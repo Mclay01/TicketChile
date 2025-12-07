@@ -1,0 +1,12 @@
+# dependencias
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+apps/api/dist/
+apps/web/dist/
+
+# envs
+.env
+.env.*

@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  ORGANIZER
+  CUSTOMER
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum TicketStatus {
+  VALID
+  USED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(CUSTOMER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events    Event[]
+  orders    Order[]
+}
+
+model Event {
+  id             String       @id @default(cuid())
+  organizer      User         @relation(fields: [organizerId], references: [id])
+  organizerId    String
+
+  title          String
+  description    String
+  venueName      String
+  venueAddress   String
+  startDateTime  DateTime
+  endDateTime    DateTime
+  status         EventStatus  @default(DRAFT)
+  totalCapacity  Int
+
+  ticketTypes    TicketType[]
+  orders         Order[]
+  tickets        Ticket[]
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model TicketType {
+  id                   String    @id @default(cuid())
+  event                Event     @relation(fields: [eventId], references: [id])
+  eventId              String
+
+  name                 String
+  description          String?
+  priceCents           Int
+  currency             String
+  capacity             Int
+  perUserLimit         Int?
+
+  salesStartDateTime   DateTime?
+  salesEndDateTime     DateTime?
+
+  tickets              Ticket[]
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+model Order {
+  id                String       @id @default(cuid())
+  user              User         @relation(fields: [userId], references: [id])
+  userId            String
+  event             Event        @relation(fields: [eventId], references: [id])
+  eventId           String
+
+  totalAmountCents  Int
+  currency          String
+  status            OrderStatus  @default(PAID)
+
+  tickets           Ticket[]
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model Ticket {
+  id            String        @id @default(cuid())
+  order         Order         @relation(fields: [orderId], references: [id])
+  orderId       String
+  ticketType    TicketType    @relation(fields: [ticketTypeId], references: [id])
+  ticketTypeId  String
+  event         Event         @relation(fields: [eventId], references: [id])
+  eventId       String
+
+  attendeeName  String
+  attendeeEmail String
+  code          String        @unique
+  status        TicketStatus  @default(VALID)
+  usedAt        DateTime?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
