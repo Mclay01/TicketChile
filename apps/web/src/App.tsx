@@ -353,23 +353,9 @@ interface EventCardProps {
   event: Event;
   isLoggedIn: boolean;
   token: string | null;
-  onRequireLogin: () => void;
-  onOrderCreated: () => void;
-  onStartOrder: (order: {
-    eventId: string;
-    ticketTypeId: string;
-    quantity: number;
-  }) => void;
 }
 
-function EventCard({
-  event,
-  isLoggedIn,
-  token,
-  onRequireLogin,
-  onOrderCreated, // por ahora no lo usamos, pero puede servir luego
-  onStartOrder,
-}: EventCardProps) {
+function EventCard({ event, isLoggedIn, token }: EventCardProps) {
   const [ticketTypeId, setTicketTypeId] = useState(
     event.ticketTypes[0]?.id ?? '',
   );
@@ -681,6 +667,7 @@ function EventCard({
     </article>
   );
 }
+
 
 /* ==================== CHECK-IN ==================== */
 
@@ -2281,11 +2268,6 @@ function App() {
                     event={event}
                     isLoggedIn={isLoggedIn}
                     token={token}
-                    onRequireLogin={() => setView('login')}
-                    onOrderCreated={() => {
-                      void refreshEvents();
-                    }}
-                    onStartOrder={(order) => setPendingOrder(order)}
                   />
                 ))}
             </div>

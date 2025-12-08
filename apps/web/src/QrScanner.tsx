@@ -1,21 +1,18 @@
-// src/QrScanner.tsx
-import { useEffect } from 'react';
+// apps/web/src/QrScanner.tsx
+import type { FC } from 'react';
 
-type QrScannerProps = {
-  onResult: (text: string) => void;
-  onError: (error: Error) => void;
+export interface QrScannerProps {
+  onResult?: (text: string) => void;
+  onError?: (error: unknown) => void;
+}
+
+/**
+ * Stub de QrScanner basado en ZXing.
+ * Actualmente no se usa porque estamos usando NativeQrScanner
+ * con BarcodeDetector. Se deja vacío para no romper el build.
+ */
+export const QrScanner: FC<QrScannerProps> = () => {
+  return null;
 };
 
-export function QrScanner({ onError }: QrScannerProps) {
-  useEffect(() => {
-    // Fallback vacío: este componente no se usa en producción ahora.
-    // Lo dejamos solo para que compile sin romper imports antiguos.
-    onError(
-      new Error(
-        'QrScanner clásico deshabilitado en esta build. Usar NativeQrScanner.'
-      )
-    );
-  }, [onError]);
-
-  return null;
-}
+export default QrScanner;
