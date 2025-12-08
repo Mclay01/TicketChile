@@ -1,6 +1,6 @@
 // apps/web/src/NativeQrScanner.tsx
 import { useEffect, useRef } from 'react';
-
+declare const BarcodeDetector: any;
 interface NativeQrScannerProps {
   onResult: (text: string) => void;
   onError?: (error: unknown) => void;
@@ -11,7 +11,9 @@ export function NativeQrScanner({ onResult, onError }: NativeQrScannerProps) {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) return;           // o lanzar error, como prefieras
+    video.srcObject = stream;
+    video.play();
 
     let stream: MediaStream | null = null;
     let cancelled = false;

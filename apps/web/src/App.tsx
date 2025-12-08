@@ -11,10 +11,13 @@ import {
   createEvent,
   API_BASE_URL,
   createCheckoutSession,   // 👈 NUEVO
+  deleteEventApi,
+  createOrder,
+  createPublicOrder,
 } from './api';
 import { NativeQrScanner } from './NativeQrScanner';
 
-
+type CheckInStatus = string;
 type View = 'events' | 'login' | 'myTickets' | 'checkin' | 'organizer';
 type UserRole = 'ADMIN' | 'ORGANIZER' | 'CUSTOMER';
 
@@ -1923,7 +1926,7 @@ function App() {
         }
         setTicketsError(null);
 
-        const data = await fetchMyTickets(token);
+        const data = await fetchMyTickets(token || '');
         if (!canceled) {
           setTickets(data);
         }

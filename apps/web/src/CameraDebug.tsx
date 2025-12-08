@@ -8,7 +8,10 @@ export function CameraDebug() {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) return;           // o lanzar error, como prefieras
+    video.srcObject = stream;
+    video.play();
+
 
     let stream: MediaStream | null = null;
 

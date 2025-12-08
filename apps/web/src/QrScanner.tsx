@@ -12,7 +12,9 @@ export function QrScanner({ onResult, onError }: QrScannerProps) {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) return;           // o lanzar error, como prefieras
+    video.srcObject = stream;
+    video.play();
 
     let stream: MediaStream | null = null;
     let cancelled = false;
@@ -124,7 +126,7 @@ export function QrScanner({ onResult, onError }: QrScannerProps) {
         stream.getTracks().forEach((t) => t.stop());
       }
 
-      reader.reset();
+      (reader as any).reset();
       console.log('[QrScanner] Cámara detenida y reader reseteado');
     };
   }, [onResult, onError]);
