@@ -1,58 +1,49 @@
-// apps/web/src/CameraDebug.tsx
+// src/CameraDebug.tsx
 import { useEffect, useRef, useState } from 'react';
 
 export function CameraDebug() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string>('idle');
+  const [status, setStatus] = useState<string>('Inicializando cámara...');
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;           // o lanzar error, como prefieras
-    video.srcObject = stream;
-    video.play();
-
-
     let stream: MediaStream | null = null;
 
-    async function start() {
+    async function init() {
       try {
-        if (!window.isSecureContext) {
-          throw new Error(
-            `Contexto inseguro: ${location.protocol}//${location.host}. Necesitas https o http://localhost`
-          );
-        }
+        const video = videoRef.current;
+        if (!video) return;
 
-        if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error('navigator.mediaDevices.getUserMedia no está disponible');
+        if (
+          typeof navigator === 'undefined' ||
+          !navigator.mediaDevices ||
+          !navigator.mediaDevices.getUserMedia
+        ) {
+          throw new Error('getUserMedia no soportado en este navegador');
         }
-
-        setInfo('pidiendo cámara...');
 
         stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' }, // trasera si existe
-          },
-          audio: false,
+          video: { facingMode: 'environment' },
         });
 
         video.srcObject = stream;
-        await video.play();
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.then === 'function') {
+          await playPromise;
+        }
 
-        setInfo(
-          `playing: ${video.videoWidth}x${video.videoHeight}`
+        setStatus(`playing: ${video.videoWidth}x${video.videoHeight}`);
+        console.log(
+          '[CameraDebug] playing',
+          video.videoWidth,
+          video.videoHeight
         );
-        console.log('[CameraDebug] playing', video.videoWidth, video.videoHeight);
       } catch (err) {
         console.error('[CameraDebug] error', err);
-        setError(err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+        setStatus('Error al iniciar la cámara');
       }
     }
 
-    start().catch((err) => {
-      console.error('[CameraDebug] error inesperado', err);
-      setError(String(err));
-    });
+    void init();
 
     return () => {
       if (stream) {
@@ -62,59 +53,20 @@ export function CameraDebug() {
   }, []);
 
   return (
-    <div
-      style={{
-        width: '100%',
-        maxWidth: 420,
-        height: 320,
-        borderRadius: 12,
-        overflow: 'hidden',
-        border: '2px solid red',
-        background: '#000',
-        position: 'relative',
-      }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <p style={{ fontSize: 12 }}>{status}</p>
       <video
         ref={videoRef}
-        autoPlay
-        playsInline
-        muted
         style={{
           width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          background: '#111',
+          maxWidth: 320,
+          borderRadius: 8,
+          border: '1px solid #4b5563',
+          background: '#020617',
         }}
+        muted
+        playsInline
       />
-
-      <div
-        style={{
-          position: 'absolute',
-          left: 8,
-          bottom: 8,
-          fontSize: 10,
-          color: '#e5e7eb',
-          textShadow: '0 1px 2px #000',
-        }}
-      >
-        {info}
-      </div>
-
-      {error && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 4,
-            borderRadius: 8,
-            background: 'rgba(15,23,42,0.9)',
-            color: '#fecaca',
-            fontSize: 12,
-            padding: 8,
-          }}
-        >
-          {error}
-        </div>
-      )}
     </div>
   );
 }

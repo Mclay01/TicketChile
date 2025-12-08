@@ -10,14 +10,16 @@ import {
   type CheckInResponse,
   createEvent,
   API_BASE_URL,
-  createCheckoutSession,   // 👈 NUEVO
+  createCheckoutSession,
   deleteEventApi,
   createOrder,
   createPublicOrder,
 } from './api';
 import { NativeQrScanner } from './NativeQrScanner';
 
-type CheckInStatus = string;
+// Status interno normalizado para el check-in
+type CheckInStatus = 'OK' | 'ALREADY_USED' | 'NOT_FOUND' | 'INVALID';
+
 type View = 'events' | 'login' | 'myTickets' | 'checkin' | 'organizer';
 type UserRole = 'ADMIN' | 'ORGANIZER' | 'CUSTOMER';
 
@@ -31,7 +33,7 @@ function formatDateTime(iso: string) {
   const date = new Date(iso);
   return date.toLocaleString('es-CL', {
     dateStyle: 'medium',
-    timeStyle: 'short'
+    timeStyle: 'short',
   });
 }
 
@@ -39,7 +41,7 @@ function formatPrice(cents: number, currency: string) {
   const amount = cents / 100;
   return new Intl.NumberFormat('es-CL', {
     style: 'currency',
-    currency
+    currency,
   }).format(amount);
 }
 
@@ -63,8 +65,10 @@ function getUserIdFromToken(token: string | null): string | null {
   const decoded = decodeToken<{ sub?: string }>(token);
   return decoded?.sub ?? null;
 }
+
 const FRONTEND_BASE_URL =
   typeof window !== 'undefined' ? window.location.origin : '';
+
 /* ==================== LOGIN ==================== */
 
 function LoginForm(props: { onSuccess: (token: string) => void }) {
@@ -94,7 +98,7 @@ function LoginForm(props: { onSuccess: (token: string) => void }) {
     <section
       style={{
         marginTop: '24px',
-        maxWidth: '360px'
+        maxWidth: '360px',
       }}
     >
       <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px' }}>
@@ -118,7 +122,7 @@ function LoginForm(props: { onSuccess: (token: string) => void }) {
               borderRadius: '6px',
               border: '1px solid #4b5563',
               background: '#020617',
-              color: '#e5e7eb'
+              color: '#e5e7eb',
             }}
           />
         </label>
@@ -136,7 +140,7 @@ function LoginForm(props: { onSuccess: (token: string) => void }) {
               borderRadius: '6px',
               border: '1px solid #4b5563',
               background: '#020617',
-              color: '#e5e7eb'
+              color: '#e5e7eb',
             }}
           />
         </label>
@@ -156,7 +160,7 @@ function LoginForm(props: { onSuccess: (token: string) => void }) {
             background: loading ? '#4b5563' : '#22c55e',
             color: '#020617',
             fontWeight: 600,
-            cursor: loading ? 'default' : 'pointer'
+            cursor: loading ? 'default' : 'pointer',
           }}
         >
           {loading ? 'Ingresando...' : 'Entrar'}
@@ -193,7 +197,7 @@ function MyTicketsSection(props: {
               color: '#38bdf8',
               textDecoration: 'underline',
               cursor: 'pointer',
-              padding: 0
+              padding: 0,
             }}
           >
             Iniciar sesión
@@ -223,119 +227,121 @@ function MyTicketsSection(props: {
           marginTop: '12px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px'
+          gap: '8px',
         }}
       >
         {tickets
           .slice()
           .sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           )
           .map((t) => {
+            const qrSize = 120;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(
+              t.code,
+            )}`;
 
-          const qrSize = 120;
-          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(
-            t.code
-          )}`;
-
-          return (
-            <article
-              key={t.id}
-              style={{
-                borderRadius: '10px',
-                background: '#020617',
-                padding: '12px 14px',
-                border: '1px solid #1f2937',
-                fontSize: '13px'
-              }}
-            >
-              <div
+            return (
+              <article
+                key={t.id}
                 style={{
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'stretch'
+                  borderRadius: '10px',
+                  background: '#020617',
+                  padding: '12px 14px',
+                  border: '1px solid #1f2937',
+                  fontSize: '13px',
                 }}
               >
-                {/* Info del ticket */}
-                <div style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      marginBottom: '4px'
-                    }}
-                  >
-                    <strong>{t.order.event.title}</strong>
-                    <span
-                      style={{
-                        fontWeight: 600,
-                        color:
-                          t.status === 'VALID'
-                            ? '#22c55e'
-                            : t.status === 'USED'
-                            ? '#eab308'
-                            : '#f87171'
-                      }}
-                    >
-                      {t.status === 'VALID'
-                        ? 'Válido'
-                        : t.status === 'USED'
-                        ? 'Usado'
-                        : 'Cancelado'}
-                    </span>
-                  </div>
-
-                  <div style={{ opacity: 0.9 }}>
-                    <div>
-                      <strong>Fecha:</strong>{' '}
-                      {formatDateTime(t.order.event.startDateTime)}
-                    </div>
-                    <div>
-                      <strong>Lugar:</strong> {t.order.event.venueName} ·{' '}
-                      {t.order.event.venueAddress}
-                    </div>
-                    <div>
-                      <strong>Entrada:</strong> {t.ticketType.name} ·{' '}
-                      {formatPrice(t.ticketType.priceCents, t.ticketType.currency)}
-                    </div>
-                    <div>
-                      <strong>Código:</strong> {t.code}
-                    </div>
-                  </div>
-                </div>
-
-                {/* QR */}
                 <div
                   style={{
-                    width: `${qrSize}px`,
                     display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px'
+                    gap: '12px',
+                    alignItems: 'stretch',
                   }}
                 >
-                  <img
-                    src={qrUrl}
-                    alt={`QR ticket ${t.code}`}
+                  {/* Info del ticket */}
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      <strong>{t.order.event.title}</strong>
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          color:
+                            t.status === 'VALID'
+                              ? '#22c55e'
+                              : t.status === 'USED'
+                              ? '#eab308'
+                              : '#f87171',
+                        }}
+                      >
+                        {t.status === 'VALID'
+                          ? 'Válido'
+                          : t.status === 'USED'
+                          ? 'Usado'
+                          : 'Cancelado'}
+                      </span>
+                    </div>
+
+                    <div style={{ opacity: 0.9 }}>
+                      <div>
+                        <strong>Fecha:</strong>{' '}
+                        {formatDateTime(t.order.event.startDateTime)}
+                      </div>
+                      <div>
+                        <strong>Lugar:</strong> {t.order.event.venueName} ·{' '}
+                        {t.order.event.venueAddress}
+                      </div>
+                      <div>
+                        <strong>Entrada:</strong> {t.ticketType.name} ·{' '}
+                        {formatPrice(
+                          t.ticketType.priceCents,
+                          t.ticketType.currency,
+                        )}
+                      </div>
+                      <div>
+                        <strong>Código:</strong> {t.code}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QR */}
+                  <div
                     style={{
-                      width: '100%',
-                      height: 'auto',
-                      borderRadius: '8px',
-                      background: '#020617',
-                      padding: '4px',
-                      border: '1px dashed #1f2937'
+                      width: `${qrSize}px`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
                     }}
-                  />
-                  <span style={{ fontSize: '11px', opacity: 0.7 }}>
-                    Escanea este QR en el acceso
-                  </span>
+                  >
+                    <img
+                      src={qrUrl}
+                      alt={`QR ticket ${t.code}`}
+                      style={{
+                        width: '100%',
+                        height: 'auto',
+                        borderRadius: '8px',
+                        background: '#020617',
+                        padding: '4px',
+                        border: '1px dashed #1f2937',
+                      }}
+                    />
+                    <span style={{ fontSize: '11px', opacity: 0.7 }}>
+                      Escanea este QR en el acceso
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </article>
-          );
-        })}
+              </article>
+            );
+          })}
       </div>
     </section>
   );
@@ -361,7 +367,7 @@ function EventCard({
   isLoggedIn,
   token,
   onRequireLogin,
-  onOrderCreated,
+  onOrderCreated, // por ahora no lo usamos, pero puede servir luego
   onStartOrder,
 }: EventCardProps) {
   const [ticketTypeId, setTicketTypeId] = useState(
@@ -676,7 +682,6 @@ function EventCard({
   );
 }
 
-
 /* ==================== CHECK-IN ==================== */
 
 function CheckInPanel(props: {
@@ -699,7 +704,10 @@ function CheckInPanel(props: {
   } | null>(null);
 
   // Evitar doble check-in por misma lectura del QR
-  const [lastScanInfo, setLastScanInfo] = useState<{ code: string; time: number } | null>(null);
+  const [lastScanInfo, setLastScanInfo] = useState<{
+    code: string;
+    time: number;
+  } | null>(null);
 
   const canCheckIn = !!token && role && role !== 'CUSTOMER';
 
@@ -707,15 +715,12 @@ function CheckInPanel(props: {
   function normalizeStatus(raw: any): CheckInStatus {
     if (!raw || typeof raw !== 'string') return 'INVALID';
 
-    let s = raw.toUpperCase();
+    const s = raw.toUpperCase();
 
-    // mapeos comunes
     if (s === 'VALID' || s === 'OK') return 'OK';
     if (s === 'USED' || s === 'ALREADY_USED') return 'ALREADY_USED';
     if (s === 'NOT_FOUND') return 'NOT_FOUND';
-    if (s === 'INVALID') return 'INVALID';
 
-    // cualquier otra cosa la tratamos como inválida
     return 'INVALID';
   }
 
@@ -755,9 +760,8 @@ function CheckInPanel(props: {
       setResult(null);
       setToast(null);
 
-      const rawRes = await scanTicket(token, trimmed);
+      const rawRes = await scanTicket(token ?? '', trimmed);
 
-      // Normalizamos el status aquí
       const normalizedStatus = normalizeStatus((rawRes as any).status);
       const res: CheckInResponse = {
         ...rawRes,
@@ -766,7 +770,6 @@ function CheckInPanel(props: {
 
       setResult(res);
 
-      // Manejo del toast según el status normalizado
       if (res.status === 'OK') {
         setToast({ type: 'success', message: 'Verificado' });
       } else if (res.status === 'ALREADY_USED') {
@@ -850,7 +853,9 @@ function CheckInPanel(props: {
   }
 
   return (
-    <section style={{ marginTop: '24px', maxWidth: '520px', position: 'relative' }}>
+    <section
+      style={{ marginTop: '24px', maxWidth: '520px', position: 'relative' }}
+    >
       <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px' }}>
         Check-in
       </h2>
@@ -1024,7 +1029,7 @@ function CheckInPanel(props: {
                 <strong>Entrada:</strong> {result.ticket.ticketType.name} ·{' '}
                 {formatPrice(
                   result.ticket.ticketType.priceCents,
-                  result.ticket.ticketType.currency
+                  result.ticket.ticketType.currency,
                 )}
               </div>
               <div>
@@ -1091,7 +1096,6 @@ function CheckInPanel(props: {
   );
 }
 
-
 /* ==================== PANEL ORGANIZADOR ==================== */
 
 type TicketForm = {
@@ -1139,22 +1143,22 @@ function OrganizerPanel(props: {
       description: '',
       price: '1500',
       capacity: '100',
-      currency: 'CLP'
-    }
+      currency: 'CLP',
+    },
   ]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-    async function handleDeleteEventClick(eventId: string) {
+  async function handleDeleteEventClick(eventId: string) {
     if (!token) {
       onRequireLogin();
       return;
     }
 
     const ok = window.confirm(
-      '¿Seguro que quieres eliminar este evento? Solo se puede eliminar si no tiene tickets vendidos.'
+      '¿Seguro que quieres eliminar este evento? Solo se puede eliminar si no tiene tickets vendidos.',
     );
     if (!ok) return;
 
@@ -1162,13 +1166,11 @@ function OrganizerPanel(props: {
       setError(null);
       setSuccess(null);
 
-      await deleteEventApi(token, eventId);
-      
+      await deleteEventApi(token ?? '', eventId);
+
       onEventDeleted(eventId);
 
       setSuccess('Evento eliminado / archivado correctamente.');
-      // Si quieres además refrescar desde el server, puedes dejar esto:
-      // onEventCreated();
     } catch (err) {
       console.error(err);
       if (err instanceof Error && err.message === 'UNAUTHORIZED') {
@@ -1200,7 +1202,7 @@ function OrganizerPanel(props: {
               color: '#38bdf8',
               textDecoration: 'underline',
               cursor: 'pointer',
-              padding: 0
+              padding: 0,
             }}
           >
             Iniciar sesión
@@ -1226,10 +1228,10 @@ function OrganizerPanel(props: {
   function handleTicketChange(
     index: number,
     field: keyof TicketForm,
-    value: string
+    value: string,
   ) {
     setTicketTypes((prev) =>
-      prev.map((t, i) => (i === index ? { ...t, [field]: value } : t))
+      prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)),
     );
   }
 
@@ -1241,8 +1243,8 @@ function OrganizerPanel(props: {
         description: '',
         price: '',
         capacity: '',
-        currency: 'CLP'
-      }
+        currency: 'CLP',
+      },
     ]);
   }
 
@@ -1285,7 +1287,7 @@ function OrganizerPanel(props: {
         t.name.trim() &&
         t.price.trim() &&
         t.capacity.trim() &&
-        Number(t.capacity) > 0
+        Number(t.capacity) > 0,
     );
 
     if (validTickets.length === 0) {
@@ -1301,17 +1303,14 @@ function OrganizerPanel(props: {
         description: t.description.trim() || undefined,
         priceCents: Math.round(priceNumber * 100),
         currency: t.currency || 'CLP',
-        capacity: capacityNumber
+        capacity: capacityNumber,
       };
     });
 
-    const sumCapacity = ticketInputs.reduce(
-      (sum, t) => sum + t.capacity,
-      0
-    );
+    const sumCapacity = ticketInputs.reduce((sum, t) => sum + t.capacity, 0);
     if (sumCapacity > totalCapacityNum) {
       setError(
-        'La suma de las capacidades de los tickets no puede ser mayor que la capacidad total.'
+        'La suma de las capacidades de los tickets no puede ser mayor que la capacidad total.',
       );
       return;
     }
@@ -1327,7 +1326,7 @@ function OrganizerPanel(props: {
     try {
       setLoading(true);
 
-      await createEvent(token, {
+      await createEvent(token ?? '', {
         title: title.trim(),
         description: description.trim(),
         venueName: venueName.trim(),
@@ -1335,7 +1334,7 @@ function OrganizerPanel(props: {
         startDateTime: start.toISOString(),
         endDateTime: end.toISOString(),
         totalCapacity: totalCapacityNum,
-        ticketTypes: ticketInputs
+        ticketTypes: ticketInputs,
       });
 
       setSuccess('Evento creado correctamente.');
@@ -1353,8 +1352,8 @@ function OrganizerPanel(props: {
           description: '',
           price: '1500',
           capacity: '100',
-          currency: 'CLP'
-        }
+          currency: 'CLP',
+        },
       ]);
 
       onEventCreated();
@@ -1377,7 +1376,7 @@ function OrganizerPanel(props: {
     ? events.filter(
         (e) =>
           (e.organizerId === userId || e.organizer?.id === userId) &&
-          e.status !== 'CANCELLED' // 👈 no mostrar archivados
+          e.status !== 'CANCELLED',
       )
     : []
   )
@@ -1385,7 +1384,7 @@ function OrganizerPanel(props: {
     .sort(
       (a, b) =>
         new Date(a.startDateTime).getTime() -
-        new Date(b.startDateTime).getTime()
+        new Date(b.startDateTime).getTime(),
     );
 
   return (
@@ -1404,7 +1403,7 @@ function OrganizerPanel(props: {
           display: 'flex',
           flexDirection: 'column',
           gap: '8px',
-          marginBottom: '24px'
+          marginBottom: '24px',
         }}
       >
         <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Crear evento</h3>
@@ -1422,7 +1421,7 @@ function OrganizerPanel(props: {
               borderRadius: '6px',
               border: '1px solid #4b5563',
               background: '#020617',
-              color: '#e5e7eb'
+              color: '#e5e7eb',
             }}
           />
         </label>
@@ -1441,7 +1440,7 @@ function OrganizerPanel(props: {
               border: '1px solid #4b5563',
               background: '#020617',
               color: '#e5e7eb',
-              resize: 'vertical'
+              resize: 'vertical',
             }}
           />
         </label>
@@ -1450,7 +1449,7 @@ function OrganizerPanel(props: {
           style={{
             display: 'flex',
             gap: '8px',
-            flexWrap: 'wrap'
+            flexWrap: 'wrap',
           }}
         >
           <label style={{ fontSize: '13px', flex: 1, minWidth: '160px' }}>
@@ -1466,7 +1465,7 @@ function OrganizerPanel(props: {
                 borderRadius: '6px',
                 border: '1px solid #4b5563',
                 background: '#020617',
-                color: '#e5e7eb'
+                color: '#e5e7eb',
               }}
             />
           </label>
@@ -1484,7 +1483,7 @@ function OrganizerPanel(props: {
                 borderRadius: '6px',
                 border: '1px solid #4b5563',
                 background: '#020617',
-                color: '#e5e7eb'
+                color: '#e5e7eb',
               }}
             />
           </label>
@@ -1494,7 +1493,7 @@ function OrganizerPanel(props: {
           style={{
             display: 'flex',
             gap: '8px',
-            flexWrap: 'wrap'
+            flexWrap: 'wrap',
           }}
         >
           <label style={{ fontSize: '13px' }}>
@@ -1509,7 +1508,7 @@ function OrganizerPanel(props: {
                 borderRadius: '6px',
                 border: '1px solid #4b5563',
                 background: '#020617',
-                color: '#e5e7eb'
+                color: '#e5e7eb',
               }}
             />
           </label>
@@ -1526,7 +1525,7 @@ function OrganizerPanel(props: {
                 borderRadius: '6px',
                 border: '1px solid #4b5563',
                 background: '#020617',
-                color: '#e5e7eb'
+                color: '#e5e7eb',
               }}
             />
           </label>
@@ -1543,7 +1542,7 @@ function OrganizerPanel(props: {
                 borderRadius: '6px',
                 border: '1px solid #4b5563',
                 background: '#020617',
-                color: '#e5e7eb'
+                color: '#e5e7eb',
               }}
             />
           </label>
@@ -1561,7 +1560,7 @@ function OrganizerPanel(props: {
                 borderRadius: '6px',
                 border: '1px solid #4b5563',
                 background: '#020617',
-                color: '#e5e7eb'
+                color: '#e5e7eb',
               }}
             />
           </label>
@@ -1574,7 +1573,7 @@ function OrganizerPanel(props: {
             paddingTop: '8px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '8px'
+            gap: '8px',
           }}
         >
           <strong style={{ fontSize: '13px' }}>Tipos de ticket</strong>
@@ -1589,7 +1588,7 @@ function OrganizerPanel(props: {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '6px',
-                background: '#020617'
+                background: '#020617',
               }}
             >
               <div
@@ -1597,7 +1596,7 @@ function OrganizerPanel(props: {
                   display: 'flex',
                   gap: '8px',
                   alignItems: 'center',
-                  justifyContent: 'space-between'
+                  justifyContent: 'space-between',
                 }}
               >
                 <label style={{ fontSize: '13px', flex: 1 }}>
@@ -1616,7 +1615,7 @@ function OrganizerPanel(props: {
                       border: '1px solid #4b5563',
                       background: '#020617',
                       color: '#e5e7eb',
-                      fontSize: '13px'
+                      fontSize: '13px',
                     }}
                   />
                 </label>
@@ -1638,7 +1637,7 @@ function OrganizerPanel(props: {
                       border: '1px solid #4b5563',
                       background: '#020617',
                       color: '#e5e7eb',
-                      fontSize: '13px'
+                      fontSize: '13px',
                     }}
                   />
                 </label>
@@ -1660,7 +1659,7 @@ function OrganizerPanel(props: {
                       border: '1px solid #4b5563',
                       background: '#020617',
                       color: '#e5e7eb',
-                      fontSize: '13px'
+                      fontSize: '13px',
                     }}
                   />
                 </label>
@@ -1682,7 +1681,7 @@ function OrganizerPanel(props: {
                     border: '1px solid #4b5563',
                     background: '#020617',
                     color: '#e5e7eb',
-                    fontSize: '13px'
+                    fontSize: '13px',
                   }}
                 />
               </label>
@@ -1699,7 +1698,7 @@ function OrganizerPanel(props: {
                     background: '#b91c1c',
                     color: '#e5e7eb',
                     fontSize: '12px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
                   }}
                 >
                   Eliminar tipo
@@ -1719,7 +1718,7 @@ function OrganizerPanel(props: {
               background: 'transparent',
               color: '#e5e7eb',
               fontSize: '13px',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             + Agregar tipo de ticket
@@ -1745,7 +1744,7 @@ function OrganizerPanel(props: {
             background: loading ? '#4b5563' : '#22c55e',
             color: '#020617',
             fontWeight: 600,
-            cursor: loading ? 'default' : 'pointer'
+            cursor: loading ? 'default' : 'pointer',
           }}
         >
           {loading ? 'Creando...' : 'Crear evento'}
@@ -1757,7 +1756,7 @@ function OrganizerPanel(props: {
           style={{
             fontSize: '16px',
             fontWeight: 600,
-            marginBottom: '8px'
+            marginBottom: '8px',
           }}
         >
           Mis eventos
@@ -1779,7 +1778,7 @@ function OrganizerPanel(props: {
             marginTop: '8px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '8px'
+            gap: '8px',
           }}
         >
           {myEvents.map((event) => (
@@ -1790,7 +1789,7 @@ function OrganizerPanel(props: {
                 background: '#020617',
                 padding: '12px 14px',
                 border: '1px solid #1f2937',
-                fontSize: '13px'
+                fontSize: '13px',
               }}
             >
               <div
@@ -1798,7 +1797,7 @@ function OrganizerPanel(props: {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  marginBottom: '4px'
+                  marginBottom: '4px',
                 }}
               >
                 <div>
@@ -1812,7 +1811,7 @@ function OrganizerPanel(props: {
                           ? '#f87171'
                           : event.status === 'DRAFT'
                           ? '#eab308'
-                          : '#22c55e'
+                          : '#22c55e',
                     }}
                   >
                     {event.status ?? 'PUBLISHED'}
@@ -1829,7 +1828,7 @@ function OrganizerPanel(props: {
                     background: '#991b1b',
                     color: '#fee2e2',
                     fontSize: '12px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
                   }}
                 >
                   Eliminar
@@ -1841,7 +1840,8 @@ function OrganizerPanel(props: {
                   <strong>Fecha:</strong> {formatDateTime(event.startDateTime)}
                 </div>
                 <div>
-                  <strong>Lugar:</strong> {event.venueName} · {event.venueAddress}
+                  <strong>Lugar:</strong> {event.venueName} ·{' '}
+                  {event.venueAddress}
                 </div>
                 {event.totalCapacity != null && (
                   <div>
@@ -1864,11 +1864,10 @@ function OrganizerPanel(props: {
 
 function App() {
   const [events, setEvents] = useState<Event[]>([]);
-  
-    const handleEventDeleted = (eventId: string) => {
-      setEvents((prev) => prev.filter((e) => e.id !== eventId));
-    };
 
+  const handleEventDeleted = (eventId: string) => {
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
+  };
 
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState<string | null>(null);
@@ -1876,13 +1875,19 @@ function App() {
   const [view, setView] = useState<View>('events');
 
   const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem('tiketera_token')
+    typeof window === 'undefined'
+      ? null
+      : localStorage.getItem('tiketera_token'),
   );
   const [role, setRole] = useState<UserRole | null>(() =>
-    getRoleFromToken(localStorage.getItem('tiketera_token'))
+    typeof window === 'undefined'
+      ? null
+      : getRoleFromToken(localStorage.getItem('tiketera_token')),
   );
   const [userId, setUserId] = useState<string | null>(() =>
-    getUserIdFromToken(localStorage.getItem('tiketera_token'))
+    typeof window === 'undefined'
+      ? null
+      : getUserIdFromToken(localStorage.getItem('tiketera_token')),
   );
 
   const [tickets, setTickets] = useState<MyTicket[]>([]);
@@ -1920,13 +1925,12 @@ function App() {
 
     async function loadTickets(isFirstCall: boolean) {
       try {
-        // Solo mostramos loading la primera vez o si aún no hay tickets
         if (isFirstCall && firstTicketsLoad && tickets.length === 0) {
           setTicketsLoading(true);
         }
         setTicketsError(null);
 
-        const data = await fetchMyTickets(token || '');
+        const data = await fetchMyTickets(token ?? '');
         if (!canceled) {
           setTickets(data);
         }
@@ -1936,7 +1940,7 @@ function App() {
           setTicketsError(
             err instanceof Error && err.message === 'UNAUTHORIZED'
               ? 'Sesión expirada. Vuelve a iniciar sesión.'
-              : 'No se pudieron cargar tus tickets'
+              : 'No se pudieron cargar tus tickets',
           );
           if (err instanceof Error && err.message === 'UNAUTHORIZED') {
             localStorage.removeItem('tiketera_token');
@@ -1955,10 +1959,8 @@ function App() {
       }
     }
 
-    // Primera carga inmediata
     void loadTickets(true);
 
-    // Polling cada 5 segundos, pero sin tocar el loading
     intervalId = window.setInterval(() => {
       void loadTickets(false);
     }, 5000);
@@ -1969,10 +1971,12 @@ function App() {
         window.clearInterval(intervalId);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, token]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get('payment');
 
@@ -1982,7 +1986,6 @@ function App() {
 
     const raw = localStorage.getItem('tiketera_pending_payment');
     if (!raw) {
-      // No hay pedido pendiente, limpiamos la query igual
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
@@ -1996,12 +1999,10 @@ function App() {
       return;
     }
 
-    // Función autoejecutable para crear la orden después del pago
     (async () => {
       try {
         if (pending.mode === 'PRIVATE') {
           if (!token) {
-            // No hay token pero venimos de pago -> pedimos login
             setView('login');
             return;
           }
@@ -2030,15 +2031,12 @@ function App() {
             ],
           });
 
-          // compra pública: lo mandamos a vista de eventos
           setView('events');
         }
       } catch (err) {
         console.error('Error creando orden post-pago', err);
-        // En caso de error, volvemos a eventos
         setView('events');
       } finally {
-        // Limpieza: borramos pending y query ?payment=
         localStorage.removeItem('tiketera_pending_payment');
         window.history.replaceState({}, document.title, window.location.pathname);
       }
@@ -2046,7 +2044,9 @@ function App() {
   }, [token]);
 
   function handleLoginSuccess(newToken: string) {
-    localStorage.setItem('tiketera_token', newToken);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tiketera_token', newToken);
+    }
     setToken(newToken);
     setRole(getRoleFromToken(newToken));
     setUserId(getUserIdFromToken(newToken));
@@ -2062,9 +2062,9 @@ function App() {
             items: [
               {
                 ticketTypeId: orderToCreate.ticketTypeId,
-                quantity: orderToCreate.quantity
-              }
-            ]
+                quantity: orderToCreate.quantity,
+              },
+            ],
           });
           setView('myTickets');
         } catch (err) {
@@ -2078,7 +2078,9 @@ function App() {
   }
 
   function handleLogout() {
-    localStorage.removeItem('tiketera_token');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('tiketera_token');
+    }
     setToken(null);
     setRole(null);
     setUserId(null);
@@ -2112,7 +2114,7 @@ function App() {
       style={{
         minHeight: '100vh',
         background: '#020617',
-        color: '#e5e7eb'
+        color: '#e5e7eb',
       }}
     >
       <header
@@ -2122,7 +2124,7 @@ function App() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '12px'
+          gap: '12px',
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -2139,7 +2141,7 @@ function App() {
             display: 'flex',
             gap: '8px',
             alignItems: 'center',
-            fontSize: '14px'
+            fontSize: '14px',
           }}
         >
           <button
@@ -2150,7 +2152,7 @@ function App() {
               border: 'none',
               background: view === 'events' ? '#1d4ed8' : 'transparent',
               color: '#e5e7eb',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             Eventos
@@ -2165,14 +2167,13 @@ function App() {
                 border: 'none',
                 background: view === 'organizer' ? '#1d4ed8' : 'transparent',
                 color: '#e5e7eb',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Organizador
             </button>
           )}
 
-          {/* Mostrar "Mis tickets" solo si estás logueado */}
           {isLoggedIn && (
             <button
               onClick={goToMyTickets}
@@ -2182,7 +2183,7 @@ function App() {
                 border: 'none',
                 background: view === 'myTickets' ? '#1d4ed8' : 'transparent',
                 color: '#e5e7eb',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Mis tickets
@@ -2198,7 +2199,7 @@ function App() {
                 border: 'none',
                 background: view === 'checkin' ? '#1d4ed8' : 'transparent',
                 color: '#e5e7eb',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Check-in
@@ -2214,7 +2215,7 @@ function App() {
                 border: '1px solid #4b5563',
                 background: 'transparent',
                 color: '#e5e7eb',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Cerrar sesión
@@ -2228,7 +2229,7 @@ function App() {
                 border: '1px solid #4b5563',
                 background: 'transparent',
                 color: '#e5e7eb',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Iniciar sesión
@@ -2241,7 +2242,7 @@ function App() {
         style={{
           padding: '16px',
           maxWidth: '960px',
-          margin: '0 auto'
+          margin: '0 auto',
         }}
       >
         {view === 'events' && (
@@ -2250,14 +2251,16 @@ function App() {
               style={{
                 fontSize: '20px',
                 fontWeight: 600,
-                marginBottom: '12px'
+                marginBottom: '12px',
               }}
             >
               Eventos
             </h1>
 
             {eventsLoading && <p>Cargando eventos...</p>}
-            {eventsError && <p style={{ color: '#f87171' }}>{eventsError}</p>}
+            {eventsError && (
+              <p style={{ color: '#f87171' }}>{eventsError}</p>
+            )}
 
             {!eventsLoading && !eventsError && events.length === 0 && (
               <p>No hay eventos publicados todavía.</p>
@@ -2267,11 +2270,11 @@ function App() {
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'minmax(0, 1fr)',
-                gap: '12px'
+                gap: '12px',
               }}
             >
               {events
-                .filter((event) => event.status !== 'CANCELLED') // 👈 ocultar archivados
+                .filter((event) => event.status !== 'CANCELLED')
                 .map((event) => (
                   <EventCard
                     key={event.id}
@@ -2279,7 +2282,9 @@ function App() {
                     isLoggedIn={isLoggedIn}
                     token={token}
                     onRequireLogin={() => setView('login')}
-                    onOrderCreated={() => { void refreshEvents(); }}
+                    onOrderCreated={() => {
+                      void refreshEvents();
+                    }}
                     onStartOrder={(order) => setPendingOrder(order)}
                   />
                 ))}
