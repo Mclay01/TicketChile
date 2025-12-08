@@ -3,7 +3,7 @@ import { prisma } from '../src/core/db/client';
 import bcrypt from 'bcryptjs';
 
 async function main() {
-  const passwordHash = await bcrypt.hash('password123', 10);
+  const passwordHash = await bcrypt.hash('superseguro123', 10);
 
   // Usuario ORGANIZER de ejemplo
   await prisma.user.upsert({
