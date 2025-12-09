@@ -54,6 +54,19 @@ app.use('/api/users', usersRouter);
 // Payments
 app.use('/api/payments', paymentsRouter);
 
+// Healthcheck y root
+app.get('/', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'ticket-chile-api',
+    version: '1.0.0',
+  });
+});
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // 404
 app.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });
