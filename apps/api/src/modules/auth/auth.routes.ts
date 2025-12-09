@@ -26,7 +26,7 @@ authRouter.post('/login', async (req, res, next) => {
 
     const { email, password } = parsed.data;
 
-    // 1) Buscar usuario por email
+    // 1) Buscar usuario
     const user = await prisma.user.findUnique({
       where: { email },
     });
@@ -35,9 +35,8 @@ authRouter.post('/login', async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // 2) Comparar password con el hash guardado
+    // 2) Comparar password
     const isValid = await bcrypt.compare(password, user.password);
-
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -49,7 +48,7 @@ authRouter.post('/login', async (req, res, next) => {
         email: user.email,
         role: user.role,
       },
-      env.JWT_SECRET,
+      env.JWT_SECRET, // <- aquí usamos tu variable de entorno
       {
         expiresIn: '7d',
       },
@@ -57,8 +56,15 @@ authRouter.post('/login', async (req, res, next) => {
 
     return res.json({ token });
   } catch (err) {
+    // 🔴 TEMPORAL: devolver el mensaje real para ver qué está fallando
     console.error('Login error', err);
-    // Delega al errorHandler global que ya tienes configurado
-    next(err);
+
+    const message =
+      err instanceof Error && err.message
+        ? err.message
+        : 'Unknown error';
+
+    return res.status(500).json({ error: message });
+    // (luego, cuando esté todo OK, volvemos a usar: next(err))
   }
 });
