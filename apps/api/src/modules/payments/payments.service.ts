@@ -24,13 +24,15 @@ if (!FLOW_API_KEY || !FLOW_SECRET_KEY) {
 
 /** Firma parámetros para Flow según su documentación. */
 function signFlowParams(params: Record<string, any>) {
-  // 1) ordenar alfabéticamente las claves
+  // Flow exige concatenar "key + value" ordenado alfabéticamente, sin signos =
   const keys = Object.keys(params).sort();
 
-  // 2) concatenar "clave + valor" sin signos extra
-  const toSign = keys.map((k) => `${k}${params[k]}`).join('');
+  let toSign = '';
+  for (const key of keys) {
+    const value = params[key];
+    toSign += `${key}${value}`;
+  }
 
-  // 3) HMAC-SHA256 con FLOW_SECRET_KEY
   return crypto
     .createHmac('sha256', FLOW_SECRET_KEY!)
     .update(toSign)

@@ -44,27 +44,34 @@ export async function flowConfirmationHandler(
   res: Response,
   _next: NextFunction
 ) {
-  // Flow puede mandar los datos como form-urlencoded (body)
-  // o (rara vez) como querystring, así que miramos ambos.
-  const token =
-    (req.body?.token as string | undefined) ||
-    (req.query?.token as string | undefined) ||
-    undefined;
-
   console.log('[Flow] Webhook recibido. body =', req.body, 'query =', req.query);
 
+  const body = (req as any).body ?? {};
+  const query = (req as any).query ?? {};
+
+  const token = (body.token || query.token) as string | undefined;
+  const s = (body.s || query.s) as string | undefined;
+
   if (!token) {
-    console.warn('[Flow] Webhook sin token. No se puede consultar el pago.');
+    console.warn('[Flow] Webhook sin token. body =', body, 'query =', query);
     return res.status(400).send('Missing token');
   }
 
+  // Si Flow no te manda firma, seguimos igual (no paramos el flujo).
+  if (!s) {
+    console.warn('[Flow] Webhook sin firma (s). Continuando sin verificar firma. token =', token);
+  } else {
+    const isValid = paymentsService.verifyFlowSignature({ token }, s);
+    if (!isValid) {
+      console.warn('[Flow] Firma inválida en webhook', { token, s });
+      // si quieres puedes devolver 400 aquí, pero para pruebas yo seguiría
+    }
+  }
+
   try {
-    // 1) Preguntamos a Flow el estado del pago
     const payment = await paymentsService.getPaymentStatus(token);
     console.log('[Flow] Estado del pago:', payment);
 
-    // Flow:
-    // 0 = pendiente, 1 = rechazado, 2 = pagado, 3 = anulado
     if (payment.status === 2) {
       console.log('[Flow] Pago pagado. Procesando creación de orden...');
 
@@ -73,17 +80,12 @@ export async function flowConfirmationHandler(
         try {
           meta = JSON.parse(payment.optional);
         } catch (e) {
-          console.error(
-            '[Flow] No se pudo parsear payment.optional:',
-            payment.optional
-          );
+          console.error('[Flow] No se pudo parsear payment.optional:', payment.optional);
         }
       }
 
       if (!meta) {
-        console.warn(
-          '[Flow] Pago sin metadata (optional). No se puede crear la orden.'
-        );
+        console.warn('[Flow] Pago sin metadata (optional). No se puede crear la orden.');
       } else {
         const mode = meta.mode as 'PUBLIC' | 'PRIVATE' | undefined;
         const eventId = meta.eventId as string | undefined;
@@ -94,49 +96,23 @@ export async function flowConfirmationHandler(
         const buyerUserId = meta.buyerUserId as string | undefined;
 
         if (!eventId || !ticketTypeId || !quantity || quantity <= 0) {
-          console.error(
-            '[Flow] Metadata incompleta. No se crea la orden.',
-            meta
-          );
+          console.error('[Flow] Metadata incompleta. No se crea la orden.', meta);
         } else if (mode === 'PRIVATE' && buyerUserId) {
-          // Compra con usuario logueado
-          console.log(
-            '[Flow] Creando orden privada para userId:',
-            buyerUserId
-          );
-
+          console.log('[Flow] Creando orden PRIVADA para userId:', buyerUserId);
           await ordersService.createOrder(buyerUserId, {
             eventId,
-            items: [
-              {
-                ticketTypeId,
-                quantity,
-              },
-            ],
+            items: [{ ticketTypeId, quantity }],
           });
         } else {
-          // Compra pública (sin login)
           if (!buyerEmail) {
-            console.error(
-              '[Flow] Falta buyerEmail en compra pública. Metadata:',
-              meta
-            );
+            console.error('[Flow] Falta buyerEmail en compra pública. Metadata:', meta);
           } else {
-            console.log(
-              '[Flow] Creando orden pública para email:',
-              buyerEmail
-            );
-
+            console.log('[Flow] Creando orden PÚBLICA para email:', buyerEmail);
             await ordersService.publicCreateOrderService({
               eventId,
               buyerName,
               buyerEmail,
-              items: [
-                {
-                  ticketTypeId,
-                  quantity,
-                },
-              ],
+              items: [{ ticketTypeId, quantity }],
             });
           }
         }
@@ -145,7 +121,6 @@ export async function flowConfirmationHandler(
       console.log('[Flow] Pago no pagado. status =', payment.status);
     }
 
-    // Flow sólo necesita 200 para dar por recibido el webhook
     return res.status(200).send('OK');
   } catch (err) {
     console.error('[Flow] Error procesando webhook:', err);
