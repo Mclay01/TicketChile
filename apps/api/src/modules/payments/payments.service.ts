@@ -125,36 +125,44 @@ export async function getPaymentStatus(token: string) {
     throw new AppError(500, 'FLOW no está configurado.');
   }
 
-  const bodyParams: Record<string, string> = {
+  // Parámetros que Flow espera para getStatus
+  const baseParams: Record<string, string> = {
     apiKey: FLOW_API_KEY,
     token,
   };
 
-  const s = signFlowParams(bodyParams);
-  const form = new URLSearchParams();
-
-  for (const [k, v] of Object.entries(bodyParams)) {
-    form.append(k, v);
-  }
-  form.append('s', s);
+  // Firmamos igual que en create
+  const s = signFlowParams(baseParams);
 
   try {
-    const resp = await axios.post(
+    // 👇 OJO: ahora es GET y los params van por query-string
+    const resp = await axios.get(
       `${FLOW_BASE_URL}/api/payment/getStatus`,
-      form.toString(),
       {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+        params: {
+          ...baseParams,
+          s,
         },
       }
     );
 
-    // 👇 Incluimos optional para leer los datos que mandamos antes
     const data = resp.data as {
-      status: number;
+      status?: number;
       optional?: string;
-      // aquí podrías agregar más campos según la doc de Flow
+      code?: number;
+      message?: string;
     };
+
+    console.log('[Flow] Respuesta getStatus:', data);
+
+    // Si Flow manda un código de error, lo tratamos como fallo
+    if (typeof data.code !== 'undefined' && data.code !== 0) {
+      console.error('[Flow] getStatus devolvió error:', data);
+      throw new AppError(
+        500,
+        `No se pudo obtener el estado del pago en Flow. Código: ${data.code}`
+      );
+    }
 
     return data;
   } catch (err: any) {
