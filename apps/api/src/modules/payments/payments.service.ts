@@ -1,3 +1,5 @@
+// apps/api/src/modules/payments/payments.service.ts
+
 import axios from 'axios';
 import crypto from 'crypto';
 import { AppError } from '../../core/errors/AppError';
@@ -16,7 +18,7 @@ const FLOW_DEFAULT_EMAIL =
 
 if (!FLOW_API_KEY || !FLOW_SECRET_KEY) {
   console.warn(
-    '[payments] FLOW no está configurado. Faltan FLOW_API_KEY / FLOW_SECRET_KEY.',
+    '[payments] FLOW no está configurado. Faltan FLOW_API_KEY / FLOW_SECRET_KEY.'
   );
 }
 
@@ -42,7 +44,7 @@ function signFlowParams(params: Record<string, any>) {
 /** Verifica la firma que Flow nos manda en el webhook. */
 export function verifyFlowSignature(
   payload: Record<string, any>,
-  signature: string,
+  signature: string
 ) {
   const expected = signFlowParams(payload);
   return expected === signature;
@@ -58,11 +60,11 @@ export async function createCheckoutSession(params: {
   if (!FLOW_API_KEY || !FLOW_SECRET_KEY) {
     throw new AppError(
       500,
-      'No se pudo crear la sesión de pago en Flow: credenciales no configuradas.',
+      'No se pudo crear la sesión de pago en Flow: credenciales no configuradas.'
     );
   }
 
-  const { amountCents, currency, successUrl, metadata } = params;
+  const { amountCents, currency, successUrl } = params;
 
   // Flow espera "amount" en unidades de moneda, no en centavos
   const amount = amountCents / 100;
@@ -71,7 +73,7 @@ export async function createCheckoutSession(params: {
 
   const bodyParams: Record<string, string | number> = {
     apiKey: FLOW_API_KEY,
-    commerceOrder: `order-${Date.now()}`, // puedes cambiarlo luego por un ID propio
+    commerceOrder: `order-${Date.now()}`, // aquí luego puedes guardar un ID real en tu BD
     subject: 'Compra entradas TIKETERA',
     currency, // normalmente "CLP"
     amount,
@@ -80,11 +82,6 @@ export async function createCheckoutSession(params: {
     urlConfirmation,
     urlReturn: successUrl, // el usuario vuelve a tu frontend
   };
-
-  // 👇 aquí mandamos TODO lo que viene del frontend
-  if (metadata && Object.keys(metadata).length > 0) {
-    bodyParams.optional = JSON.stringify(metadata);
-  }
 
   const s = signFlowParams(bodyParams);
   const form = new URLSearchParams();
@@ -102,7 +99,7 @@ export async function createCheckoutSession(params: {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-      },
+      }
     );
 
     const data = resp.data as {
@@ -114,8 +111,16 @@ export async function createCheckoutSession(params: {
     const checkoutUrl = `${data.url}?token=${data.token}`;
     return checkoutUrl;
   } catch (err: any) {
-    console.error('Error creando pago en Flow:', err?.response?.data ?? err);
-    throw new AppError(500, 'No se pudo crear la sesión de pago en Flow.');
+    const flowErrorData = err?.response?.data ?? err?.message ?? String(err);
+
+    console.error('Error creando pago en Flow:', flowErrorData);
+
+    // 🔥 ahora mandamos el detalle hacia afuera
+    throw new AppError(
+      500,
+      'No se pudo crear la sesión de pago en Flow.',
+      flowErrorData
+    );
   }
 }
 
@@ -146,28 +151,25 @@ export async function getPaymentStatus(token: string) {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-      },
+      }
     );
 
     // Typing mínimo para lo que nos interesa
     const data = resp.data as {
       status: number;
-      optional?: unknown;
-      flowOrder?: number;
-      commerceOrder?: string;
-      amount?: number;
-      // puedes añadir más campos según la doc de Flow
+      // aquí puedes agregar más campos según la doc de Flow:
+      // commerceOrder, amount, payer, etc.
     };
 
     return data;
   } catch (err: any) {
     console.error(
       'Error consultando estado de pago en Flow:',
-      err?.response?.data ?? err,
+      err?.response?.data ?? err
     );
     throw new AppError(
       500,
-      'No se pudo obtener el estado del pago en Flow.',
+      'No se pudo obtener el estado del pago en Flow.'
     );
   }
 }
