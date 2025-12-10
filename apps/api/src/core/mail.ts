@@ -18,10 +18,20 @@ function getTransporter(): Transporter {
     return transporter;
   }
 
+  const smtpPort = Number(env.SMTP_PORT) || 587;
+  const smtpSecure = false; // para puerto 587 (STARTTLS), secure debe ser false
+
+  console.log('[mail] Creando transporter SMTP real:', {
+    host: env.SMTP_HOST,
+    port: smtpPort,
+    secure: smtpSecure,
+    hasUser: !!env.SMTP_USER,
+  });
+
   transporter = nodemailer.createTransport({
     host: env.SMTP_HOST,
-    port: Number(env.SMTP_PORT) || 587,
-    secure: false,
+    port: smtpPort,
+    secure: smtpSecure,
     auth:
       env.SMTP_USER && env.SMTP_PASS
         ? {
@@ -51,13 +61,26 @@ export async function sendMail(opts: {
     return;
   }
 
-  await t.sendMail({
+  console.log('[mail] Enviando correo...', {
     from,
     to: opts.to,
     subject: opts.subject,
-    html: opts.html,
-    text: opts.text,
   });
+
+  try {
+    const info = await t.sendMail({
+      from,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+      text: opts.text,
+    });
+
+    console.log('[mail] Correo enviado OK. Respuesta transporter:', info);
+  } catch (err) {
+    console.error('[mail] Error enviando correo con nodemailer:', err);
+    throw err;
+  }
 }
 
 /**
@@ -73,6 +96,13 @@ export async function sendOrderTicketsEmail(params: {
   tickets: { code: string }[];
 }) {
   const { to, buyerName, eventTitle, eventDate, eventVenue, tickets } = params;
+
+  console.log('[mail] Preparando correo de tickets', {
+    to,
+    buyerName,
+    eventTitle,
+    ticketsCount: tickets.length,
+  });
 
   const subject = `Tus tickets para ${eventTitle}`;
 
