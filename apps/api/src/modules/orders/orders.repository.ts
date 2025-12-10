@@ -54,8 +54,20 @@ export async function createOrderWithTickets(params: {
     attendeeName: string;
     attendeeEmail: string;
   }[];
+  status?: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED';
+  flowToken?: string | null;
+  flowOrder?: number | null;
 }) {
-  const { userId, eventId, currency, totalAmountCents, tickets } = params;
+  const {
+    userId,
+    eventId,
+    currency,
+    totalAmountCents,
+    tickets,
+    status,
+    flowToken,
+    flowOrder,
+  } = params;
 
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.create({
@@ -64,8 +76,10 @@ export async function createOrderWithTickets(params: {
         eventId,
         currency,
         totalAmountCents,
-        status: 'PAID' // MVP: asumimos pago OK
-      }
+        status: status ?? 'PAID', // por defecto igual que antes
+        flowToken: flowToken ?? null,
+        flowOrder: flowOrder ?? null,
+      },
     });
 
     const ticketsData = tickets.map((t) => ({
@@ -74,11 +88,11 @@ export async function createOrderWithTickets(params: {
       eventId,
       attendeeName: t.attendeeName,
       attendeeEmail: t.attendeeEmail,
-      code: randomUUID()
+      code: randomUUID(),
     }));
 
     await tx.ticket.createMany({
-      data: ticketsData
+      data: ticketsData,
     });
 
     const fullOrder = await tx.order.findUnique({
@@ -87,15 +101,16 @@ export async function createOrderWithTickets(params: {
         event: true,
         tickets: {
           include: {
-            ticketType: true
-          }
-        }
-      }
+            ticketType: true,
+          },
+        },
+      },
     });
 
     return fullOrder;
   });
 }
+
 
 export async function findTicketsForUser(userId: string) {
   return prisma.ticket.findMany({
@@ -177,4 +192,10 @@ export async function findTicketsByBuyerEmail(email: string) {
       : null,
     createdAt: t.createdAt,
   }));
+}
+
+export async function findOrderByFlowToken(flowToken: string) {
+  return prisma.order.findUnique({
+    where: { flowToken },
+  });
 }

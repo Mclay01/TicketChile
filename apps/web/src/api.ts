@@ -399,6 +399,7 @@ export interface CreateCheckoutSessionInput {
     eventId?: string;
     ticketTypeId?: string;
     quantity?: string;
+    buyerUserId?: string; // 👈 agregado para el PRIVATE con login
   };
 }
 
@@ -420,4 +421,3 @@ export async function createCheckoutSession(
   const data = await handleJsonResponse<CreateCheckoutSessionResponse>(res);
   return data.checkoutUrl;
 }
-

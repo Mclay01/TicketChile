@@ -12,8 +12,6 @@ import {
   API_BASE_URL,
   createCheckoutSession,
   deleteEventApi,
-  createOrder,
-  createPublicOrder,
 } from './api';
 import { NativeQrScanner } from './NativeQrScanner';
 
@@ -23,11 +21,8 @@ type CheckInStatus = 'OK' | 'ALREADY_USED' | 'NOT_FOUND' | 'INVALID';
 type View = 'events' | 'login' | 'myTickets' | 'checkin' | 'organizer';
 type UserRole = 'ADMIN' | 'ORGANIZER' | 'CUSTOMER';
 
-type PendingOrder = {
-  eventId: string;
-  ticketTypeId: string;
-  quantity: number;
-} | null;
+type PaymentStatus = 'idle' | 'success' | 'cancel' | 'error';
+
 
 function formatDateTime(iso: string) {
   const date = new Date(iso);
@@ -73,8 +68,8 @@ const FRONTEND_BASE_URL =
 
 function LoginForm(props: { onSuccess: (token: string) => void }) {
   const { onSuccess } = props;
-  const [email, setEmail] = useState('juan@example.com');
-  const [password, setPassword] = useState('superseguro123');
+  const [email, setEmail] = useState('');       // 👈 antes: 'juan@example.com'
+  const [password, setPassword] = useState(''); // 👈 antes: 'superseguro123'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,7 +97,7 @@ function LoginForm(props: { onSuccess: (token: string) => void }) {
       }}
     >
       <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px' }}>
-        Iniciar sesión
+        Iniciar sesión organizador
       </h2>
 
       <form
@@ -115,6 +110,7 @@ function LoginForm(props: { onSuccess: (token: string) => void }) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            placeholder="organizador@tudominio.cl"
             style={{
               width: '100%',
               marginTop: '4px',
@@ -133,6 +129,7 @@ function LoginForm(props: { onSuccess: (token: string) => void }) {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
             style={{
               width: '100%',
               marginTop: '4px',
@@ -169,6 +166,7 @@ function LoginForm(props: { onSuccess: (token: string) => void }) {
     </section>
   );
 }
+
 
 /* ==================== MIS TICKETS (CON QR) ==================== */
 
@@ -353,9 +351,10 @@ interface EventCardProps {
   event: Event;
   isLoggedIn: boolean;
   token: string | null;
+  userId: string | null; // 👈 nuevo prop
 }
 
-function EventCard({ event, isLoggedIn, token }: EventCardProps) {
+function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
   const [ticketTypeId, setTicketTypeId] = useState(
     event.ticketTypes[0]?.id ?? '',
   );
@@ -405,7 +404,7 @@ function EventCard({ event, isLoggedIn, token }: EventCardProps) {
       try {
         setLoading(true);
 
-        // Guardamos info por si queremos leerla después del pago
+        // Guardamos info solo para UX después del pago
         localStorage.setItem(
           'tiketera_pending_payment',
           JSON.stringify({
@@ -450,9 +449,18 @@ function EventCard({ event, isLoggedIn, token }: EventCardProps) {
     }
 
     // 🔵 COMPRA CON LOGIN (usuario autenticado)
+    if (!userId) {
+      // seguridad extra + TS feliz
+      setError(
+        'No se pudo identificar tu sesión. Vuelve a iniciar sesión e intenta de nuevo.',
+      );
+      return;
+    }
+
     try {
       setLoading(true);
 
+      // Solo para decidir qué mensaje mostrar al volver de Flow
       localStorage.setItem(
         'tiketera_pending_payment',
         JSON.stringify({
@@ -473,6 +481,8 @@ function EventCard({ event, isLoggedIn, token }: EventCardProps) {
           eventId: event.id,
           ticketTypeId,
           quantity: String(quantity),
+          // 👇 aquí ya es string, no null
+          buyerUserId: userId,
         },
       });
 
@@ -667,6 +677,7 @@ function EventCard({ event, isLoggedIn, token }: EventCardProps) {
     </article>
   );
 }
+
 
 
 /* ==================== CHECK-IN ==================== */
@@ -1861,6 +1872,9 @@ function App() {
 
   const [view, setView] = useState<View>('events');
 
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
+  const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
+
   const [token, setToken] = useState<string | null>(() =>
     typeof window === 'undefined'
       ? null
@@ -1881,8 +1895,6 @@ function App() {
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketsError, setTicketsError] = useState<string | null>(null);
   const [firstTicketsLoad, setFirstTicketsLoad] = useState(true);
-
-  const [pendingOrder, setPendingOrder] = useState<PendingOrder>(null);
 
   const isLoggedIn = !!token;
 
@@ -1961,74 +1973,69 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, token]);
 
+  // Nuevo efecto: solo muestra mensajes según ?payment=
+  // y NO crea órdenes en el frontend.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') return;
 
-    const params = new URLSearchParams(window.location.search);
-    const paymentStatus = params.get('payment');
+  const params = new URLSearchParams(window.location.search);
+  const payment = params.get('payment');
 
-    if (!paymentStatus || paymentStatus !== 'success') {
-      return;
-    }
+  if (!payment) return;
 
-    const raw = localStorage.getItem('tiketera_pending_payment');
-    if (!raw) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
+  // ❌ Cancelado en Flow
+  if (payment === 'cancel') {
+    setPaymentStatus('cancel');
+    setPaymentMessage('El pago fue cancelado o no se completó.');
 
-    let pending: any;
+    localStorage.removeItem('tiketera_pending_payment');
+    params.delete('payment');
+    const newUrl =
+      window.location.pathname +
+      (params.toString() ? `?${params.toString()}` : '');
+    window.history.replaceState({}, document.title, newUrl);
+    return;
+  }
+
+  if (payment !== 'success') return;
+
+  // Solo lo usamos para decidir qué mensaje / vista mostrar
+  let pendingMode: 'PRIVATE' | 'PUBLIC' | undefined;
+
+  const raw = localStorage.getItem('tiketera_pending_payment');
+  if (raw) {
     try {
-      pending = JSON.parse(raw);
-    } catch {
-      localStorage.removeItem('tiketera_pending_payment');
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
-
-    (async () => {
-      try {
-        if (pending.mode === 'PRIVATE') {
-          if (!token) {
-            setView('login');
-            return;
-          }
-
-          await createOrder(token, {
-            eventId: pending.eventId,
-            items: [
-              {
-                ticketTypeId: pending.ticketTypeId,
-                quantity: pending.quantity,
-              },
-            ],
-          });
-
-          setView('myTickets');
-        } else if (pending.mode === 'PUBLIC') {
-          await createPublicOrder({
-            eventId: pending.eventId,
-            buyerName: pending.buyerName,
-            buyerEmail: pending.buyerEmail,
-            items: [
-              {
-                ticketTypeId: pending.ticketTypeId,
-                quantity: pending.quantity,
-              },
-            ],
-          });
-
-          setView('events');
-        }
-      } catch (err) {
-        console.error('Error creando orden post-pago', err);
-        setView('events');
-      } finally {
-        localStorage.removeItem('tiketera_pending_payment');
-        window.history.replaceState({}, document.title, window.location.pathname);
+      const parsed = JSON.parse(raw);
+      if (parsed && (parsed.mode === 'PRIVATE' || parsed.mode === 'PUBLIC')) {
+        pendingMode = parsed.mode;
       }
-    })();
-  }, [token]);
+    } catch {
+      // da lo mismo, solo es para UX
+    }
+  }
+
+  if (pendingMode === 'PRIVATE') {
+    setPaymentStatus('success');
+    setPaymentMessage(
+      'Pago procesado correctamente. Tus tickets ya están disponibles en "Mis tickets".',
+    );
+    setView(isLoggedIn ? 'myTickets' : 'login');
+  } else {
+    // Público o sin info: asumimos compra pública
+    setPaymentStatus('success');
+    setPaymentMessage(
+      'Pago procesado correctamente. Te enviamos los tickets por correo.',
+    );
+    setView('events');
+  }
+
+  localStorage.removeItem('tiketera_pending_payment');
+  params.delete('payment');
+  const newUrl =
+    window.location.pathname +
+    (params.toString() ? `?${params.toString()}` : '');
+  window.history.replaceState({}, document.title, newUrl);
+}, [isLoggedIn]);
 
   function handleLoginSuccess(newToken: string) {
     if (typeof window !== 'undefined') {
@@ -2038,30 +2045,7 @@ function App() {
     setRole(getRoleFromToken(newToken));
     setUserId(getUserIdFromToken(newToken));
 
-    if (pendingOrder) {
-      const orderToCreate = pendingOrder;
-      setPendingOrder(null);
-
-      (async () => {
-        try {
-          await createOrder(newToken, {
-            eventId: orderToCreate.eventId,
-            items: [
-              {
-                ticketTypeId: orderToCreate.ticketTypeId,
-                quantity: orderToCreate.quantity,
-              },
-            ],
-          });
-          setView('myTickets');
-        } catch (err) {
-          console.error(err);
-          setView('events');
-        }
-      })();
-    } else {
-      setView('myTickets');
-    }
+    setView('myTickets');
   }
 
   function handleLogout() {
@@ -2072,7 +2056,6 @@ function App() {
     setRole(null);
     setUserId(null);
     setTickets([]);
-    setPendingOrder(null);
     setView('events');
   }
 
@@ -2232,6 +2215,32 @@ function App() {
           margin: '0 auto',
         }}
       >
+        {paymentStatus !== 'idle' && paymentMessage && (
+          <div
+            style={{
+              marginBottom: '12px',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              fontSize: '14px',
+              border: '1px solid',
+              background:
+                paymentStatus === 'success'
+                  ? '#022c22'
+                  : paymentStatus === 'cancel'
+                  ? '#451a1a'
+                  : '#3f1f1f',
+              borderColor:
+                paymentStatus === 'success'
+                  ? '#16a34a'
+                  : paymentStatus === 'cancel'
+                  ? '#f97316'
+                  : '#f87171',
+              color: '#e5e7eb',
+            }}
+          >
+            {paymentMessage}
+          </div>
+        )}
         {view === 'events' && (
           <section>
             <h1
@@ -2268,6 +2277,7 @@ function App() {
                     event={event}
                     isLoggedIn={isLoggedIn}
                     token={token}
+                    userId={userId}
                   />
                 ))}
             </div>
@@ -2313,3 +2323,4 @@ function App() {
 }
 
 export default App;
+
