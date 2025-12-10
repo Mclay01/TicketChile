@@ -48,40 +48,46 @@ export async function flowConfirmationHandler(
   const token = body.token as string | undefined;
   const s = body.s as string | undefined;
 
-  console.log('[Flow] Confirmación recibida. body =', body);
+  console.log('[Flow] Webhook recibido. body =', body);
 
-  if (!token || !s) {
-    console.warn('[Flow] Webhook sin token o firma. body =', body);
-    // Para que Flow no re-intente eternamente, devolvemos 200 igualmente.
-    return res.status(200).send('OK');
-  }
+  // 👇 IMPORTANTÍSIMO: SIEMPRE respondemos 200 a Flow LO MÁS RÁPIDO POSIBLE
+  res.status(200).send('OK');
 
-  // 1) Validar firma con TODO el payload (no solo token)
-  try {
-    const isValid = paymentsService.verifyFlowSignature(body, s);
-    if (!isValid) {
-      console.warn('[Flow] Firma inválida en webhook (MVP: continuamos igual)', {
-        body,
-        s,
-      });
-      // En este MVP **no** cortamos el flujo; solo lo logueamos.
-    }
-  } catch (e) {
-    console.error('[Flow] Error verificando firma de webhook:', e);
-    // Igual seguimos; preferimos no perder pagos reales.
-  }
+  // Y ahora hacemos todo lo demás en segundo plano
+  (async () => {
+    try {
+      if (!token || !s) {
+        console.warn('[Flow] Webhook sin token o firma (async). body =', body);
+        return;
+      }
 
-  try {
-    // 2) Preguntar a Flow el estado del pago
-    const payment = await paymentsService.getPaymentStatus(token);
+      // 1) Intentar validar firma, pero NO detenemos el flujo si falla
+      try {
+        const isValid = paymentsService.verifyFlowSignature(body, s);
+        if (!isValid) {
+          console.warn(
+            '[Flow] Firma inválida en webhook (no se detiene, solo se loguea).',
+            { body, s }
+          );
+        }
+      } catch (e) {
+        console.error('[Flow] Error verificando firma del webhook:', e);
+      }
 
-    console.log('[Flow] Estado del pago desde getPaymentStatus:', payment);
+      // 2) Preguntar a Flow el estado del pago
+      const payment = await paymentsService.getPaymentStatus(token);
 
-    // Flow suele usar status:
-    // 0 = pendiente, 1 = rechazado, 2 = pagado, 3 = anulado
-    if (payment.status === 2) {
-      console.log('[Flow] Pago pagado. Procesando creación de orden...');
+      console.log('[Flow] Estado del pago (async):', payment);
 
+      // 0 = pendiente, 1 = rechazado, 2 = pagado, 3 = anulado
+      if (payment.status !== 2) {
+        console.log('[Flow] Pago no pagado. status =', payment.status);
+        return;
+      }
+
+      console.log('[Flow] Pago pagado. Procesando creación de orden (async)...');
+
+      // 3) Leer metadata desde payment.optional
       let meta: any = null;
       if (payment.optional) {
         try {
@@ -98,90 +104,90 @@ export async function flowConfirmationHandler(
         console.warn(
           '[Flow] Pago sin metadata (optional). No se puede crear la orden.'
         );
-      } else {
-        const mode = meta.mode as 'PUBLIC' | 'PRIVATE' | undefined;
-        const eventId = meta.eventId as string | undefined;
-        const ticketTypeId = meta.ticketTypeId as string | undefined;
-        const quantity = Number(meta.quantity ?? 1);
-        const buyerEmail = meta.buyerEmail as string | undefined;
-        const buyerName = (meta.buyerName as string | undefined) ?? '';
-        const buyerUserId = meta.buyerUserId as string | undefined;
+        return;
+      }
 
-        console.log('[Flow] Metadata recibida en webhook:', meta);
+      console.log('[Flow] Metadata recibida en webhook (async):', meta);
 
-        if (!eventId || !ticketTypeId || !quantity || quantity <= 0) {
+      const mode = meta.mode as 'PUBLIC' | 'PRIVATE' | undefined;
+      const eventId = meta.eventId as string | undefined;
+      const ticketTypeId = meta.ticketTypeId as string | undefined;
+      const quantity = Number(meta.quantity ?? 1);
+      const buyerEmail = meta.buyerEmail as string | undefined;
+      const buyerName = (meta.buyerName as string | undefined) ?? '';
+      const buyerUserId = meta.buyerUserId as string | undefined;
+
+      if (!eventId || !ticketTypeId || !quantity || quantity <= 0) {
+        console.error(
+          '[Flow] Metadata incompleta. No se crea la orden.',
+          meta
+        );
+        return;
+      }
+
+      if (mode === 'PRIVATE' && buyerUserId) {
+        // 💳 Compra con usuario logueado
+        console.log(
+          '[Flow] Creando orden PRIVADA para userId:',
+          buyerUserId
+        );
+
+        try {
+          await ordersService.createOrder(buyerUserId, {
+            eventId,
+            items: [
+              {
+                ticketTypeId,
+                quantity,
+              },
+            ],
+          });
+          console.log('[Flow] Orden privada creada OK (async)');
+        } catch (e) {
           console.error(
-            '[Flow] Metadata incompleta. No se crea la orden.',
+            '[Flow] Error creando orden privada desde webhook (async):',
+            e
+          );
+        }
+      } else {
+        // 💳 Compra pública (sin login)
+        if (!buyerEmail) {
+          console.error(
+            '[Flow] Falta buyerEmail en compra pública. Metadata:',
             meta
           );
-        } else if (mode === 'PRIVATE' && buyerUserId) {
-          // Compra con usuario logueado
-          console.log(
-            '[Flow] Creando orden PRIVADA para userId:',
-            buyerUserId
+          return;
+        }
+
+        console.log(
+          '[Flow] Creando orden PÚBLICA para email:',
+          buyerEmail
+        );
+
+        try {
+          await ordersService.publicCreateOrderService({
+            eventId,
+            buyerName,
+            buyerEmail,
+            items: [
+              {
+                ticketTypeId,
+                quantity,
+              },
+            ],
+          });
+          console.log('[Flow] Orden pública creada OK (async)');
+        } catch (e) {
+          console.error(
+            '[Flow] Error creando orden pública desde webhook (async):',
+            e
           );
-
-          try {
-            await ordersService.createOrder(buyerUserId, {
-              eventId,
-              items: [
-                {
-                  ticketTypeId,
-                  quantity,
-                },
-              ],
-            });
-            console.log('[Flow] Orden privada creada OK');
-          } catch (e) {
-            console.error(
-              '[Flow] Error creando orden privada desde webhook:',
-              e
-            );
-          }
-        } else {
-          // Compra pública (sin login)
-          if (!buyerEmail) {
-            console.error(
-              '[Flow] Falta buyerEmail en compra pública. Metadata:',
-              meta
-            );
-          } else {
-            console.log(
-              '[Flow] Creando orden PÚBLICA para email:',
-              buyerEmail
-            );
-
-            try {
-              await ordersService.publicCreateOrderService({
-                eventId,
-                buyerName,
-                buyerEmail,
-                items: [
-                  {
-                    ticketTypeId,
-                    quantity,
-                  },
-                ],
-              });
-              console.log('[Flow] Orden pública creada OK');
-            } catch (e) {
-              console.error(
-                '[Flow] Error creando orden pública desde webhook:',
-                e
-              );
-            }
-          }
         }
       }
-    } else {
-      console.log('[Flow] Pago no pagado. status =', payment.status);
+    } catch (err) {
+      console.error('[Flow] Error general en job async del webhook:', err);
     }
-
-    // Flow sólo necesita 200 para dar por recibido el webhook
-    return res.status(200).send('OK');
-  } catch (err) {
-    console.error('[Flow] Error procesando webhook (getPaymentStatus o lógica interna):', err);
-    // Aun así devolvemos 200 para que Flow no reintente indefinidamente
-    return res.status(200).send('OK');
-  }
+  })().catch((err) => {
+    console.error('[Flow] Error inesperado fuera del job async:', err);
+  });
 }
