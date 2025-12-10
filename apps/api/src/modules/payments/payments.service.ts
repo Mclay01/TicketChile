@@ -64,7 +64,7 @@ export async function createCheckoutSession(params: {
     );
   }
 
-  const { amountCents, currency, successUrl } = params;
+  const { amountCents, currency, successUrl, metadata } = params;
 
   // Flow espera "amount" en unidades de moneda, no en centavos
   const amount = amountCents / 100;
@@ -73,7 +73,7 @@ export async function createCheckoutSession(params: {
 
   const bodyParams: Record<string, string | number> = {
     apiKey: FLOW_API_KEY,
-    commerceOrder: `order-${Date.now()}`, // aquí luego puedes guardar un ID real en tu BD
+    commerceOrder: `order-${Date.now()}`, // puedes mejorar esto luego si quieres
     subject: 'Compra entradas TIKETERA',
     currency, // normalmente "CLP"
     amount,
@@ -82,6 +82,11 @@ export async function createCheckoutSession(params: {
     urlConfirmation,
     urlReturn: successUrl, // el usuario vuelve a tu frontend
   };
+
+  // 👇 Aquí mandamos los datos del ticket a Flow
+  if (metadata && Object.keys(metadata).length > 0) {
+    bodyParams.optional = JSON.stringify(metadata);
+  }
 
   const s = signFlowParams(bodyParams);
   const form = new URLSearchParams();
@@ -111,16 +116,8 @@ export async function createCheckoutSession(params: {
     const checkoutUrl = `${data.url}?token=${data.token}`;
     return checkoutUrl;
   } catch (err: any) {
-    const flowErrorData = err?.response?.data ?? err?.message ?? String(err);
-
-    console.error('Error creando pago en Flow:', flowErrorData);
-
-    // 🔥 ahora mandamos el detalle hacia afuera
-    throw new AppError(
-      500,
-      'No se pudo crear la sesión de pago en Flow.',
-      flowErrorData
-    );
+    console.error('Error creando pago en Flow:', err?.response?.data ?? err);
+    throw new AppError(500, 'No se pudo crear la sesión de pago en Flow.');
   }
 }
 
@@ -154,11 +151,11 @@ export async function getPaymentStatus(token: string) {
       }
     );
 
-    // Typing mínimo para lo que nos interesa
+    // 👇 Incluimos optional para leer los datos que mandamos antes
     const data = resp.data as {
       status: number;
-      // aquí puedes agregar más campos según la doc de Flow:
-      // commerceOrder, amount, payer, etc.
+      optional?: string;
+      // aquí podrías agregar más campos según la doc de Flow
     };
 
     return data;
@@ -167,9 +164,6 @@ export async function getPaymentStatus(token: string) {
       'Error consultando estado de pago en Flow:',
       err?.response?.data ?? err
     );
-    throw new AppError(
-      500,
-      'No se pudo obtener el estado del pago en Flow.'
-    );
+    throw new AppError(500, 'No se pudo obtener el estado del pago en Flow.');
   }
 }

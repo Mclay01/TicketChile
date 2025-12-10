@@ -3,20 +3,10 @@ import type { Request, Response, NextFunction } from 'express';
 import * as paymentsService from './payments.service';
 import * as ordersService from '../orders/orders.service';
 
-type FlowOptionalMetadata = {
-  mode?: 'PRIVATE' | 'PUBLIC';
-  eventId?: string;
-  ticketTypeId?: string;
-  quantity?: string | number;
-  buyerUserId?: string; // para compras con login
-  buyerName?: string;   // para compras públicas
-  buyerEmail?: string;  // para compras públicas
-};
-
 export async function createCheckoutSessionHandler(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const {
@@ -52,7 +42,7 @@ export async function createCheckoutSessionHandler(
 export async function flowConfirmationHandler(
   req: Request,
   res: Response,
-  _next: NextFunction,
+  _next: NextFunction
 ) {
   const token = req.body?.token as string | undefined;
   const s = req.body?.s as string | undefined;
@@ -73,110 +63,90 @@ export async function flowConfirmationHandler(
 
   try {
     // 2) Preguntar a Flow el estado del pago
-    const payment: any = await paymentsService.getPaymentStatus(token);
+    const payment = await paymentsService.getPaymentStatus(token);
 
     console.log('[Flow] Estado del pago:', payment);
 
     // Flow suele usar status:
     // 0 = pendiente, 1 = rechazado, 2 = pagado, 3 = anulado
-    if (payment.status !== 2) {
-      console.log('[Flow] Pago no pagado. status =', payment.status);
-      // igual devolvemos 200 para que Flow deje de spamear
-      return res.status(200).send('OK');
-    }
+    if (payment.status === 2) {
+      console.log('[Flow] Pago pagado. Procesando creación de orden...');
 
-    // 3) Intentar leer la metadata que mandamos en "optional"
-    let meta: FlowOptionalMetadata | null = null;
-
-    if (payment.optional != null) {
-      if (typeof payment.optional === 'string') {
+      let meta: any = null;
+      if (payment.optional) {
         try {
-          meta = JSON.parse(payment.optional) as FlowOptionalMetadata;
-        } catch (err) {
+          meta = JSON.parse(payment.optional);
+        } catch (e) {
           console.error(
-            '[Flow] No se pudo parsear optional como JSON:',
-            payment.optional,
+            '[Flow] No se pudo parsear payment.optional:',
+            payment.optional
           );
         }
-      } else if (typeof payment.optional === 'object') {
-        meta = payment.optional as FlowOptionalMetadata;
       }
-    }
 
-    if (!meta) {
-      console.error(
-        '[Flow] Sin metadata optional. No sabemos qué evento/tickets crear.',
-      );
-      return res.status(200).send('OK');
-    }
-
-    const { mode, eventId, ticketTypeId } = meta;
-    const quantityNum = Number(meta.quantity ?? 1);
-
-    if (
-      !eventId ||
-      !ticketTypeId ||
-      !Number.isFinite(quantityNum) ||
-      quantityNum <= 0
-    ) {
-      console.error('[Flow] Metadata incompleta o inválida:', meta);
-      return res.status(200).send('OK');
-    }
-
-    if (mode === 'PRIVATE') {
-      if (!meta.buyerUserId) {
-        console.error(
-          '[Flow] Falta buyerUserId en metadata para compra PRIVATE:',
-          meta,
+      if (!meta) {
+        console.warn(
+          '[Flow] Pago sin metadata (optional). No se puede crear la orden.'
         );
-        return res.status(200).send('OK');
+      } else {
+        const mode = meta.mode as 'PUBLIC' | 'PRIVATE' | undefined;
+        const eventId = meta.eventId as string | undefined;
+        const ticketTypeId = meta.ticketTypeId as string | undefined;
+        const quantity = Number(meta.quantity ?? 1);
+        const buyerEmail = meta.buyerEmail as string | undefined;
+        const buyerName = (meta.buyerName as string | undefined) ?? '';
+        const buyerUserId = meta.buyerUserId as string | undefined;
+
+        if (!eventId || !ticketTypeId || !quantity || quantity <= 0) {
+          console.error(
+            '[Flow] Metadata incompleta. No se crea la orden.',
+            meta
+          );
+        } else if (mode === 'PRIVATE' && buyerUserId) {
+          // Compra con usuario logueado
+          console.log(
+            '[Flow] Creando orden privada para userId:',
+            buyerUserId
+          );
+
+          await ordersService.createOrder(buyerUserId, {
+            eventId,
+            items: [
+              {
+                ticketTypeId,
+                quantity,
+              },
+            ],
+          });
+        } else {
+          // Compra pública (sin login)
+          if (!buyerEmail) {
+            console.error(
+              '[Flow] Falta buyerEmail en compra pública. Metadata:',
+              meta
+            );
+          } else {
+            console.log(
+              '[Flow] Creando orden pública para email:',
+              buyerEmail
+            );
+
+            await ordersService.publicCreateOrderService({
+              eventId,
+              buyerName,
+              buyerEmail,
+              items: [
+                {
+                  ticketTypeId,
+                  quantity,
+                },
+              ],
+            });
+          }
+        }
       }
-
-      console.log('[Flow] Creando orden (PRIVATE) desde webhook...', {
-        userId: meta.buyerUserId,
-        eventId,
-        ticketTypeId,
-        quantity: quantityNum,
-      });
-
-      await ordersService.createOrder(meta.buyerUserId, {
-        eventId,
-        items: [
-          {
-            ticketTypeId,
-            quantity: quantityNum,
-          },
-        ],
-      });
-    } else if (mode === 'PUBLIC') {
-      if (!meta.buyerEmail) {
-        console.error(
-          '[Flow] Falta buyerEmail en metadata para compra PUBLIC:',
-          meta,
-        );
-        return res.status(200).send('OK');
-      }
-
-      console.log('[Flow] Creando orden (PUBLIC) desde webhook...', {
-        eventId,
-        ticketTypeId,
-        quantity: quantityNum,
-        buyerEmail: meta.buyerEmail,
-      });
-
-      await ordersService.publicCreateOrderService({
-        eventId,
-        buyerName: meta.buyerName ?? '',
-        buyerEmail: meta.buyerEmail,
-        items: [
-          {
-            ticketTypeId,
-            quantity: quantityNum,
-          },
-        ],
-      });
     } else {
-      console.error('[Flow] mode inválido en metadata:', meta);
+      console.log('[Flow] Pago no pagado. status =', payment.status);
     }
 
     // Flow sólo necesita 200 para dar por recibido el webhook
