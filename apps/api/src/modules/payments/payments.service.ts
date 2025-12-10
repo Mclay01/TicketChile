@@ -9,7 +9,7 @@ const FLOW_SECRET_KEY = process.env.FLOW_SECRET_KEY;
 const FLOW_BASE_URL = process.env.FLOW_BASE_URL || 'https://www.flow.cl';
 
 const PUBLIC_API_BASE_URL =
-  process.env.PUBLIC_API_BASE_URL || 'http://localhost:4000/api';
+  process.env.PUBLIC_API_BASE_URL || 'https://ticket-chile-api.onrender.com/api';
 
 const FLOW_DEFAULT_EMAIL =
   process.env.FLOW_DEFAULT_EMAIL ||
