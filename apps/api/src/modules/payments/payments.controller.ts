@@ -59,12 +59,15 @@ export async function flowConfirmationHandler(
 
   // Si Flow no te manda firma, seguimos igual (no paramos el flujo).
   if (!s) {
-    console.warn('[Flow] Webhook sin firma (s). Continuando sin verificar firma. token =', token);
+    console.warn(
+      '[Flow] Webhook sin firma (s). Continuando sin verificar firma. token =',
+      token
+    );
   } else {
     const isValid = paymentsService.verifyFlowSignature({ token }, s);
     if (!isValid) {
       console.warn('[Flow] Firma inválida en webhook', { token, s });
-      // si quieres puedes devolver 400 aquí, pero para pruebas yo seguiría
+      // Para producción podrías cortar aquí con 400, pero para pruebas seguimos.
     }
   }
 
@@ -76,17 +79,31 @@ export async function flowConfirmationHandler(
       console.log('[Flow] Pago pagado. Procesando creación de orden...');
 
       let meta: any = null;
-      if (payment.optional) {
-        try {
-          meta = JSON.parse(payment.optional);
-        } catch (e) {
-          console.error('[Flow] No se pudo parsear payment.optional:', payment.optional);
+
+      // 👇 AHORA soportamos optional como string o como objeto
+      if ((payment as any).optional) {
+        const opt = (payment as any).optional;
+        if (typeof opt === 'string') {
+          try {
+            meta = JSON.parse(opt);
+          } catch (e) {
+            console.error(
+              '[Flow] No se pudo parsear payment.optional (string):',
+              opt
+            );
+          }
+        } else if (typeof opt === 'object') {
+          meta = opt;
         }
       }
 
       if (!meta) {
-        console.warn('[Flow] Pago sin metadata (optional). No se puede crear la orden.');
+        console.warn(
+          '[Flow] Pago sin metadata (optional). No se puede crear la orden.'
+        );
       } else {
+        console.log('[Flow] Metadata usada para crear orden:', meta);
+
         const mode = meta.mode as 'PUBLIC' | 'PRIVATE' | undefined;
         const eventId = meta.eventId as string | undefined;
         const ticketTypeId = meta.ticketTypeId as string | undefined;
@@ -105,7 +122,10 @@ export async function flowConfirmationHandler(
           });
         } else {
           if (!buyerEmail) {
-            console.error('[Flow] Falta buyerEmail en compra pública. Metadata:', meta);
+            console.error(
+              '[Flow] Falta buyerEmail en compra pública. Metadata:',
+              meta
+            );
           } else {
             console.log('[Flow] Creando orden PÚBLICA para email:', buyerEmail);
             await ordersService.publicCreateOrderService({
@@ -127,4 +147,3 @@ export async function flowConfirmationHandler(
     return res.status(500).send('Internal error');
   }
 }
-
