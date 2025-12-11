@@ -2215,59 +2215,67 @@ function App() {
 
     if (!payment) return;
 
-    // ❌ Cancelado en Flow → mostramos aviso y limpiamos
+    const pathname = window.location.pathname;
+    const isSuccessPage = pathname === '/compra-exitosa';
+
+    // Cancelado
     if (payment === 'cancel') {
       setPaymentStatus('cancel');
       setPaymentMessage('El pago fue cancelado o no se completó.');
 
+      // aquí sí podemos limpiar siempre
       localStorage.removeItem('tiketera_pending_payment');
+
       params.delete('payment');
       const newUrl =
-        window.location.pathname +
-        (params.toString() ? `?${params.toString()}` : '');
+        pathname + (params.toString() ? `?${params.toString()}` : '');
       window.history.replaceState({}, document.title, newUrl);
       return;
     }
 
-    // Si no es "success", ignoramos
     if (payment !== 'success') return;
 
-    // Por si en algún flujo futuro usamos ?payment=success de nuevo:
-    let pendingMode: 'PRIVATE' | 'PUBLIC' | undefined;
+    // En /compra-exitosa dejamos que la propia página muestre el resumen.
+    if (!isSuccessPage) {
+      let pendingMode: 'PRIVATE' | 'PUBLIC' | undefined;
 
-    const raw = localStorage.getItem('tiketera_pending_payment');
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed && (parsed.mode === 'PRIVATE' || parsed.mode === 'PUBLIC')) {
-          pendingMode = parsed.mode;
+      const raw = localStorage.getItem('tiketera_pending_payment');
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && (parsed.mode === 'PRIVATE' || parsed.mode === 'PUBLIC')) {
+            pendingMode = parsed.mode;
+          }
+        } catch {
+          // nada
         }
-      } catch {
-        // da lo mismo, solo es para UX
       }
+
+      if (pendingMode === 'PRIVATE') {
+        setPaymentStatus('success');
+        setPaymentMessage(
+          'Pago procesado correctamente. Tus tickets ya están disponibles en "Mis tickets".',
+        );
+        setView(isLoggedIn ? 'myTickets' : 'login');
+      } else {
+        setPaymentStatus('success');
+        setPaymentMessage(
+          'Pago procesado correctamente. Te enviamos los tickets por correo.',
+        );
+        setView('events');
+      }
+
+      // solo limpiamos acá si NO es la página de compra-exitosa
+      localStorage.removeItem('tiketera_pending_payment');
     }
 
-    if (pendingMode === 'PRIVATE') {
-      setPaymentStatus('success');
-      setPaymentMessage(
-        'Pago procesado correctamente. Tus tickets ya están disponibles en "Mis tickets".',
-      );
-      setView(isLoggedIn ? 'myTickets' : 'login');
-    } else {
-      setPaymentStatus('success');
-      setPaymentMessage(
-        'Pago procesado correctamente. Te enviamos los tickets por correo.',
-      );
-      setView('events');
-    }
-
-    localStorage.removeItem('tiketera_pending_payment');
+    // en todos los casos quitamos el ?payment= de la URL
     params.delete('payment');
     const newUrl =
-      window.location.pathname +
-      (params.toString() ? `?${params.toString()}` : '');
+      pathname + (params.toString() ? `?${params.toString()}` : '');
     window.history.replaceState({}, document.title, newUrl);
   }, [isLoggedIn]);
+
 
   function handleLoginSuccess(newToken: string) {
     if (typeof window !== 'undefined') {

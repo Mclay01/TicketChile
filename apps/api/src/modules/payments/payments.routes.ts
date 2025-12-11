@@ -1,4 +1,5 @@
 // apps/api/src/modules/payments/payments.routes.ts
+
 import { Router } from 'express';
 import express from 'express';
 import {
@@ -19,9 +20,8 @@ paymentsRouter.post(
   flowConfirmationHandler
 );
 
-// 🔙 NUEVO: retorno del navegador desde Flow (urlReturn)
-paymentsRouter.get('/flow-browser-return', flowBrowserReturnHandler);
-paymentsRouter.post(
+// Retorno del navegador desde Flow (puede ser GET o POST)
+paymentsRouter.all(
   '/flow-browser-return',
   express.urlencoded({ extended: false }),
   flowBrowserReturnHandler

@@ -1,14 +1,11 @@
 // apps/api/src/modules/payments/payments.controller.ts
+
 import type { Request, Response, NextFunction } from 'express';
 import * as paymentsService from './payments.service';
 import * as ordersService from '../orders/orders.service';
 
-// 👇 Base del frontend para redirigir al usuario
 const FRONTEND_BASE_URL =
-  process.env.FRONTEND_BASE_URL ||
-  (process.env.NODE_ENV === 'production'
-    ? 'https://www.ticketchile.com'
-    : 'http://localhost:5173');
+  process.env.FRONTEND_BASE_URL || 'https://www.ticketchile.com';
 
 export async function createCheckoutSessionHandler(
   req: Request,
@@ -45,7 +42,7 @@ export async function createCheckoutSessionHandler(
   }
 }
 
-// 🔔 Endpoint que llama Flow después del pago (webhook servidor-servidor)
+// 🔔 Endpoint que llama Flow después del pago (webhook servidor a servidor)
 export async function flowConfirmationHandler(
   req: Request,
   res: Response,
@@ -155,63 +152,43 @@ export async function flowConfirmationHandler(
   }
 }
 
-/**
- * 🔙 NUEVO: endpoint donde Flow redirige el NAVEGADOR (urlReturn).
- * Desde aquí mandamos al usuario al frontend: /compra-exitosa?token=...&payment=...
- */
+// 🌐 Endpoint al que Flow redirige al USUARIO (navegador)
 export async function flowBrowserReturnHandler(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    // token puede venir por query (GET) o por body (POST con form)
-    const tokenFromQuery =
-      typeof req.query.token === 'string' ? req.query.token : undefined;
-    const tokenFromBody =
-      req.body && typeof (req.body as any).token === 'string'
-        ? (req.body as any).token
-        : undefined;
+    const body = (req as any).body ?? {};
+    const query = (req as any).query ?? {};
 
-    const token = tokenFromQuery ?? tokenFromBody;
+    const token = (body.token || query.token) as string | undefined;
 
-    // status también puede venir en query o body
-    const statusFromQuery =
-      typeof req.query.status === 'string' ? req.query.status : undefined;
-    const statusFromBody =
-      req.body && typeof (req.body as any).status === 'string'
-        ? (req.body as any).status
-        : undefined;
-
-    const rawStatus = statusFromQuery ?? statusFromBody;
-
-    let paymentFlag: 'success' | 'cancel' = 'cancel';
-
-    // En Flow normalmente 2 = pagado
-    if (rawStatus === '2' || rawStatus?.toLowerCase() === 'paid') {
-      paymentFlag = 'success';
+    if (!token) {
+      // Si por alguna razón Flow no manda token, igual mandamos al front
+      const url = `${FRONTEND_BASE_URL}/compra-exitosa?payment=missing_token`;
+      return res.redirect(302, url);
     }
 
-    const params = new URLSearchParams();
-    if (token) {
-      params.set('token', token);
+    // Intentamos leer estado real solo para saber si fue success/cancel
+    let paymentStatus: number | undefined;
+    try {
+      const payment = await paymentsService.getPaymentStatus(token);
+      paymentStatus = payment.status;
+    } catch (e) {
+      console.error(
+        '[Flow] Error en getPaymentStatus en flow-browser-return:',
+        e
+      );
     }
-    params.set('payment', paymentFlag);
 
-    const redirectUrl =
-      FRONTEND_BASE_URL +
-      '/compra-exitosa' +
-      (params.toString() ? `?${params.toString()}` : '');
+    const paymentFlag = paymentStatus === 2 ? 'success' : 'cancel';
 
-    console.log('[Flow] flow-browser-return →', {
-      token,
-      rawStatus,
-      paymentFlag,
-      redirectUrl,
-    });
+    const redirectUrl = `${FRONTEND_BASE_URL}/compra-exitosa?payment=${paymentFlag}&token=${encodeURIComponent(
+      token
+    )}`;
 
-    // 303 fuerza a que el navegador haga un GET en la nueva URL
-    return res.redirect(303, redirectUrl);
+    return res.redirect(302, redirectUrl);
   } catch (err) {
     next(err);
   }

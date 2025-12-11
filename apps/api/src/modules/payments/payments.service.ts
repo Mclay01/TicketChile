@@ -9,7 +9,8 @@ const FLOW_SECRET_KEY = process.env.FLOW_SECRET_KEY;
 const FLOW_BASE_URL = process.env.FLOW_BASE_URL || 'https://www.flow.cl';
 
 const PUBLIC_API_BASE_URL =
-  process.env.PUBLIC_API_BASE_URL || 'https://ticket-chile-api.onrender.com/api';
+  process.env.PUBLIC_API_BASE_URL ||
+  'https://ticket-chile-api.onrender.com/api';
 
 const FLOW_DEFAULT_EMAIL =
   process.env.FLOW_DEFAULT_EMAIL ||
@@ -51,7 +52,7 @@ export function verifyFlowSignature(
 export async function createCheckoutSession(params: {
   amountCents: number;
   currency: string;
-  successUrl: string;
+  successUrl: string; // lo sigue recibiendo pero ya no se usa directo en Flow
   cancelUrl: string;
   metadata: Record<string, string>;
 }) {
@@ -62,12 +63,15 @@ export async function createCheckoutSession(params: {
     );
   }
 
-  const { amountCents, currency, successUrl, metadata } = params;
+  const { amountCents, currency, metadata } = params;
 
   // Flow espera "amount" en unidades de moneda, no en centavos
   const amount = amountCents / 100;
 
   const urlConfirmation = `${PUBLIC_API_BASE_URL}/payments/flow-confirmation`;
+
+  // 👉 AHORA Flow vuelve al API, NO directo al frontend
+  const urlReturn = `${PUBLIC_API_BASE_URL}/payments/flow-browser-return`;
 
   const bodyParams: Record<string, string | number> = {
     apiKey: FLOW_API_KEY,
@@ -78,7 +82,7 @@ export async function createCheckoutSession(params: {
     email: FLOW_DEFAULT_EMAIL,
     paymentMethod: 9, // todos los medios de pago
     urlConfirmation,
-    urlReturn: successUrl, // el usuario vuelve a tu frontend
+    urlReturn,
   };
 
   // 👇 Aquí mandamos los datos del ticket a Flow
@@ -136,15 +140,12 @@ export async function getPaymentStatus(token: string) {
 
   try {
     // 👇 OJO: ahora es GET y los params van por query-string
-    const resp = await axios.get(
-      `${FLOW_BASE_URL}/api/payment/getStatus`,
-      {
-        params: {
-          ...baseParams,
-          s,
-        },
-      }
-    );
+    const resp = await axios.get(`${FLOW_BASE_URL}/api/payment/getStatus`, {
+      params: {
+        ...baseParams,
+        s,
+      },
+    });
 
     const data = resp.data as {
       status?: number;
