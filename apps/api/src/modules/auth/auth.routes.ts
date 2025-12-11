@@ -35,7 +35,7 @@ authRouter.post('/login', async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // 2) Comparar password
+    // 2) Comparar password contra el hash que guardamos en user.password
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -48,7 +48,7 @@ authRouter.post('/login', async (req, res, next) => {
         email: user.email,
         role: user.role,
       },
-      env.JWT_SECRET, // <- aquí usamos tu variable de entorno
+      env.JWT_SECRET,
       {
         expiresIn: '7d',
       },
@@ -56,15 +56,12 @@ authRouter.post('/login', async (req, res, next) => {
 
     return res.json({ token });
   } catch (err) {
-    // 🔴 TEMPORAL: devolver el mensaje real para ver qué está fallando
     console.error('Login error', err);
 
     const message =
-      err instanceof Error && err.message
-        ? err.message
-        : 'Unknown error';
+      err instanceof Error && err.message ? err.message : 'Unknown error';
 
     return res.status(500).json({ error: message });
-    // (luego, cuando esté todo OK, volvemos a usar: next(err))
+    // luego puedes cambiar esto por: next(err);
   }
 });

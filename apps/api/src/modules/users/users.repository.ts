@@ -1,4 +1,4 @@
-// src/modules/users/users.repository.ts
+// apps/api/src/modules/users/users.repository.ts
 import { prisma } from '../../core/db/client';
 
 export type UserRole = 'ADMIN' | 'ORGANIZER' | 'CUSTOMER';
@@ -15,7 +15,7 @@ export async function createUser(data: CreateUserData) {
     data: {
       name: data.name,
       email: data.email,
-      // En tu modelo Prisma seguramente se llama "password"
+      // En el modelo Prisma el campo es "password", pero contiene el hash
       password: data.passwordHash,
       role: data.role ?? 'CUSTOMER',
     },

@@ -1,3 +1,4 @@
+// apps/api/src/modules/auth/auth.service.ts
 import bcrypt from 'bcryptjs';
 import { AppError } from '../../core/errors/AppError';
 import { signAccessToken } from '../../core/auth/jwt';
@@ -11,15 +12,16 @@ export async function login(payload: LoginInput) {
     throw new AppError(401, 'Invalid credentials');
   }
 
-  const isValid = await bcrypt.compare(payload.password, user.password);
+  // 👇 Comparamos contra user.password (que guarda el hash)
+  const isMatch = await bcrypt.compare(payload.password, user.password);
 
-  if (!isValid) {
+  if (!isMatch) {
     throw new AppError(401, 'Invalid credentials');
   }
 
   const token = signAccessToken({ id: user.id, role: user.role });
 
-  // sacamos el password antes de devolver
+  // Sacamos el password antes de devolver el usuario
   const { password, ...safeUser } = user;
 
   return { token, user: safeUser };
