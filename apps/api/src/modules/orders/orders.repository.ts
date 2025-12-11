@@ -194,8 +194,12 @@ export async function findTicketsByBuyerEmail(email: string) {
   }));
 }
 
-export async function findOrderByFlowToken(flowToken: string) {
-  return prisma.order.findUnique({
-    where: { flowToken },
+export async function findOrderByFlowToken(token: string) {
+  return prisma.order.findFirst({
+    where: { flowToken: token },
+    include: {
+      event: true,
+      tickets: true,
+    },
   });
 }

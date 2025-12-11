@@ -77,7 +77,7 @@ export async function listTicketsForOrganizerHandler(
 export async function getPublicOrderByFlowTokenHandler(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   try {
     const token = req.query.token as string | undefined;
@@ -88,26 +88,35 @@ export async function getPublicOrderByFlowTokenHandler(
     const order = await ordersRepo.findOrderByFlowToken(token);
 
     if (!order) {
+      // Todavía no se creó la orden para ese token
       return res.status(404).json({ message: 'Order not found yet' });
     }
 
-    // 👇 TS no sabe que aquí viene con `event` y `tickets`
     const richOrder = order as any;
 
+    const tickets = Array.isArray(richOrder.tickets)
+      ? richOrder.tickets
+      : [];
+
     return res.json({
-      id: richOrder.id,
-      event: {
-        title: richOrder.event.title,
-        startDateTime: richOrder.event.startDateTime,
-        venueName: richOrder.event.venueName,
-        venueAddress: richOrder.event.venueAddress,
-      },
-      tickets: richOrder.tickets.map((t: any) => ({
+      orderId: richOrder.id,
+      eventTitle: richOrder.event?.title ?? 'Evento',
+      eventDate:
+        (richOrder.event?.startDateTime as string | undefined) ?? null,
+      eventVenue: richOrder.event
+        ? [richOrder.event.venueName, richOrder.event.venueAddress]
+            .filter(Boolean)
+            .join(' · ')
+        : null,
+      tickets: tickets.map((t: any) => ({
         code: t.code,
         status: t.status,
+        attendeeName: t.attendeeName,
+        attendeeEmail: t.attendeeEmail,
       })),
     });
   } catch (err) {
     next(err);
   }
 }
+

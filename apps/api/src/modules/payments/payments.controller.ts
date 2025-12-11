@@ -1,16 +1,21 @@
 // apps/api/src/modules/payments/payments.controller.ts
-
 import type { Request, Response, NextFunction } from 'express';
 import * as paymentsService from './payments.service';
 import * as ordersService from '../orders/orders.service';
 
-const FRONTEND_BASE_URL =
-  process.env.FRONTEND_BASE_URL || 'https://www.ticketchile.com';
-
+/**
+ * Crea la sesión de pago en Flow.
+ * Body:
+ * - amountCents
+ * - currency
+ * - successUrl
+ * - cancelUrl
+ * - metadata (eventId, ticketTypeId, quantity, buyerEmail, etc.)
+ */
 export async function createCheckoutSessionHandler(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   try {
     const {
@@ -35,20 +40,28 @@ export async function createCheckoutSessionHandler(
       metadata: metadata ?? {},
     });
 
-    res.json({ checkoutUrl });
+    return res.json({ checkoutUrl });
   } catch (err) {
     console.error('Error creating checkout session:', err);
-    next(err);
+    return next(err);
   }
 }
 
-// 🔔 Endpoint que llama Flow después del pago (webhook servidor a servidor)
+/**
+ * Webhook de Flow (urlConfirmation).
+ * Flow llama aquí desde su backend cuando el pago cambia de estado.
+ */
 export async function flowConfirmationHandler(
   req: Request,
   res: Response,
-  _next: NextFunction
+  _next: NextFunction,
 ) {
-  console.log('[Flow] Webhook recibido. body =', req.body, 'query =', req.query);
+  console.log(
+    '[Flow] Webhook recibido. body =',
+    req.body,
+    'query =',
+    req.query,
+  );
 
   const body = (req as any).body ?? {};
   const query = (req as any).query ?? {};
@@ -61,17 +74,17 @@ export async function flowConfirmationHandler(
     return res.status(400).send('Missing token');
   }
 
-  // Si Flow no te manda firma, seguimos igual (no paramos el flujo).
+  // Firma opcional (para pruebas no bloqueamos si falla)
   if (!s) {
     console.warn(
       '[Flow] Webhook sin firma (s). Continuando sin verificar firma. token =',
-      token
+      token,
     );
   } else {
     const isValid = paymentsService.verifyFlowSignature({ token }, s);
     if (!isValid) {
       console.warn('[Flow] Firma inválida en webhook', { token, s });
-      // Para producción podrías cortar aquí con 400, pero para pruebas seguimos.
+      // En producción podrías devolver 400 aquí.
     }
   }
 
@@ -82,9 +95,9 @@ export async function flowConfirmationHandler(
     if (payment.status === 2) {
       console.log('[Flow] Pago pagado. Procesando creación de orden...');
 
+      // ---- Metadata (optional) ----
       let meta: any = null;
 
-      // 👇 AHORA soportamos optional como string o como objeto
       if ((payment as any).optional) {
         const opt = (payment as any).optional;
         if (typeof opt === 'string') {
@@ -93,7 +106,7 @@ export async function flowConfirmationHandler(
           } catch (e) {
             console.error(
               '[Flow] No se pudo parsear payment.optional (string):',
-              opt
+              opt,
             );
           }
         } else if (typeof opt === 'object') {
@@ -103,7 +116,7 @@ export async function flowConfirmationHandler(
 
       if (!meta) {
         console.warn(
-          '[Flow] Pago sin metadata (optional). No se puede crear la orden.'
+          '[Flow] Pago sin metadata (optional). No se puede crear la orden.',
         );
       } else {
         console.log('[Flow] Metadata usada para crear orden:', meta);
@@ -116,28 +129,41 @@ export async function flowConfirmationHandler(
         const buyerName = (meta.buyerName as string | undefined) ?? '';
         const buyerUserId = meta.buyerUserId as string | undefined;
 
+        // Guardamos también el número de orden de Flow si viene
+        const flowOrder = (payment as any).flowOrder ?? null;
+        const opts = { flowToken: token, flowOrder };
+
         if (!eventId || !ticketTypeId || !quantity || quantity <= 0) {
           console.error('[Flow] Metadata incompleta. No se crea la orden.', meta);
         } else if (mode === 'PRIVATE' && buyerUserId) {
+          // Compra con usuario logueado (PRIVATE)
           console.log('[Flow] Creando orden PRIVADA para userId:', buyerUserId);
-          await ordersService.createOrder(buyerUserId, {
-            eventId,
-            items: [{ ticketTypeId, quantity }],
-          });
+          await ordersService.createOrder(
+            buyerUserId,
+            {
+              eventId,
+              items: [{ ticketTypeId, quantity }],
+            },
+            opts,
+          );
         } else {
+          // Compra pública (sin login)
           if (!buyerEmail) {
             console.error(
               '[Flow] Falta buyerEmail en compra pública. Metadata:',
-              meta
+              meta,
             );
           } else {
             console.log('[Flow] Creando orden PÚBLICA para email:', buyerEmail);
-            await ordersService.publicCreateOrderService({
-              eventId,
-              buyerName,
-              buyerEmail,
-              items: [{ ticketTypeId, quantity }],
-            });
+            await ordersService.publicCreateOrderService(
+              {
+                eventId,
+                buyerName,
+                buyerEmail,
+                items: [{ ticketTypeId, quantity }],
+              },
+              opts,
+            );
           }
         }
       }
@@ -152,44 +178,28 @@ export async function flowConfirmationHandler(
   }
 }
 
-// 🌐 Endpoint al que Flow redirige al USUARIO (navegador)
+/**
+ * URL de retorno del navegador (urlReturn de Flow).
+ * Aquí solo redirigimos al frontend con el token como query param.
+ */
 export async function flowBrowserReturnHandler(
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction,
 ) {
-  try {
-    const body = (req as any).body ?? {};
-    const query = (req as any).query ?? {};
+  const token = req.query.token as string | undefined;
 
-    const token = (body.token || query.token) as string | undefined;
+  const FRONT_BASE =
+    process.env.PUBLIC_WEB_BASE_URL || 'https://www.ticketchile.com';
+  const successUrl = `${FRONT_BASE.replace(/\/$/, '')}/compra-exitosa`;
 
-    if (!token) {
-      // Si por alguna razón Flow no manda token, igual mandamos al front
-      const url = `${FRONTEND_BASE_URL}/compra-exitosa?payment=missing_token`;
-      return res.redirect(302, url);
-    }
-
-    // Intentamos leer estado real solo para saber si fue success/cancel
-    let paymentStatus: number | undefined;
-    try {
-      const payment = await paymentsService.getPaymentStatus(token);
-      paymentStatus = payment.status;
-    } catch (e) {
-      console.error(
-        '[Flow] Error en getPaymentStatus en flow-browser-return:',
-        e
-      );
-    }
-
-    const paymentFlag = paymentStatus === 2 ? 'success' : 'cancel';
-
-    const redirectUrl = `${FRONTEND_BASE_URL}/compra-exitosa?payment=${paymentFlag}&token=${encodeURIComponent(
-      token
-    )}`;
-
-    return res.redirect(302, redirectUrl);
-  } catch (err) {
-    next(err);
+  // Si no viene token, simplemente mandamos al usuario a la página de éxito.
+  if (!token) {
+    return res.redirect(successUrl);
   }
+
+  const url = new URL(successUrl);
+  url.searchParams.set('token', token);
+
+  return res.redirect(url.toString());
 }
