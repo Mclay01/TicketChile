@@ -18,7 +18,13 @@ import { NativeQrScanner } from './NativeQrScanner';
 // Status interno normalizado para el check-in
 type CheckInStatus = 'OK' | 'ALREADY_USED' | 'NOT_FOUND' | 'INVALID';
 
-type View = 'events' | 'login' | 'myTickets' | 'checkin' | 'organizer';
+type View =
+  | 'events'
+  | 'login'
+  | 'myTickets'
+  | 'checkin'
+  | 'organizer'
+  | 'paymentSuccess';
 type UserRole = 'ADMIN' | 'ORGANIZER' | 'CUSTOMER';
 
 type PaymentStatus = 'idle' | 'success' | 'cancel' | 'error';
@@ -391,7 +397,7 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
     const totalAmountCents = selectedTicketType.priceCents * quantity;
     const currency = selectedTicketType.currency || 'CLP';
 
-    const successUrl = `${FRONTEND_BASE_URL}?payment=success`;
+    const successUrl = `${FRONTEND_BASE_URL}/compra-exitosa`;
     const cancelUrl = `${FRONTEND_BASE_URL}?payment=cancel`;
 
     // 🟢 COMPRA PÚBLICA (sin login)
@@ -1858,6 +1864,202 @@ function OrganizerPanel(props: {
   );
 }
 
+type PendingPayment =
+  | {
+      mode: 'PUBLIC';
+      eventId: string;
+      ticketTypeId: string;
+      quantity: number;
+      buyerName: string;
+      buyerEmail: string;
+    }
+  | {
+      mode: 'PRIVATE';
+      eventId: string;
+      ticketTypeId: string;
+      quantity: number;
+    }
+  | null;
+
+function PaymentSuccessView(props: {
+  onGoHome: () => void;
+  onGoMyTickets: () => void;
+}) {
+  const { onGoHome, onGoMyTickets } = props;
+  const [pending, setPending] = useState<PendingPayment>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('tiketera_pending_payment');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      setPending(parsed);
+      // limpiar para que no quede pegado
+      localStorage.removeItem('tiketera_pending_payment');
+    } catch (e) {
+      console.error('Error leyendo tiketera_pending_payment', e);
+    }
+  }, []);
+
+  const isPublic = pending?.mode === 'PUBLIC';
+
+  function handleGoHome() {
+    onGoHome();
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, document.title, '/');
+    }
+  }
+
+  function handleGoMyTickets() {
+    onGoMyTickets();
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, document.title, '/');
+    }
+  }
+
+  return (
+    <div
+      style={{
+        minHeight: '60vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 520,
+          width: '100%',
+          background: '#020617',
+          borderRadius: 16,
+          border: '1px solid #1f2937',
+          padding: 24,
+          boxShadow: '0 18px 45px rgba(0,0,0,0.6)',
+        }}
+      >
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>
+          ✅ ¡Pago recibido!
+        </h1>
+
+        <p style={{ fontSize: 14, opacity: 0.9, marginBottom: 16 }}>
+          Tu compra fue procesada correctamente.
+        </p>
+
+        {pending ? (
+          <div
+            style={{
+              borderRadius: 12,
+              border: '1px solid #1f2937',
+              padding: 16,
+              marginBottom: 16,
+              background:
+                'radial-gradient(circle at top, rgba(34,197,94,0.1), transparent)',
+            }}
+          >
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
+              Resumen de compra
+            </h2>
+            <p style={{ fontSize: 14, marginBottom: 4 }}>
+              <strong>Cantidad:</strong> {pending.quantity} entrada
+              {pending.quantity > 1 ? 's' : ''}
+            </p>
+            {isPublic && (
+              <>
+                <p style={{ fontSize: 14, marginBottom: 4 }}>
+                  <strong>Nombre:</strong>{' '}
+                  {(pending as any).buyerName || 'Cliente'}
+                </p>
+                <p style={{ fontSize: 14, marginBottom: 4 }}>
+                  <strong>Correo:</strong>{' '}
+                  {(pending as any).buyerEmail || '—'}
+                </p>
+              </>
+            )}
+            <p style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
+              * Los datos exactos del evento vienen del backend, pero tu pago ya
+              quedó asociado a la orden.
+            </p>
+          </div>
+        ) : (
+          <p style={{ fontSize: 13, opacity: 0.75, marginBottom: 16 }}>
+            No encontramos los datos de la compra reciente. Puede que esta
+            página haya sido recargada o abierta directamente.
+          </p>
+        )}
+
+        <div style={{ marginBottom: 16, fontSize: 13, opacity: 0.85 }}>
+          <p style={{ marginBottom: 6 }}>
+            📧 Tus tickets se enviarán al correo que indicaste durante la
+            compra.
+          </p>
+          <p style={{ marginBottom: 6 }}>
+            Si no los ves en unos minutos, revisa la carpeta de{' '}
+            <strong>Spam</strong> o <strong>Promociones</strong>.
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            flexWrap: 'wrap',
+            marginTop: 8,
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleGoHome}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 999,
+              border: '1px solid #374151',
+              fontSize: 13,
+              background: 'transparent',
+              color: '#e5e7eb',
+              cursor: 'pointer',
+            }}
+          >
+            ← Volver al inicio
+          </button>
+
+          <button
+            type="button"
+            onClick={handleGoMyTickets}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 999,
+              border: 'none',
+              background: '#22c55e',
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#020617',
+              cursor: 'pointer',
+            }}
+          >
+            Ver mis tickets (si tienes cuenta)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 999,
+              border: '1px solid #4b5563',
+              background: 'transparent',
+              fontSize: 13,
+              color: '#e5e7eb',
+              cursor: 'pointer',
+            }}
+          >
+            Descargar comprobante
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ==================== APP ROOT ==================== */
 
 function App() {
@@ -1917,61 +2119,33 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (view !== 'myTickets' || !token) return;
+    if (typeof window === 'undefined') return;
 
-    let canceled = false;
-    let intervalId: number | undefined;
-
-    async function loadTickets(isFirstCall: boolean) {
-      try {
-        if (isFirstCall && firstTicketsLoad && tickets.length === 0) {
-          setTicketsLoading(true);
-        }
-        setTicketsError(null);
-
-        const data = await fetchMyTickets(token ?? '');
-        if (!canceled) {
-          setTickets(data);
-        }
-      } catch (err) {
-        console.error(err);
-        if (!canceled) {
-          setTicketsError(
-            err instanceof Error && err.message === 'UNAUTHORIZED'
-              ? 'Sesión expirada. Vuelve a iniciar sesión.'
-              : 'No se pudieron cargar tus tickets',
-          );
-          if (err instanceof Error && err.message === 'UNAUTHORIZED') {
-            localStorage.removeItem('tiketera_token');
-            setToken(null);
-            setRole(null);
-            setUserId(null);
-          }
-        }
-      } finally {
-        if (!canceled) {
-          setTicketsLoading(false);
-          if (firstTicketsLoad) {
-            setFirstTicketsLoad(false);
-          }
-        }
-      }
+    if (window.location.pathname === '/compra-exitosa') {
+      setView('paymentSuccess');
     }
+  }, []);
 
-    void loadTickets(true);
 
-    intervalId = window.setInterval(() => {
-      void loadTickets(false);
-    }, 5000);
+    useEffect(() => {
+    if (typeof window === 'undefined') return;
 
-    return () => {
-      canceled = true;
-      if (intervalId !== undefined) {
-        window.clearInterval(intervalId);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, token]);
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('payment');
+
+    if (payment !== 'cancel') return;
+
+    setPaymentStatus('cancel');
+    setPaymentMessage('El pago fue cancelado o no se completó.');
+
+    localStorage.removeItem('tiketera_pending_payment');
+    params.delete('payment');
+    const newUrl =
+      window.location.pathname +
+      (params.toString() ? `?${params.toString()}` : '');
+    window.history.replaceState({}, document.title, newUrl);
+  }, []);
+
 
   // Nuevo efecto: solo muestra mensajes según ?payment=
   // y NO crea órdenes en el frontend.
@@ -2282,6 +2456,13 @@ function App() {
                 ))}
             </div>
           </section>
+        )}
+
+        {view === 'paymentSuccess' && (
+          <PaymentSuccessView
+            onGoHome={() => setView('events')}
+            onGoMyTickets={() => setView('myTickets')}
+          />
         )}
 
         {view === 'login' && <LoginForm onSuccess={handleLoginSuccess} />}

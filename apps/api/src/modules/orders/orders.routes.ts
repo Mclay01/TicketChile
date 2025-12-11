@@ -1,9 +1,11 @@
+// apps/api/src/modules/orders/orders.routes.ts
 import { Router } from 'express';
 import { authMiddleware } from '../../core/middleware/authMiddleware';
 import {
   createOrderHandler,
   listMyTicketsHandler,
-  listTicketsForOrganizerHandler
+  listTicketsForOrganizerHandler,
+  getPublicOrderByFlowTokenHandler, // 👈 NUEVO
 } from './orders.controller';
 
 export const ordersRouter = Router();
@@ -18,4 +20,15 @@ ordersRouter.get('/my-tickets', authMiddleware, listMyTicketsHandler);
 
 // Tickets de mis eventos (organizador)
 // GET /api/orders/organizer-tickets
-ordersRouter.get('/organizer-tickets', authMiddleware, listTicketsForOrganizerHandler);
+ordersRouter.get(
+  '/organizer-tickets',
+  authMiddleware,
+  listTicketsForOrganizerHandler
+);
+
+// ✅ NUEVO: endpoint público para la página "compra-exitosa"
+// GET /api/orders/public-order/by-flow-token?token=...
+ordersRouter.get(
+  '/public-order/by-flow-token',
+  getPublicOrderByFlowTokenHandler
+);
