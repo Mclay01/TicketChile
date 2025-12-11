@@ -1,6 +1,7 @@
 // apps/web/src/CompraExitosaPage.tsx
 import React, { useEffect, useState } from 'react';
 import { API_BASE_URL } from './api';
+import MisTicketsOrganizer from './MisTicketsOrganizer';
 
 type PublicOrderResponse = {
   id: string;
@@ -176,6 +177,8 @@ export default function CompraExitosaPage() {
         <h1>Compra exitosa</h1>
         <p>{renderLeftMessage()}</p>
       </section>
+      
+        <MisTicketsOrganizer />
 
       {/* Columna derecha */}
       <section className="card-right">
