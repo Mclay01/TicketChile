@@ -1,13 +1,12 @@
-// apps/web/src/CompraExitosaPage.tsx
 import { useEffect, useState } from 'react';
-import { API_BASE_URL } from './api';
 
-type TicketSummary = {
-  code: string;
-  status: string;
-};
+// misma base que en App.tsx
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3001';
 
-type OrderSummaryResponse = {
+type TicketStatus = 'VALID' | 'USED' | 'CANCELLED';
+
+interface PublicOrderResponse {
   id: string;
   event: {
     title: string;
@@ -15,20 +14,36 @@ type OrderSummaryResponse = {
     venueName: string;
     venueAddress: string;
   };
-  tickets: TicketSummary[];
-};
+  tickets: {
+    code: string;
+    status: TicketStatus;
+  }[];
+}
 
 function formatDateTime(iso: string) {
-  const date = new Date(iso);
-  return date.toLocaleString('es-CL', {
-    dateStyle: 'medium',
+  const d = new Date(iso);
+  return d.toLocaleString('es-CL', {
+    dateStyle: 'full',
     timeStyle: 'short',
   });
 }
 
-function CompraExitosaPage() {
+function statusLabel(status: TicketStatus) {
+  switch (status) {
+    case 'VALID':
+      return 'Válido';
+    case 'USED':
+      return 'Usado';
+    case 'CANCELLED':
+      return 'Cancelado';
+    default:
+      return status;
+  }
+}
+
+export default function CompraExitosaPage() {
   const [loading, setLoading] = useState(true);
-  const [order, setOrder] = useState<OrderSummaryResponse | null>(null);
+  const [order, setOrder] = useState<PublicOrderResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,278 +54,410 @@ function CompraExitosaPage() {
       setError(null);
 
       const params = new URLSearchParams(window.location.search);
+      const tokenFromUrl = params.get('token');
 
-      // 1) Intentamos sacar algo de la URL (?token=..., ?flow_token=..., ?flow_order=...)
-      let token =
-        params.get('token') ??
-        params.get('flow_token') ??
-        params.get('flowToken') ??
-        params.get('flow_order') ??
-        null;
-
-      // 2) Si no viene en la URL, usamos lo que guardamos antes de ir a Flow
-      if (!token) {
-        const stored = window.localStorage.getItem('tiketera_last_flow_token');
-        if (stored) {
-          token = stored;
+      let tokenFromStorage: string | null = null;
+      const raw = window.localStorage.getItem('tiketera_pending_payment');
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed.flowToken === 'string') {
+            tokenFromStorage = parsed.flowToken;
+          }
+        } catch {
+          // da lo mismo
         }
       }
 
-      if (!token) {
+      const finalToken = tokenFromUrl ?? tokenFromStorage;
+
+      if (!finalToken) {
         setError('No se encontró el identificador de la compra.');
         setLoading(false);
         return;
       }
 
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/orders/public/flow-order?token=${encodeURIComponent(
-            token,
-          )}`,
+        const url = new URL(
+          `${API_BASE_URL}/orders/public/by-flow-token`,
         );
+        url.searchParams.set('token', finalToken);
+
+        const res = await fetch(url.toString(), {
+          method: 'GET',
+        });
 
         if (!res.ok) {
           if (res.status === 404) {
             setError(
-              'Todavía no encontramos tu compra. Es posible que el pago siga procesándose. Actualiza en unos segundos o revisa tu correo.',
+              'No encontramos una compra asociada a este enlace. ' +
+                'Si acabas de pagar, espera unos segundos y vuelve a intentarlo.',
             );
-            setLoading(false);
-            return;
+          } else {
+            setError('Hubo un problema al cargar el resumen de tu compra.');
           }
-
-          throw new Error('Error al cargar la compra');
+          return;
         }
 
-        const data = (await res.json()) as OrderSummaryResponse;
+        const data = (await res.json()) as PublicOrderResponse;
         setOrder(data);
       } catch (err) {
-        console.error('[CompraExitosa] error cargando orden', err);
-        setError('No se pudo cargar la información de la compra.');
+        console.error(err);
+        setError('Hubo un problema al cargar el resumen de tu compra.');
       } finally {
         setLoading(false);
+        // una vez usado, podemos limpiar el pending
+        window.localStorage.removeItem('tiketera_pending_payment');
       }
     }
 
     void load();
   }, []);
 
+  const handleGoHome = () => {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#020617',
+          color: '#e5e7eb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+        }}
+      >
+        <p>Cargando resumen de tu compra...</p>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
         minHeight: '100vh',
         background: '#020617',
-        padding: '32px 16px',
         color: '#e5e7eb',
+        padding: '24px 16px',
         display: 'flex',
         justifyContent: 'center',
       }}
     >
-      <div style={{ width: '100%', maxWidth: '720px' }}>
-        <div
+      <div
+        style={{
+          maxWidth: '960px',
+          width: '100%',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 3fr)',
+          gap: '24px',
+        }}
+      >
+        {/* Columna izquierda: mensaje principal */}
+        <section
           style={{
-            borderRadius: '20px',
-            background:
-              'radial-gradient(circle at top left, #16a34a33, #020617)',
-            border: '1px solid #064e3b',
-            padding: '20px 20px 16px',
-            marginBottom: '16px',
-            display: 'flex',
-            gap: '12px',
-            alignItems: 'flex-start',
+            background: '#020617',
+            borderRadius: '16px',
+            border: '1px solid #1f2937',
+            padding: '16px 20px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
           }}
         >
           <div
             style={{
-              width: 40,
-              height: 40,
-              borderRadius: '999px',
-              background: '#16a34a',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 22,
-              boxShadow: '0 0 0 4px rgba(34,197,94,0.25)',
-              flexShrink: 0,
+              gap: '12px',
+              marginBottom: '12px',
             }}
           >
-            ✓
-          </div>
-
-          <div style={{ flex: 1 }}>
-            <h1
-              style={{
-                fontSize: '22px',
-                fontWeight: 600,
-                marginBottom: 4,
-              }}
-            >
-              Compra exitosa
-            </h1>
-            <p
-              style={{
-                fontSize: '14px',
-                opacity: 0.85,
-                marginBottom: 4,
-              }}
-            >
-              Gracias por tu compra. Aquí tienes el resumen de tus tickets.
-            </p>
-          </div>
-        </div>
-
-        {loading && (
-          <div
-            style={{
-              borderRadius: 12,
-              border: '1px solid #1f2937',
-              background: '#020617',
-              padding: '12px 14px',
-              fontSize: 14,
-            }}
-          >
-            Cargando información de tu compra...
-          </div>
-        )}
-
-        {error && (
-          <div
-            style={{
-              borderRadius: 12,
-              border: '1px solid #7f1d1d',
-              background: '#450a0a',
-              padding: '12px 14px',
-              fontSize: 14,
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        {order && !loading && !error && (
-          <div
-            style={{
-              borderRadius: 16,
-              border: '1px solid #1f2937',
-              background: '#020617',
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-            }}
-          >
-            <div>
-              <h2
-                style={{
-                  fontSize: 16,
-                  fontWeight: 600,
-                  marginBottom: 4,
-                }}
-              >
-                {order.event.title}
-              </h2>
-              <p style={{ fontSize: 13, opacity: 0.85 }}>
-                <strong>Fecha:</strong> {formatDateTime(order.event.startDateTime)}
-                <br />
-                <strong>Lugar:</strong> {order.event.venueName} ·{' '}
-                {order.event.venueAddress}
-              </p>
-            </div>
-
             <div
               style={{
-                borderTop: '1px solid #1f2937',
-                paddingTop: 10,
+                width: '32px',
+                height: '32px',
+                borderRadius: '999px',
+                background: '#022c22',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid #16a34a',
               }}
             >
-              <h3
+              <span style={{ color: '#22c55e', fontSize: '18px' }}>✓</span>
+            </div>
+            <div>
+              <h1
                 style={{
-                  fontSize: 14,
+                  fontSize: '20px',
                   fontWeight: 600,
-                  marginBottom: 6,
+                  margin: 0,
+                  marginBottom: '2px',
                 }}
               >
-                Tus tickets
-              </h3>
+                Compra exitosa
+              </h1>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '13px',
+                  color: '#9ca3af',
+                }}
+              >
+                Gracias por tu compra. Aquí tienes el resumen de tus tickets.
+              </p>
+            </div>
+          </div>
 
+          {error && (
+            <div
+              style={{
+                marginTop: '16px',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: '#451a1a',
+                border: '1px solid #f97316',
+                fontSize: '14px',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {!error && order && (
+            <>
               <div
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(0,1fr)',
-                  gap: 8,
+                  marginTop: '16px',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  background: '#020617',
+                  border: '1px solid #1f2937',
                 }}
               >
-                {order.tickets.map((t) => (
+                <p
+                  style={{
+                    fontSize: '13px',
+                    color: '#9ca3af',
+                    marginTop: 0,
+                    marginBottom: '6px',
+                  }}
+                >
+                  Orden #{order.id}
+                </p>
+
+                <h2
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    margin: 0,
+                    marginBottom: '4px',
+                  }}
+                >
+                  {order.event.title}
+                </h2>
+
+                <p
+                  style={{
+                    fontSize: '14px',
+                    margin: 0,
+                    marginBottom: '4px',
+                  }}
+                >
+                  {formatDateTime(order.event.startDateTime)}
+                </p>
+
+                <p
+                  style={{
+                    fontSize: '14px',
+                    margin: 0,
+                    color: '#9ca3af',
+                  }}
+                >
+                  {order.event.venueName} · {order.event.venueAddress}
+                </p>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <button
+                  onClick={handleGoHome}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '999px',
+                    border: '1px solid #4b5563',
+                    background: 'transparent',
+                    color: '#e5e7eb',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  Volver al inicio
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* Columna derecha: tickets + QR */}
+        <section
+          style={{
+            background: '#020617',
+            borderRadius: '16px',
+            border: '1px solid #1f2937',
+            padding: '16px 20px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
+          }}
+        >
+          <h2
+            style={{
+              fontSize: '16px',
+              fontWeight: 600,
+              margin: 0,
+              marginBottom: '10px',
+            }}
+          >
+            Tus tickets
+          </h2>
+
+          {!error && !order && (
+            <p style={{ fontSize: '14px', color: '#9ca3af' }}>
+              No encontramos tickets para esta compra.
+            </p>
+          )}
+
+          {order && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1fr)',
+                gap: '12px',
+              }}
+            >
+              {order.tickets.map((t) => {
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                  t.code,
+                )}`;
+
+                return (
                   <div
                     key={t.code}
                     style={{
-                      borderRadius: 10,
+                      borderRadius: '12px',
                       border: '1px solid #1f2937',
-                      padding: '10px 12px',
-                      fontSize: 13,
-                      display: 'flex',
-                      justifyContent: 'space-between',
+                      padding: '12px 14px',
+                      display: 'grid',
+                      gridTemplateColumns: 'auto 1fr',
+                      gap: '12px',
                       alignItems: 'center',
-                      gap: 8,
+                      background: '#020617',
                     }}
                   >
-                    <div>
-                      <div>
-                        <strong>Código:</strong> {t.code}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          opacity: 0.8,
-                        }}
-                      >
-                        Presenta este código o el QR del correo en la entrada.
-                      </div>
-                    </div>
-                    <span
+                    <div
                       style={{
-                        fontSize: 11,
-                        padding: '2px 8px',
-                        borderRadius: 999,
-                        border: '1px solid #16a34a55',
-                        background: '#064e3b',
+                        width: '120px',
+                        height: '120px',
+                        borderRadius: '8px',
+                        background: '#020617',
+                        border: '1px solid #111827',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
                       }}
                     >
-                      {t.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+                      <img
+                        src={qrUrl}
+                        alt={`QR ticket ${t.code}`}
+                        width={120}
+                        height={120}
+                        style={{ display: 'block' }}
+                      />
+                    </div>
 
-            <div
-              style={{
-                marginTop: 8,
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 8,
-              }}
-            >
-              <a
-                href="/"
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: '#1d4ed8',
-                  color: '#e5e7eb',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                Volver al inicio
-              </a>
+                    <div>
+                      <p
+                        style={{
+                          fontSize: '14px',
+                          margin: 0,
+                          marginBottom: '4px',
+                        }}
+                      >
+                        <strong>Código:</strong> {t.code}
+                      </p>
+                      <p
+                        style={{
+                          fontSize: '13px',
+                          margin: 0,
+                          marginBottom: '8px',
+                          color: '#9ca3af',
+                        }}
+                      >
+                        Estado:{' '}
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            fontSize: '12px',
+                            border: '1px solid #374151',
+                          }}
+                        >
+                          {statusLabel(t.status)}
+                        </span>
+                      </p>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '8px',
+                          flexWrap: 'wrap',
+                          fontSize: '13px',
+                        }}
+                      >
+                        <a
+                          href={qrUrl}
+                          download={`ticket-${t.code}.png`}
+                          style={{
+                            padding: '6px 10px',
+                            borderRadius: '999px',
+                            border: '1px solid #4b5563',
+                            background: 'transparent',
+                            color: '#e5e7eb',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          Descargar QR
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard
+                              ?.writeText(t.code)
+                              .catch(() => undefined);
+                          }}
+                          style={{
+                            padding: '6px 10px',
+                            borderRadius: '999px',
+                            border: 'none',
+                            background: '#111827',
+                            color: '#e5e7eb',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Copiar código
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        )}
+          )}
+        </section>
       </div>
     </div>
   );
 }
-
-export default CompraExitosaPage;
