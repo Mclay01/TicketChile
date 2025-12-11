@@ -1,142 +1,102 @@
-import { useEffect, useState } from 'react';
+// apps/web/src/CompraExitosaPage.tsx
+import React, { useEffect, useState } from 'react';
 
-// misma base que en App.tsx
+// 🔹 IMPORTANTE: aquí apuntamos al API real en producción
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3001';
+  import.meta.env.VITE_API_BASE_URL ??
+  'https://ticket-chile-api.onrender.com/api';
 
 type TicketStatus = 'VALID' | 'USED' | 'CANCELLED';
 
-interface PublicOrderResponse {
+interface TicketSummary {
+  code: string;
+  status: TicketStatus;
+}
+
+interface EventSummary {
+  title: string;
+  startDateTime: string;
+  venueName: string;
+  venueAddress: string;
+}
+
+interface PublicOrderSummary {
   id: string;
-  event: {
-    title: string;
-    startDateTime: string;
-    venueName: string;
-    venueAddress: string;
-  };
-  tickets: {
-    code: string;
-    status: TicketStatus;
-  }[];
+  event: EventSummary;
+  tickets: TicketSummary[];
 }
 
 function formatDateTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString('es-CL', {
-    dateStyle: 'full',
-    timeStyle: 'short',
-  });
-}
-
-function statusLabel(status: TicketStatus) {
-  switch (status) {
-    case 'VALID':
-      return 'Válido';
-    case 'USED':
-      return 'Usado';
-    case 'CANCELLED':
-      return 'Cancelado';
-    default:
-      return status;
+  try {
+    const date = new Date(iso);
+    return date.toLocaleString('es-CL', {
+      dateStyle: 'full',
+      timeStyle: 'short',
+    });
+  } catch {
+    return iso;
   }
 }
 
-export default function CompraExitosaPage() {
+const CompraExitosaPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [order, setOrder] = useState<PublicOrderResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [order, setOrder] = useState<PublicOrderSummary | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    async function load() {
-      setLoading(true);
-      setError(null);
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromUrl = params.get('token');
 
-      const params = new URLSearchParams(window.location.search);
-      const tokenFromUrl = params.get('token');
+    if (!tokenFromUrl) {
+      setError('No se encontró el identificador de la compra.');
+      setLoading(false);
+      return;
+    }
 
-      let tokenFromStorage: string | null = null;
-      const raw = window.localStorage.getItem('tiketera_pending_payment');
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed.flowToken === 'string') {
-            tokenFromStorage = parsed.flowToken;
-          }
-        } catch {
-          // da lo mismo
-        }
-      }
+    // Guardamos el token por si el usuario recarga la página
+    try {
+      window.localStorage.setItem('tiketera_last_flow_token', tokenFromUrl);
+    } catch {
+      // si localStorage falla, no pasa nada
+    }
 
-      const finalToken = tokenFromUrl ?? tokenFromStorage;
-
-      if (!finalToken) {
-        setError('No se encontró el identificador de la compra.');
-        setLoading(false);
-        return;
-      }
-
+    const fetchSummary = async () => {
       try {
-        const url = new URL(
-          `${API_BASE_URL}/orders/public/by-flow-token`,
+        setLoading(true);
+        setError(null);
+
+        const resp = await fetch(
+          `${API_BASE_URL}/orders/public/by-flow-token?token=${encodeURIComponent(
+            tokenFromUrl,
+          )}`,
         );
-        url.searchParams.set('token', finalToken);
 
-        const res = await fetch(url.toString(), {
-          method: 'GET',
-        });
-
-        if (!res.ok) {
-          if (res.status === 404) {
+        if (!resp.ok) {
+          if (resp.status === 404) {
             setError(
-              'No encontramos una compra asociada a este enlace. ' +
-                'Si acabas de pagar, espera unos segundos y vuelve a intentarlo.',
+              'Todavía no encontramos tu compra. Si el pago se acaba de completar, espera unos segundos y recarga la página.',
             );
-          } else {
-            setError('Hubo un problema al cargar el resumen de tu compra.');
+            return;
           }
+
+          setError('Hubo un problema al cargar el resumen de tu compra.');
           return;
         }
 
-        const data = (await res.json()) as PublicOrderResponse;
+        const data = (await resp.json()) as PublicOrderSummary;
         setOrder(data);
-      } catch (err) {
-        console.error(err);
+      } catch (e) {
+        console.error('Error cargando resumen de compra', e);
         setError('Hubo un problema al cargar el resumen de tu compra.');
       } finally {
         setLoading(false);
-        // una vez usado, podemos limpiar el pending
-        window.localStorage.removeItem('tiketera_pending_payment');
       }
-    }
+    };
 
-    void load();
+    void fetchSummary();
   }, []);
-
-  const handleGoHome = () => {
-    if (typeof window !== 'undefined') {
-      window.location.href = '/';
-    }
-  };
-
-  if (loading) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: '#020617',
-          color: '#e5e7eb',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px',
-        }}
-      >
-        <p>Cargando resumen de tu compra...</p>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -144,28 +104,28 @@ export default function CompraExitosaPage() {
         minHeight: '100vh',
         background: '#020617',
         color: '#e5e7eb',
-        padding: '24px 16px',
+        padding: '24px',
         display: 'flex',
         justifyContent: 'center',
       }}
     >
       <div
         style={{
-          maxWidth: '960px',
           width: '100%',
+          maxWidth: '1040px',
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 3fr)',
+          gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1.4fr)',
           gap: '24px',
         }}
       >
         {/* Columna izquierda: mensaje principal */}
         <section
           style={{
-            background: '#020617',
             borderRadius: '16px',
             border: '1px solid #1f2937',
-            padding: '16px 20px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
+            padding: '20px 24px',
+            background: '#020617',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.45)',
           }}
         >
           <div
@@ -173,30 +133,30 @@ export default function CompraExitosaPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              marginBottom: '12px',
+              marginBottom: '16px',
             }}
           >
             <div
               style={{
-                width: '32px',
-                height: '32px',
+                width: 32,
+                height: 32,
                 borderRadius: '999px',
                 background: '#022c22',
+                border: '1px solid #16a34a',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1px solid #16a34a',
+                fontSize: 18,
               }}
             >
-              <span style={{ color: '#22c55e', fontSize: '18px' }}>✓</span>
+              ✓
             </div>
             <div>
               <h1
                 style={{
-                  fontSize: '20px',
+                  fontSize: '22px',
                   fontWeight: 600,
                   margin: 0,
-                  marginBottom: '2px',
                 }}
               >
                 Compra exitosa
@@ -204,7 +164,8 @@ export default function CompraExitosaPage() {
               <p
                 style={{
                   margin: 0,
-                  fontSize: '13px',
+                  marginTop: 4,
+                  fontSize: 14,
                   color: '#9ca3af',
                 }}
               >
@@ -213,251 +174,202 @@ export default function CompraExitosaPage() {
             </div>
           </div>
 
-          {error && (
+          {loading && (
+            <p style={{ fontSize: 14, color: '#9ca3af' }}>
+              Cargando información de tu compra...
+            </p>
+          )}
+
+          {!loading && error && (
             <div
               style={{
-                marginTop: '16px',
-                padding: '10px 12px',
-                borderRadius: '10px',
-                background: '#451a1a',
+                marginTop: 12,
+                padding: '12px 14px',
+                borderRadius: 10,
+                background: '#3f1f1f',
                 border: '1px solid #f97316',
-                fontSize: '14px',
+                fontSize: 14,
               }}
             >
               {error}
             </div>
           )}
 
-          {!error && order && (
-            <>
-              <div
+          {!loading && !error && order && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: '12px 14px',
+                borderRadius: 10,
+                background: '#020617',
+                border: '1px solid #1f2937',
+                fontSize: 14,
+              }}
+            >
+              <p style={{ margin: 0, marginBottom: 8, fontSize: 13 }}>
+                <span style={{ color: '#9ca3af' }}>Evento:</span>{' '}
+                <strong>{order.event.title}</strong>
+              </p>
+              <p style={{ margin: 0, marginBottom: 4, fontSize: 13 }}>
+                <span style={{ color: '#9ca3af' }}>Fecha:</span>{' '}
+                {formatDateTime(order.event.startDateTime)}
+              </p>
+              <p style={{ margin: 0, marginBottom: 4, fontSize: 13 }}>
+                <span style={{ color: '#9ca3af' }}>Lugar:</span>{' '}
+                {order.event.venueName} · {order.event.venueAddress}
+              </p>
+              <p
                 style={{
-                  marginTop: '16px',
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  background: '#020617',
-                  border: '1px solid #1f2937',
+                  margin: 0,
+                  marginTop: 8,
+                  fontSize: 12,
+                  color: '#6b7280',
                 }}
               >
-                <p
-                  style={{
-                    fontSize: '13px',
-                    color: '#9ca3af',
-                    marginTop: 0,
-                    marginBottom: '6px',
-                  }}
-                >
-                  Orden #{order.id}
-                </p>
-
-                <h2
-                  style={{
-                    fontSize: '18px',
-                    fontWeight: 600,
-                    margin: 0,
-                    marginBottom: '4px',
-                  }}
-                >
-                  {order.event.title}
-                </h2>
-
-                <p
-                  style={{
-                    fontSize: '14px',
-                    margin: 0,
-                    marginBottom: '4px',
-                  }}
-                >
-                  {formatDateTime(order.event.startDateTime)}
-                </p>
-
-                <p
-                  style={{
-                    fontSize: '14px',
-                    margin: 0,
-                    color: '#9ca3af',
-                  }}
-                >
-                  {order.event.venueName} · {order.event.venueAddress}
-                </p>
-              </div>
-
-              <div style={{ marginTop: '16px' }}>
-                <button
-                  onClick={handleGoHome}
-                  style={{
-                    padding: '8px 14px',
-                    borderRadius: '999px',
-                    border: '1px solid #4b5563',
-                    background: 'transparent',
-                    color: '#e5e7eb',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                  }}
-                >
-                  Volver al inicio
-                </button>
-              </div>
-            </>
+                Te enviamos también los tickets por correo electrónico.
+              </p>
+            </div>
           )}
         </section>
 
-        {/* Columna derecha: tickets + QR */}
+        {/* Columna derecha: lista de tickets */}
         <section
           style={{
-            background: '#020617',
             borderRadius: '16px',
             border: '1px solid #1f2937',
-            padding: '16px 20px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
+            padding: '20px 24px',
+            background: '#020617',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.45)',
+            minHeight: 260,
           }}
         >
           <h2
             style={{
-              fontSize: '16px',
+              fontSize: 18,
               fontWeight: 600,
               margin: 0,
-              marginBottom: '10px',
+              marginBottom: 16,
             }}
           >
             Tus tickets
           </h2>
 
-          {!error && !order && (
-            <p style={{ fontSize: '14px', color: '#9ca3af' }}>
-              No encontramos tickets para esta compra.
+          {loading && (
+            <p style={{ fontSize: 14, color: '#9ca3af' }}>
+              Cargando tickets...
             </p>
           )}
 
-          {order && (
+          {!loading && !error && (!order || order.tickets.length === 0) && (
+            <p style={{ fontSize: 14, color: '#9ca3af' }}>
+              No encontramos tickets asociados a esta compra.
+            </p>
+          )}
+
+          {!loading && !error && order && order.tickets.length > 0 && (
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'minmax(0, 1fr)',
-                gap: '12px',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
+                gap: 16,
               }}
             >
-              {order.tickets.map((t) => {
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-                  t.code,
-                )}`;
-
-                return (
-                  <div
-                    key={t.code}
+              {order.tickets.map((ticket) => (
+                <article
+                  key={ticket.code}
+                  style={{
+                    borderRadius: 12,
+                    border: '1px solid #1f2937',
+                    padding: '12px 12px 14px',
+                    background: '#020617',
+                  }}
+                >
+                  <p
                     style={{
-                      borderRadius: '12px',
-                      border: '1px solid #1f2937',
-                      padding: '12px 14px',
-                      display: 'grid',
-                      gridTemplateColumns: 'auto 1fr',
-                      gap: '12px',
-                      alignItems: 'center',
-                      background: '#020617',
+                      margin: 0,
+                      fontSize: 12,
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.06,
+                      color: '#9ca3af',
+                      marginBottom: 4,
                     }}
                   >
-                    <div
-                      style={{
-                        width: '120px',
-                        height: '120px',
-                        borderRadius: '8px',
-                        background: '#020617',
-                        border: '1px solid #111827',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <img
-                        src={qrUrl}
-                        alt={`QR ticket ${t.code}`}
-                        width={120}
-                        height={120}
-                        style={{ display: 'block' }}
-                      />
-                    </div>
+                    Código
+                  </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontFamily: 'monospace',
+                      fontSize: 13,
+                      marginBottom: 8,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {ticket.code}
+                  </p>
 
-                    <div>
-                      <p
-                        style={{
-                          fontSize: '14px',
-                          margin: 0,
-                          marginBottom: '4px',
-                        }}
-                      >
-                        <strong>Código:</strong> {t.code}
-                      </p>
-                      <p
-                        style={{
-                          fontSize: '13px',
-                          margin: 0,
-                          marginBottom: '8px',
-                          color: '#9ca3af',
-                        }}
-                      >
-                        Estado:{' '}
-                        <span
-                          style={{
-                            padding: '2px 8px',
-                            borderRadius: '999px',
-                            fontSize: '12px',
-                            border: '1px solid #374151',
-                          }}
-                        >
-                          {statusLabel(t.status)}
-                        </span>
-                      </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 12,
+                      marginBottom: 8,
+                      color:
+                        ticket.status === 'VALID'
+                          ? '#4ade80'
+                          : ticket.status === 'USED'
+                          ? '#f97316'
+                          : '#f87171',
+                    }}
+                  >
+                    {ticket.status === 'VALID'
+                      ? 'Válido'
+                      : ticket.status === 'USED'
+                      ? 'Usado'
+                      : 'Cancelado'}
+                  </p>
 
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: '8px',
-                          flexWrap: 'wrap',
-                          fontSize: '13px',
-                        }}
-                      >
-                        <a
-                          href={qrUrl}
-                          download={`ticket-${t.code}.png`}
-                          style={{
-                            padding: '6px 10px',
-                            borderRadius: '999px',
-                            border: '1px solid #4b5563',
-                            background: 'transparent',
-                            color: '#e5e7eb',
-                            textDecoration: 'none',
-                          }}
-                        >
-                          Descargar QR
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard
-                              ?.writeText(t.code)
-                              .catch(() => undefined);
-                          }}
-                          style={{
-                            padding: '6px 10px',
-                            borderRadius: '999px',
-                            border: 'none',
-                            background: '#111827',
-                            color: '#e5e7eb',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Copiar código
-                        </button>
-                      </div>
-                    </div>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      borderRadius: 10,
+                      overflow: 'hidden',
+                      background: '#020617',
+                      border: '1px dashed #1f2937',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                        ticket.code,
+                      )}`}
+                      alt={`QR ticket ${ticket.code}`}
+                      width={180}
+                      height={180}
+                      style={{ display: 'block' }}
+                    />
                   </div>
-                );
-              })}
+
+                  <p
+                    style={{
+                      margin: 0,
+                      marginTop: 6,
+                      fontSize: 11,
+                      color: '#6b7280',
+                    }}
+                  >
+                    Puedes guardar esta imagen o mostrar el QR directamente en
+                    la entrada.
+                  </p>
+                </article>
+              ))}
             </div>
           )}
         </section>
       </div>
     </div>
   );
-}
+};
+
+export default CompraExitosaPage;
