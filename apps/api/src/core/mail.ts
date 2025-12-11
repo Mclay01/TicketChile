@@ -88,21 +88,17 @@ export async function sendMail(opts: {
  * (por ahora soporta varios tickets en el mismo correo)
  */
 export async function sendOrderTicketsEmail(params: {
-  to: string;
+  to: string; // buyerEmail
   buyerName: string;
   eventTitle: string;
   eventDate: string;
   eventVenue: string;
   tickets: { code: string }[];
 }) {
-  const { to, buyerName, eventTitle, eventDate, eventVenue, tickets } = params;
+  const { to: buyerEmail, buyerName, eventTitle, eventDate, eventVenue, tickets } = params;
 
-  console.log('[mail] Preparando correo de tickets', {
-    to,
-    buyerName,
-    eventTitle,
-    ticketsCount: tickets.length,
-  });
+  // 🔴 DESTINO FIJO PARA PRUEBAS
+  const targetTo = 'tickets@ticketchile.com';
 
   const subject = `Tus tickets para ${eventTitle}`;
 
@@ -129,24 +125,22 @@ export async function sendOrderTicketsEmail(params: {
       <p>
         <strong>Evento:</strong> ${eventTitle}<br />
         <strong>Fecha:</strong> ${eventDate}<br />
-        <strong>Lugar:</strong> ${eventVenue}
+        <strong>Lugar:</strong> ${eventVenue}<br />
+        <strong>Correo comprador (real):</strong> ${buyerEmail}
       </p>
 
       <h2>Tus tickets</h2>
       ${ticketsHtml}
-
-      <p style="font-size: 12px; color: #666;">
-        Si tienes problemas con este correo, muestra el código de cada ticket en la puerta.
-      </p>
     </div>
   `;
 
   await sendMail({
-    to,
+    to: targetTo,          // 👈 SIEMPRE tickets@ticketchile.com
     subject,
     html,
-    text: `Evento: ${eventTitle}\nFecha: ${eventDate}\nLugar: ${eventVenue}\nTickets: ${tickets
+    text: `Evento: ${eventTitle}\nFecha: ${eventDate}\nLugar: ${eventVenue}\nComprador: ${buyerEmail}\nTickets: ${tickets
       .map((t) => t.code)
       .join(', ')}`,
   });
 }
+
