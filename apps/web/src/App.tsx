@@ -360,6 +360,19 @@ interface EventCardProps {
   token: string | null;
   userId: string | null; // 👈 nuevo prop
 }
+function storeFlowTokenFromCheckoutUrl(checkoutUrl: string) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const url = new URL(checkoutUrl);
+    const token = url.searchParams.get('token');
+    if (token) {
+      localStorage.setItem('tiketera_last_flow_token', token);
+    }
+  } catch (err) {
+    console.error('No se pudo leer el token de Flow desde checkoutUrl', err);
+  }
+}
 
 function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
   const [ticketTypeId, setTicketTypeId] = useState(
@@ -439,6 +452,9 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
           },
         });
 
+        // 👇 guardamos el token de Flow para que /compra-exitosa lo pueda usar
+        storeFlowTokenFromCheckoutUrl(checkoutUrl);
+
         window.location.href = checkoutUrl;
       } catch (err) {
         console.error('Public purchase payment error', err);
@@ -488,12 +504,15 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
           eventId: event.id,
           ticketTypeId,
           quantity: String(quantity),
-          // 👇 aquí ya es string, no null
           buyerUserId: userId,
         },
       });
 
+      // 👇 igual que arriba
+      storeFlowTokenFromCheckoutUrl(checkoutUrl);
+
       window.location.href = checkoutUrl;
+
     } catch (err) {
       console.error('Private purchase payment error', err);
       setError(

@@ -1,8 +1,5 @@
 {
   "rewrites": [
-    {
-      "source": "/compra-exitosa",
-      "destination": "/"
-    }
+    { "source": "/compra-exitosa", "destination": "/" }
   ]
 }
