@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/compra-exitosa",
+      "destination": "/"
+    }
+  ]
+}
