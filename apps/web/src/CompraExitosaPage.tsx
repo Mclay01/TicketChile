@@ -128,7 +128,7 @@ export default function CompraExitosaPage() {
             {order.tickets.map((t) => (
               <li key={t.code} style={{ marginBottom: 8 }}>
                 <div>
-                  Código:{' '}
+                  Código{' '}
                   <code
                     style={{
                       background: '#111',
@@ -140,7 +140,7 @@ export default function CompraExitosaPage() {
                   </code>{' '}
                   — Estado: {t.status}
                 </div>
-                {/* Aquí podrías añadir el QR si quieres */}
+                {/* aquí podrías renderizar el QR o un botón "Descargar entrada" usando este código */}
               </li>
             ))}
           </ul>
