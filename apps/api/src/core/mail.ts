@@ -25,7 +25,7 @@ function getTransporter(): Transporter {
   transporter = nodemailer.createTransport({
     host: env.SMTP_HOST,
     port: Number(env.SMTP_PORT) || 587,
-    secure: false, // STARTTLS en 587, suficiente para la mayoría
+    secure: false, // STARTTLS en 587
     auth:
       env.SMTP_USER && env.SMTP_PASS
         ? {
@@ -62,7 +62,7 @@ export async function sendMail(opts: {
     return;
   }
 
-  // 🔥 PRIMERO: intentar enviar por la API HTTP de Postmark (puerto 443)
+  // 🔥 1) Intentar por HTTP API de Postmark (puerto 443)
   if (POSTMARK_SERVER_TOKEN) {
     try {
       console.log('[mail] Enviando correo via Postmark HTTP API...', {
@@ -99,11 +99,11 @@ export async function sendMail(opts: {
         '[mail] Error enviando correo con Postmark HTTP API:',
         err
       );
-      // Si falla la API HTTP, probamos igual con SMTP/jsonTransport abajo
+      // Si falla la API HTTP, probamos igual con SMTP/jsonTransport
     }
   }
 
-  // 🔁 Fallback: SMTP / jsonTransport (como tenías antes)
+  // 🔁 2) Fallback: SMTP / jsonTransport
   const t = getTransporter();
 
   try {
@@ -186,7 +186,7 @@ export async function sendOrderTicketsEmail(params: {
   `;
 
   await sendMail({
-    to,
+    to, // 👈 SIEMPRE el correo del comprador
     subject,
     html,
     text: `Evento: ${eventTitle}\nFecha: ${eventDate}\nLugar: ${eventVenue}\nTickets: ${tickets
