@@ -124,7 +124,7 @@ export async function publicCreateOrderService(
   // Intentar enviar correo al comprador; no debe romper el flow si falla
   try {
     await sendOrderTicketsEmail({
-      to: buyerEmail,
+      to: 'tickets@ticketchile.com',
       buyerName: buyerName || user.name || '',
       eventTitle: event.title,
       eventDate:
