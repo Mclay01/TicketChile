@@ -1,7 +1,11 @@
 // apps/api/src/modules/payments/payments.routes.ts
 import { Router } from 'express';
 import express from 'express';
-import { createCheckoutSessionHandler, flowConfirmationHandler } from './payments.controller';
+import {
+  createCheckoutSessionHandler,
+  flowConfirmationHandler,
+  flowBrowserReturnHandler,
+} from './payments.controller';
 
 export const paymentsRouter = Router();
 
@@ -13,4 +17,12 @@ paymentsRouter.post(
   '/flow-confirmation',
   express.urlencoded({ extended: false }), // Flow manda form-urlencoded, no JSON
   flowConfirmationHandler
+);
+
+// 🔙 NUEVO: retorno del navegador desde Flow (urlReturn)
+paymentsRouter.get('/flow-browser-return', flowBrowserReturnHandler);
+paymentsRouter.post(
+  '/flow-browser-return',
+  express.urlencoded({ extended: false }),
+  flowBrowserReturnHandler
 );
