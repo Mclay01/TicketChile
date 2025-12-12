@@ -2503,8 +2503,10 @@ function App() {
       <main
         style={{
           padding: '16px',
-          maxWidth: '960px',
+          maxWidth: '1200px',     // más ancho en pantallas grandes
+          width: '100%',          // ocupa todo el ancho disponible
           margin: '0 auto',
+          boxSizing: 'border-box',
         }}
       >
         {paymentStatus !== 'idle' && paymentMessage && (
@@ -2558,8 +2560,8 @@ function App() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'minmax(0, 1fr)',
-                gap: '12px',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '16px',
               }}
             >
               {events
