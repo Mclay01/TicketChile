@@ -125,8 +125,8 @@ export default function CompraExitosaPage() {
           </p>
           <ul style={{ marginTop: 16 }}>
             {order.tickets.map((t) => (
-              <li key={t.code} style={{ marginBottom: 8 }}>
-                <div>
+              <li key={t.code} style={{ marginBottom: 24, listStyle: 'none' }}>
+                <div style={{ marginBottom: 8 }}>
                   Código{' '}
                   <code
                     style={{
@@ -139,6 +139,23 @@ export default function CompraExitosaPage() {
                   </code>{' '}
                   — Estado: {t.status}
                 </div>
+
+                {/* QR visible para que el cliente pueda usar la entrada */}
+                <div style={{ marginTop: 8 }}>
+                  <p style={{ marginBottom: 8 }}>
+                    Presenta este QR en la entrada:
+                  </p>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                      t.code
+                    )}`}
+                    width={220}
+                    height={220}
+                    alt={`QR ticket ${t.code}`}
+                    style={{ background: '#fff', padding: 4, borderRadius: 8 }}
+                  />
+                </div>
+
                 {/* aquí podrías renderizar el QR o un botón "Descargar entrada" usando este código */}
               </li>
             ))}
