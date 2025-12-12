@@ -187,17 +187,22 @@ export async function flowBrowserReturnHandler(
   res: Response,
   _next: NextFunction,
 ) {
-  const token = req.query.token as string | undefined;
+  // Flow a veces manda el token en el body (POST) y a veces en la query.
+  const body = (req as any).body ?? {};
+  const query = (req as any).query ?? {};
+
+  const token = (body.token || query.token) as string | undefined;
 
   const FRONT_BASE =
     process.env.PUBLIC_WEB_BASE_URL || 'https://www.ticketchile.com';
   const successUrl = `${FRONT_BASE.replace(/\/$/, '')}/compra-exitosa`;
 
-  // Si no viene token, simplemente mandamos al usuario a la página de éxito.
+  // Si aún así no hay token, mandamos al success "pelado"
   if (!token) {
     return res.redirect(successUrl);
   }
 
+  // Redirigimos al front con el token en la URL
   const url = new URL(successUrl);
   url.searchParams.set('token', token);
 

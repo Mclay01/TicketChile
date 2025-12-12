@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import * as paymentsService from '../payments/payments.service';
 import { createOrderSchema } from './orders.schemas';
 import * as ordersService from './orders.service';
 import { AppError } from '../../core/errors/AppError';
@@ -77,7 +78,7 @@ export async function listTicketsForOrganizerHandler(
 export async function getPublicOrderByFlowTokenHandler(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const token = req.query.token as string | undefined;
@@ -85,37 +86,89 @@ export async function getPublicOrderByFlowTokenHandler(
       return res.status(400).json({ message: 'Missing token' });
     }
 
+    // 1) Primero intentamos por flowToken (lo que ya tenías)
     const order = await ordersRepo.findOrderByFlowToken(token);
 
-    if (!order) {
-      // Todavía no se creó la orden para ese token
+    if (order) {
+      const richOrder = order as any;
+
+      return res.json({
+        id: richOrder.id,
+        event: {
+          title: richOrder.event.title,
+          startDateTime: richOrder.event.startDateTime,
+          venueName: richOrder.event.venueName,
+          venueAddress: richOrder.event.venueAddress,
+        },
+        tickets: richOrder.tickets.map((t: any) => ({
+          code: t.code,
+          status: t.status,
+          
+        })),
+      });
+    }
+
+    // 2) Fallback: si no hay order por flowToken, usamos el email de Flow
+    //    (reutilizamos la lógica que ya te funciona para listar tickets)
+    let buyerEmail: string | undefined;
+
+    try {
+      const payment = await paymentsService.getPaymentStatus(token);
+      const optional = (payment as any).optional;
+
+      let meta: any = null;
+      if (typeof optional === 'string') {
+        try {
+          meta = JSON.parse(optional);
+        } catch {
+          meta = null;
+        }
+      } else if (typeof optional === 'object' && optional !== null) {
+        meta = optional;
+      }
+
+      buyerEmail = meta?.buyerEmail;
+    } catch (e) {
+      console.error('[public/by-flow-token] Error llamando a Flow:', e);
+    }
+
+    if (!buyerEmail) {
+      // No pudimos deducir el correo ⇒ para el front es "todavía no está"
       return res.status(404).json({ message: 'Order not found yet' });
     }
 
-    const richOrder = order as any;
+    // 3) Reutilizamos findTicketsByBuyerEmail (lo mismo que MisTickets)
+    const tickets = await ordersRepo.findTicketsByBuyerEmail(buyerEmail);
 
-    const tickets = Array.isArray(richOrder.tickets)
-      ? richOrder.tickets
-      : [];
+    if (!tickets.length) {
+      return res.status(404).json({ message: 'Order not found yet' });
+    }
+
+    // Están ordenados por createdAt DESC; tomamos la orden más reciente
+    const first = tickets[0];
+    const targetOrderId = (first.orderId ?? first.order?.id) as string;
+    const event = first.order?.event;
+
+    const ticketsForOrder = tickets.filter(
+      (t) => (t.orderId ?? t.order?.id) === targetOrderId
+    );
 
     return res.json({
-      orderId: richOrder.id,
-      eventTitle: richOrder.event?.title ?? 'Evento',
-      eventDate:
-        (richOrder.event?.startDateTime as string | undefined) ?? null,
-      eventVenue: richOrder.event
-        ? [richOrder.event.venueName, richOrder.event.venueAddress]
-            .filter(Boolean)
-            .join(' · ')
-        : null,
-      tickets: tickets.map((t: any) => ({
+      id: targetOrderId,
+      event: {
+        title: event?.title ?? 'Evento',
+        startDateTime: event?.startDateTime ?? '',
+        venueName: event?.venueName ?? '',
+        venueAddress: event?.venueAddress ?? '',
+      },
+      tickets: ticketsForOrder.map((t) => ({
         code: t.code,
         status: t.status,
-        attendeeName: t.attendeeName,
-        attendeeEmail: t.attendeeEmail,
+        
       })),
     });
   } catch (err) {
+    console.error('[public/by-flow-token] Error general:', err);
     next(err);
   }
 }
