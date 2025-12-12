@@ -575,7 +575,7 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
           <strong>Lugar:</strong> {event.venueName} · {event.venueAddress}
         </div>
         <div>
-          <strong>Organiza:</strong> {event.organizer.name}
+          <strong>Organiza:</strong> {"PRODUCTORA"}
         </div>
       </div>
 
