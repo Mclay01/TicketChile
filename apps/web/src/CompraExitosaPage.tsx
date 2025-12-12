@@ -48,8 +48,7 @@ export default function CompraExitosaPage() {
         const res = await fetch(
           `${API_BASE_URL}/orders/public/by-flow-token?token=${encodeURIComponent(
             token
-          )}`,
-          { credentials: 'include' }
+          )}`
         );
 
         if (res.ok) {
