@@ -1,6 +1,9 @@
 import { prisma } from '../../core/db/client';
 import { randomUUID } from 'crypto';
 import type { CreateOrderInput } from './orders.schemas';
+import type { Order, Ticket } from '@prisma/client';
+
+type OrderWithTickets = Order & { tickets: Ticket[] }; 
 
 export async function findTicketsForOrganizer(organizerId: string) {
   return prisma.ticket.findMany({
@@ -56,7 +59,7 @@ export async function createOrderWithTickets(args: {
   }[];
   flowToken?: string | null;
   flowOrder?: number | null;
-}) {
+}): Promise<OrderWithTickets> {   // 👈 tipo de retorno con tickets
   const {
     userId,
     eventId,
@@ -77,6 +80,9 @@ export async function createOrderWithTickets(args: {
       flowOrder: flowOrder ?? null,
       tickets: {
         create: tickets.map((t) => ({
+          // 👇 estos campos son los que Prisma espera
+          code: randomUUID(),       // código del ticket
+          eventId,                  // ligamos el ticket al evento
           ticketTypeId: t.ticketTypeId,
           attendeeName: t.attendeeName,
           attendeeEmail: t.attendeeEmail,
@@ -151,6 +157,7 @@ export async function findTicketsByBuyerEmail(email: string) {
     code: t.code,
     attendeeName: t.attendeeName,
     attendeeEmail: t.attendeeEmail,
+    status: (t as any).status,
     ticketType: t.ticketType ? { id: t.ticketType.id, name: t.ticketType.name } : null,
     orderId: t.orderId,
     order: t.order
