@@ -9,7 +9,7 @@ const path = window.location.pathname.toLowerCase();
 
 // /  => landing
 // todo lo demás ( /eventos, /compra-exitosa, /lo-que-sea ) => App
-const RootComponent = path === '/' ? LandingPage : App;
+const RootComponent = path === '/' ? App : App;
 
 ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement,
