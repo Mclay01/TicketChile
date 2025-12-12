@@ -44,7 +44,7 @@ export async function countIssuedTicketsForTicketType(ticketTypeId: string) {
   });
 }
 
-export async function createOrderWithTickets(params: {
+export async function createOrderWithTickets(args: {
   userId: string;
   eventId: string;
   currency: string;
@@ -54,7 +54,6 @@ export async function createOrderWithTickets(params: {
     attendeeName: string;
     attendeeEmail: string;
   }[];
-  status?: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED';
   flowToken?: string | null;
   flowOrder?: number | null;
 }) {
@@ -64,50 +63,30 @@ export async function createOrderWithTickets(params: {
     currency,
     totalAmountCents,
     tickets,
-    status,
     flowToken,
     flowOrder,
-  } = params;
+  } = args;
 
-  return prisma.$transaction(async (tx) => {
-    const order = await tx.order.create({
-      data: {
-        userId,
-        eventId,
-        currency,
-        totalAmountCents,
-        status: status ?? 'PAID', // por defecto igual que antes
-        flowToken: flowToken ?? null,
-        flowOrder: flowOrder ?? null,
-      },
-    });
-
-    const ticketsData = tickets.map((t) => ({
-      orderId: order.id,
-      ticketTypeId: t.ticketTypeId,
+  return prisma.order.create({
+    data: {
+      userId,
       eventId,
-      attendeeName: t.attendeeName,
-      attendeeEmail: t.attendeeEmail,
-      code: randomUUID(),
-    }));
-
-    await tx.ticket.createMany({
-      data: ticketsData,
-    });
-
-    const fullOrder = await tx.order.findUnique({
-      where: { id: order.id },
-      include: {
-        event: true,
-        tickets: {
-          include: {
-            ticketType: true,
-          },
-        },
+      currency,
+      totalAmountCents,
+      flowToken: flowToken ?? null,
+      flowOrder: flowOrder ?? null,
+      tickets: {
+        create: tickets.map((t) => ({
+          ticketTypeId: t.ticketTypeId,
+          attendeeName: t.attendeeName,
+          attendeeEmail: t.attendeeEmail,
+        })),
       },
-    });
-
-    return fullOrder;
+    },
+    include: {
+      tickets: true,
+      event: true,
+    },
   });
 }
 
