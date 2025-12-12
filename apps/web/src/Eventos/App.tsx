@@ -12,9 +12,9 @@ import {
   API_BASE_URL,
   createCheckoutSession,
   deleteEventApi,
-} from './api';
-import { NativeQrScanner } from './NativeQrScanner';
-import CompraExitosaPage from './CompraExitosaPage';
+} from '../api';
+import { NativeQrScanner } from '../NativeQrScanner';
+import CompraExitosaPage from '../CompraExitosaPage';
 
 // Status interno normalizado para el check-in
 type CheckInStatus = 'OK' | 'ALREADY_USED' | 'NOT_FOUND' | 'INVALID';
