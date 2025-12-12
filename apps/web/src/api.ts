@@ -399,7 +399,10 @@ export interface CreateCheckoutSessionInput {
     eventId?: string;
     ticketTypeId?: string;
     quantity?: string;
-    buyerUserId?: string; // 👈 agregado para el PRIVATE con login
+    buyerUserId?: string; // PRIVATE con login
+
+    // 👇 permite agregar cualquier otro campo string (como las comisiones)
+    [key: string]: string | undefined;
   };
 }
 

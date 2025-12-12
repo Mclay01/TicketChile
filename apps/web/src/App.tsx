@@ -39,6 +39,17 @@ function formatDateTime(iso: string) {
   });
 }
 
+const COMMISSION_RATE = 0.1119; // 11,19%
+
+function calcCommissionCents(priceCents: number) {
+  // Redondeamos a centavos
+  return Math.round(priceCents * COMMISSION_RATE);
+}
+
+function calcFinalPriceCents(priceCents: number) {
+  return priceCents + calcCommissionCents(priceCents);
+}
+
 function formatPrice(cents: number, currency: string) {
   const amount = cents / 100;
   return new Intl.NumberFormat('es-CL', {
@@ -46,6 +57,7 @@ function formatPrice(cents: number, currency: string) {
     currency,
   }).format(amount);
 }
+
 
 function decodeToken<T = unknown>(token: string | null): T | null {
   if (!token) return null;
@@ -408,8 +420,18 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
       return;
     }
 
-    const totalAmountCents = selectedTicketType.priceCents * quantity;
+    const basePriceCents = selectedTicketType.priceCents;
+    const commissionPerTicketCents = calcCommissionCents(basePriceCents);
+    const finalPricePerTicketCents = basePriceCents + commissionPerTicketCents;
+
+    const baseTotalCents = basePriceCents * quantity;
+    const commissionTotalCents = commissionPerTicketCents * quantity;
+
+    // ESTO es lo que se le cobra al cliente en Flow
+    const totalAmountCents = finalPricePerTicketCents * quantity;
+
     const currency = selectedTicketType.currency || 'CLP';
+
 
     const successUrl = `${FRONTEND_BASE_URL}/compra-exitosa`;
     const cancelUrl = `${FRONTEND_BASE_URL}?payment=cancel`;
@@ -449,8 +471,15 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
             quantity: String(quantity),
             buyerName,
             buyerEmail,
+            // desglose de precios
+            basePriceCents: String(basePriceCents),
+            commissionPerTicketCents: String(commissionPerTicketCents),
+            baseTotalCents: String(baseTotalCents),
+            commissionTotalCents: String(commissionTotalCents),
+            finalTotalCents: String(totalAmountCents),
           },
         });
+
 
         // 👇 guardamos el token de Flow para que /compra-exitosa lo pueda usar
         storeFlowTokenFromCheckoutUrl(checkoutUrl);
@@ -505,6 +534,11 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
           ticketTypeId,
           quantity: String(quantity),
           buyerUserId: userId,
+          basePriceCents: String(basePriceCents),
+          commissionPerTicketCents: String(commissionPerTicketCents),
+          baseTotalCents: String(baseTotalCents),
+          commissionTotalCents: String(commissionTotalCents),
+          finalTotalCents: String(totalAmountCents),
         },
       });
 
@@ -564,32 +598,62 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
       </div>
 
       {event.ticketTypes.length > 0 && (
-        <>
+  <>
+    <div
+      style={{
+        marginTop: '8px',
+        paddingTop: '8px',
+        borderTop: '1px solid #1f2937',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+      }}
+    >
+      <strong style={{ fontSize: '13px' }}>Entradas:</strong>
+      {event.ticketTypes.map((tt) => (
+        <div
+          key={tt.id}
+          style={{
+            fontSize: '13px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+          }}
+        >
           <div
             style={{
-              marginTop: '8px',
-              paddingTop: '8px',
-              borderTop: '1px solid #1f2937',
               display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
+              justifyContent: 'space-between',
             }}
           >
-            <strong style={{ fontSize: '13px' }}>Entradas:</strong>
-            {event.ticketTypes.map((tt) => (
-              <div
-                key={tt.id}
+            <span>{tt.name}</span>
+            {(() => {
+              const base = tt.priceCents;
+              const fee = calcCommissionCents(base);
+              const finalPrice = base + fee;
+              return (
+                <span>{formatPrice(finalPrice, tt.currency)}</span>
+              );
+            })()}
+          </div>
+
+          {(() => {
+            const base = tt.priceCents;
+            const fee = calcCommissionCents(base);
+            return (
+              <span
                 style={{
-                  fontSize: '13px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
+                  fontSize: '11px',
+                  opacity: 0.8,
                 }}
               >
-                <span>{tt.name}</span>
-                <span>{formatPrice(tt.priceCents, tt.currency)}</span>
-              </div>
-            ))}
-          </div>
+                Comisión: {formatPrice(fee, tt.currency)}
+              </span>
+            );
+          })()}
+        </div>
+      ))}
+    </div>
 
           <div
             style={{
