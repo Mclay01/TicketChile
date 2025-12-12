@@ -1,19 +1,20 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
+// apps/web/src/main.tsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.tsx';
 import LandingPage from './LandingPage.tsx';
-import './index.css'
-import App from './App.tsx'
+import './index.css';
 
 const path = window.location.pathname.toLowerCase();
-
 
 // /  => landing
 // todo lo demás ( /eventos, /compra-exitosa, /lo-que-sea ) => App
 const RootComponent = path === '/' ? LandingPage : App;
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement,
+).render(
+  <React.StrictMode>
     <RootComponent />
-    <App />
-  </StrictMode>,
-)
+  </React.StrictMode>,
+);
