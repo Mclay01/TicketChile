@@ -65,29 +65,59 @@ export async function createCheckoutSession(params: {
 
   const { amountCents, currency, metadata } = params;
 
-  // Flow espera "amount" en unidades de moneda, no en centavos
-  const amount = amountCents / 100;
+  // 💰 1) Monto base en centavos (lo que viene del front, SIN comisión)
+  const baseAmountCents = amountCents;
+
+  // 💸 2) Comisión 11,19% sobre el monto base (en centavos, redondeado)
+  const COMMISSION_RATE = 0.1119;
+  const feeCents = Math.round(baseAmountCents * COMMISSION_RATE);
+
+  // 🧮 3) Total con comisión, en centavos
+  const totalAmountCents = baseAmountCents + feeCents;
+
+  // 4) Flow espera "amount" en unidades de moneda
+  let amount: number;
+  if (currency === 'CLP') {
+    // CLP NO acepta decimales → entero sí o sí
+    amount = Math.round(totalAmountCents / 100);
+
+    if (!Number.isInteger(amount)) {
+      // por si acaso, para evitar otro error raro
+      throw new AppError(
+        500,
+        `Monto inválido para Flow (CLP debe ser entero): ${amount}`
+      );
+    }
+  } else {
+    // Por si algún día usas otra moneda que sí permita decimales
+    amount = totalAmountCents / 100;
+  }
 
   const urlConfirmation = `${PUBLIC_API_BASE_URL}/payments/flow-confirmation`;
-
-  // 👉 AHORA Flow vuelve al API, NO directo al frontend
   const urlReturn = `${PUBLIC_API_BASE_URL}/payments/flow-browser-return`;
 
   const bodyParams: Record<string, string | number> = {
     apiKey: FLOW_API_KEY,
-    commerceOrder: `order-${Date.now()}`, // puedes mejorar esto luego si quieres
+    commerceOrder: `order-${Date.now()}`,
     subject: 'Compra entradas TIKETERA',
     currency, // normalmente "CLP"
-    amount,
+    amount,   // ✅ ya incluye comisión y es entero en CLP
     email: FLOW_DEFAULT_EMAIL,
-    paymentMethod: 9, // todos los medios de pago
+    paymentMethod: 9,
     urlConfirmation,
     urlReturn,
   };
 
-  // 👇 Aquí mandamos los datos del ticket a Flow
-  if (metadata && Object.keys(metadata).length > 0) {
-    bodyParams.optional = JSON.stringify(metadata);
+  // 👇 Metadatos extendidos: lo tuyo + desglose de comisión
+  const extendedMetadata: Record<string, string> = {
+    ...(metadata ?? {}),
+    baseAmountCents: String(baseAmountCents),
+    feeCents: String(feeCents),
+    totalAmountCents: String(totalAmountCents),
+  };
+
+  if (extendedMetadata && Object.keys(extendedMetadata).length > 0) {
+    bodyParams.optional = JSON.stringify(extendedMetadata);
   }
 
   const s = signFlowParams(bodyParams);
