@@ -13,13 +13,11 @@ type PublicOrderResponse = {
     venueName: string;
     venueAddress: string;
   };
-  buyerEmail?: string | null;
-  buyerName?: string | null;
+  buyerEmail: string;
+  buyerName: string;
   tickets: {
     code: string;
     status: string;
-    attendeeName?: string;
-    attendeeEmail?: string;
   }[];
 };
 
@@ -165,14 +163,6 @@ export default function CompraExitosaPage() {
 
   const renderContent = () => {
     if (status === 'done' && order && order.tickets.length > 0) {
-      const firstTicket = order.tickets[0];
-      
-      const buyerName =
-        order.buyerName || firstTicket.attendeeName || '';
-
-      const buyerEmail =
-        order.buyerEmail || firstTicket.attendeeEmail || '';
-
       return (
         <div
           ref={cardRef}
@@ -220,8 +210,8 @@ export default function CompraExitosaPage() {
             }}
           >
             Gracias por tu compra. Aquí tienes el resumen de tus tickets.
-            
           </p>
+
           {order.buyerEmail && (
             <p
               style={{
@@ -257,41 +247,64 @@ export default function CompraExitosaPage() {
             </p>
           </div>
 
+          {/* 🔹 AQUÍ mostramos TODOS los tickets con su QR y código */}
           <div
             style={{
               marginTop: 12,
               marginBottom: 10,
               display: 'flex',
+              flexWrap: 'wrap',
               justifyContent: 'center',
+              gap: 16,
             }}
           >
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(
-                firstTicket.code
-              )}`}
-              width={260}
-              height={260}
-              alt={`QR ticket ${firstTicket.code}`}
-              style={{
-                background: '#ffffff',
-                padding: 8,
-                borderRadius: 16,
-                border: '1px solid #e5e7eb',
-              }}
-            />
+            {order.tickets.map((ticket, index) => (
+              <div
+                key={ticket.code}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  maxWidth: 220,
+                }}
+              >
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                    ticket.code
+                  )}`}
+                  width={220}
+                  height={220}
+                  alt={`QR ticket ${ticket.code}`}
+                  style={{
+                    background: '#ffffff',
+                    padding: 8,
+                    borderRadius: 16,
+                    border: '1px solid #e5e7eb',
+                  }}
+                />
+                <p
+                  style={{
+                    margin: 4,
+                    fontSize: 12,
+                    color: '#111827',
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  {ticket.code}
+                </p>
+                {order.tickets.length > 1 && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: '#6b7280',
+                    }}
+                  >
+                    Ticket {index + 1} de {order.tickets.length}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
-
-          <p
-            style={{
-              margin: 0,
-              marginTop: 4,
-              fontSize: 13,
-              color: '#111827',
-              wordBreak: 'break-all',
-            }}
-          >
-            {firstTicket.code}
-          </p>
 
           <p
             style={{

@@ -7,15 +7,15 @@ async function main() {
 
   // Usuario ORGANIZER de ejemplo
   await prisma.user.upsert({
-    where: { email: 'juan@example.com' },
+    where: { email: 'franko@ticketchile.com' },
     update: {
-      name: 'Juan Organizador',
+      name: 'Franko Riquelme',
       password: passwordHash,
       role: 'ORGANIZER',
     },
     create: {
-      name: 'Juan Organizador',
-      email: 'juan@example.com',
+      name: 'Franko Riquelme',
+      email: 'franko@ticketchile.com',
       password: passwordHash,
       role: 'ORGANIZER',
     },
