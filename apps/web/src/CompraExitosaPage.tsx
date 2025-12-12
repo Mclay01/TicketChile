@@ -1,6 +1,8 @@
 // apps/web/src/CompraExitosaPage.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { API_BASE_URL } from './api';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 type PublicOrderResponse = {
   id: string;
@@ -11,7 +13,7 @@ type PublicOrderResponse = {
     venueName: string;
     venueAddress: string;
   };
-  // 👉 opcional, por si más adelante el backend manda estos datos
+  // opcionales, por si más adelante el backend manda estos datos
   buyerEmail?: string;
   buyerName?: string;
   tickets: {
@@ -28,6 +30,9 @@ export default function CompraExitosaPage() {
   const [status, setStatus] = useState<
     'loading' | 'waiting' | 'not-found' | 'error' | 'done'
   >('loading');
+
+  // ref al “tarjetón” para convertirlo en PDF
+  const cardRef = useRef<HTMLDivElement | null>(null);
 
   // leer token de la URL
   const search = typeof window !== 'undefined' ? window.location.search : '';
@@ -104,10 +109,41 @@ export default function CompraExitosaPage() {
 
   // --- helpers de UI (no tocan la lógica de datos) ---
 
-  const handleDownloadPdf = () => {
-    if (typeof window !== 'undefined') {
-      // El usuario luego elige "Guardar como PDF" en el diálogo de impresión
-      window.print();
+  // Ahora genera un PDF y lo descarga directamente
+  const handleDownloadPdf = async () => {
+    if (!cardRef.current || !order) return;
+
+    try {
+      const element = cardRef.current;
+
+      const canvas = await html2canvas(element, {
+        scale: 2, // más resolución
+        useCORS: true,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      // Dejamos márgenes y ajustamos la imagen al ancho de la página
+      const margin = 10;
+      const imgWidth = pageWidth - margin * 2;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      const x = margin;
+      const y = Math.max(margin, (pageHeight - imgHeight) / 2);
+
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+      const filename = `ticket-${order.id || 'compra'}.pdf`;
+      pdf.save(filename);
+    } catch (err) {
+      console.error('Error generando PDF:', err);
+      // fallback mínimo: si algo explota, al menos no deja el botón muerto
+      if (typeof window !== 'undefined') {
+        window.alert('No se pudo generar el PDF. Inténtalo nuevamente.');
+      }
     }
   };
 
@@ -143,6 +179,7 @@ export default function CompraExitosaPage() {
 
       return (
         <div
+          ref={cardRef}
           style={{
             width: '100%',
             maxWidth: 520,
@@ -324,6 +361,7 @@ export default function CompraExitosaPage() {
     // Estados de espera / error envueltos en una tarjeta similar
     return (
       <div
+        ref={cardRef}
         style={{
           width: '100%',
           maxWidth: 520,
