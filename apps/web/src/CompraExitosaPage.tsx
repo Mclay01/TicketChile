@@ -6,6 +6,7 @@ type PublicOrderResponse = {
   id: string;
   event: {
     title: string;
+    description?: string; // opcional, por si el backend la envía
     startDateTime: string;
     venueName: string;
     venueAddress: string;
@@ -98,7 +99,14 @@ export default function CompraExitosaPage() {
     };
   }, [token]);
 
-  // --- Render (usa tus estilos actuales) ---
+  // --- helpers de UI (no tocan la lógica de datos) ---
+
+  const handleDownloadPdf = () => {
+    if (typeof window !== 'undefined') {
+      // El usuario luego elige "Guardar como PDF" en el diálogo de impresión
+      window.print();
+    }
+  };
 
   const renderLeftMessage = () => {
     if (!token || status === 'error') {
@@ -118,45 +126,141 @@ export default function CompraExitosaPage() {
     if (status === 'done' && order) {
       return (
         <div>
-          <h3>{order.event.title}</h3>
-          <p>
-            {new Date(order.event.startDateTime).toLocaleString()} ·{' '}
-            {order.event.venueName} – {order.event.venueAddress}
-          </p>
-          <ul style={{ marginTop: 16 }}>
+          <div style={{ marginBottom: 16 }}>
+            <h3 style={{ marginBottom: 4 }}>{order.event.title}</h3>
+            <p style={{ margin: 0, color: '#444' }}>
+              {new Date(order.event.startDateTime).toLocaleString()} ·{' '}
+              {order.event.venueName} – {order.event.venueAddress}
+            </p>
+            {order.event.description && (
+              <p
+                style={{
+                  marginTop: 8,
+                  color: '#555',
+                  lineHeight: 1.5,
+                  fontSize: 14,
+                }}
+              >
+                {order.event.description}
+              </p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 16px',
+              borderRadius: 999,
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 14,
+              fontWeight: 600,
+              background:
+                'linear-gradient(135deg, #111827 0%, #1f2937 50%, #4b5563 100%)',
+              color: '#fff',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+              marginBottom: 20,
+            }}
+          >
+            {/* iconito simple con CSS, así no dependemos de librerías */}
+            <span
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 4,
+                border: '2px solid currentColor',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 10,
+              }}
+            >
+              ↓
+            </span>
+            Descargar comprobante (PDF)
+          </button>
+
+          <ul style={{ marginTop: 8, padding: 0 }}>
             {order.tickets.map((t) => (
-              <li key={t.code} style={{ marginBottom: 24, listStyle: 'none' }}>
-                <div style={{ marginBottom: 8 }}>
-                  Código{' '}
-                  <code
+              <li
+                key={t.code}
+                style={{
+                  marginBottom: 24,
+                  listStyle: 'none',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 12,
+                  padding: 16,
+                  display: 'flex',
+                  gap: 16,
+                  alignItems: 'center',
+                  background: '#fafafa',
+                }}
+              >
+                <div style={{ flex: '1 1 auto' }}>
+                  <div style={{ marginBottom: 6, fontSize: 14 }}>
+                    <span style={{ fontWeight: 600 }}>Código</span>{' '}
+                    <code
+                      style={{
+                        background: '#111',
+                        padding: '4px 8px',
+                        borderRadius: 4,
+                        color: '#f9fafb',
+                        fontSize: 13,
+                      }}
+                    >
+                      {t.code}
+                    </code>{' '}
+                    <span style={{ color: '#6b7280' }}>—</span>{' '}
+                    <span>
+                      Estado:{' '}
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          color:
+                            t.status === 'VALID'
+                              ? '#16a34a'
+                              : t.status === 'USED'
+                              ? '#ea580c'
+                              : '#b91c1c',
+                        }}
+                      >
+                        {t.status}
+                      </span>
+                    </span>
+                  </div>
+                  <p
                     style={{
-                      background: '#111',
-                      padding: '4px 8px',
-                      borderRadius: 4,
+                      margin: 0,
+                      fontSize: 13,
+                      color: '#6b7280',
+                      maxWidth: 360,
                     }}
                   >
-                    {t.code}
-                  </code>{' '}
-                  — Estado: {t.status}
+                    Presenta este código o el QR en la entrada del evento.
+                  </p>
                 </div>
 
                 {/* QR visible para que el cliente pueda usar la entrada */}
-                <div style={{ marginTop: 8 }}>
-                  <p style={{ marginBottom: 8 }}>
-                    Presenta este QR en la entrada:
-                  </p>
+                <div style={{ flex: '0 0 auto' }}>
                   <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
                       t.code
                     )}`}
-                    width={220}
-                    height={220}
+                    width={140}
+                    height={140}
                     alt={`QR ticket ${t.code}`}
-                    style={{ background: '#fff', padding: 4, borderRadius: 8 }}
+                    style={{
+                      background: '#fff',
+                      padding: 4,
+                      borderRadius: 8,
+                      border: '1px solid #e5e7eb',
+                    }}
                   />
                 </div>
-
-                {/* aquí podrías renderizar el QR o un botón "Descargar entrada" usando este código */}
               </li>
             ))}
           </ul>
@@ -186,18 +290,103 @@ export default function CompraExitosaPage() {
   };
 
   return (
-    <div className="layout-compra-exitosa">
-      {/* Columna izquierda */}
-      <section className="card-left">
-        <h1>Compra exitosa</h1>
-        <p>{renderLeftMessage()}</p>
-      </section>
+    <div
+      className="layout-compra-exitosa"
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        padding: '32px 16px',
+        background: '#f3f4f6',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 980,
+          background: '#ffffff',
+          borderRadius: 24,
+          boxShadow: '0 18px 45px rgba(15,23,42,0.2)',
+          padding: '28px 24px 32px',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1.05fr) minmax(0, 0.95fr)',
+          gap: 32,
+        }}
+      >
+        {/* Columna izquierda */}
+        <section
+          className="card-left"
+          style={{
+            paddingRight: 24,
+            borderRight: '1px solid #e5e7eb',
+          }}
+        >
+          <h1
+            style={{
+              fontSize: 32,
+              lineHeight: 1.1,
+              marginBottom: 12,
+            }}
+          >
+            Compra exitosa
+          </h1>
+          <p
+            style={{
+              marginTop: 0,
+              marginBottom: 16,
+              color: '#4b5563',
+              fontSize: 15,
+            }}
+          >
+            {renderLeftMessage()}
+          </p>
 
-      {/* Columna derecha */}
-      <section className="card-right">
-        <h2>Tus tickets</h2>
-        {renderTickets()}
-      </section>
+          {status === 'done' && order && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: 16,
+                borderRadius: 16,
+                background:
+                  'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(129,140,248,0.08))',
+                border: '1px solid rgba(59,130,246,0.25)',
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 14,
+                  color: '#1f2937',
+                }}
+              >
+                Guarda este comprobante o descárgalo en PDF. También te enviamos
+                los detalles al correo usado en la compra.
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* Columna derecha */}
+        <section
+          className="card-right"
+          style={{
+            paddingLeft: 8,
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 20,
+              marginTop: 4,
+              marginBottom: 12,
+            }}
+          >
+            Tus tickets
+          </h2>
+          {renderTickets()}
+        </section>
+      </div>
     </div>
   );
 }
