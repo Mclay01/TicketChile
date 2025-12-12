@@ -2339,8 +2339,8 @@ function App() {
       >
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontWeight: 600 }}>
-            <span style={{ color: '#0400ffff' }}>TICKET</span>
-            <span style={{ color: '#960000ff' }}>chile</span> 
+            <span style={{ color: '#0400ffff' }}>TICKET</span> -
+            <span style={{ color: '#960000ff' }}>Chile</span> 
           </span>
           <p style={{ fontSize: '12px', opacity: 0.7 }}>
             Tu entrada mas rapida al evento.
