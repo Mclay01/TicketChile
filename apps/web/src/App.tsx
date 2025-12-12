@@ -2342,7 +2342,7 @@ function App() {
             <span style={{ color: '#38bdf8' }}>Tiketera</span> MVP
           </span>
           <p style={{ fontSize: '12px', opacity: 0.7 }}>
-            Ticketera: Tus entrada mas rapidas al evento.
+            Tu entrada mas rapida al evento.
           </p>
         </div>
 
