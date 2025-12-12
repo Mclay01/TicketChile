@@ -592,40 +592,53 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
             }}
           >
             <strong style={{ fontSize: '13px' }}>Entradas:</strong>
-            {event.ticketTypes.map((tt) => (
-              <div
-                key={tt.id}
-                style={{
-                  fontSize: '13px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <span>{tt.name}</span>
-                <span>{formatPrice(tt.priceCents, tt.currency)}</span>
-              </div>
-            ))}
+            {event.ticketTypes.map((tt) => {
+              const isSelected = tt.id === ticketTypeId;
 
-            {selectedTicketType && (
-              <div
-                style={{
-                  fontSize: '12px',
-                  color: '#9ca3af',
-                  marginTop: '4px',
-                }}
-              >
-                Comisión (11,19%):{' '}
-                {formatPrice(
-                  commissionPerTicketCents,
-                  selectedTicketType.currency || 'CLP',
-                )}{' '}
-                · Total por entrada:{' '}
-                {formatPrice(
-                  displayFinalPriceCents,
-                  selectedTicketType.currency || 'CLP',
-                )}
-              </div>
-            )}
+              const baseCents = tt.priceCents ?? 0;
+              const commissionCents = Math.round(baseCents * COMMISSION_RATE);
+              const finalCents = baseCents + commissionCents;
+
+              return (
+                <div
+                  key={tt.id}
+                  style={{
+                    fontSize: '13px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'baseline',
+                    gap: 8,
+                  }}
+                >
+                  <span>{tt.name}</span>
+
+                  <div
+                    style={{
+                      textAlign: 'right',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                    }}
+                  >
+                    {/* Precio base */}
+                    <span>{formatPrice(tt.priceCents, tt.currency)}</span>
+
+                    {/* Solo mostramos comisión + total para el tipo seleccionado */}
+                    {isSelected && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          color: '#9ca3af',
+                        }}
+                      >
+                        Comisión: {formatPrice(commissionCents, tt.currency || 'CLP')} ·
+                        Total: {formatPrice(finalCents, tt.currency || 'CLP')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <div
