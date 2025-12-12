@@ -13,8 +13,8 @@ type PublicOrderResponse = {
     venueName: string;
     venueAddress: string;
   };
-  buyerEmail?: string;
-  buyerName?: string;
+  buyerEmail: string;
+  buyerName: string;
   tickets: {
     code: string;
     status: string;
