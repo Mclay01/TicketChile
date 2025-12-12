@@ -7,9 +7,9 @@ import './index.css';
 
 const path = window.location.pathname.toLowerCase();
 
-// /  => landing
-// todo lo demás ( /eventos, /compra-exitosa, /lo-que-sea ) => App
-const RootComponent = path === '/' ? App : App;
+// /  => Landing
+// /eventos, /compra-exitosa, etc. => App (la app que ya tenías)
+const RootComponent = path === '/' ? LandingPage : App;
 
 ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement,
