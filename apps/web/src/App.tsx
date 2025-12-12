@@ -2339,7 +2339,8 @@ function App() {
       >
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontWeight: 600 }}>
-            <span style={{ color: '#38bdf8' }}>Tiketera</span> MVP
+            <span style={{ color: '#0400ffff' }}>TICKET</span>
+            <span style={{ color: '#960000ff' }}>CHILE</span> 
           </span>
           <p style={{ fontSize: '12px', opacity: 0.7 }}>
             Tu entrada mas rapida al evento.
