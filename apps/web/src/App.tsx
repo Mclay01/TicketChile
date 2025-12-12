@@ -420,16 +420,16 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
       return;
     }
 
+    // 💰 Precio base (sin comisión)
     const basePriceCents = selectedTicketType.priceCents;
-    const commissionPerTicketCents = calcCommissionCents(basePriceCents);
-    const finalPricePerTicketCents = basePriceCents + commissionPerTicketCents;
-
     const baseTotalCents = basePriceCents * quantity;
+
+    // 🧾 Comisión 11,19%
+    const commissionPerTicketCents = Math.round(basePriceCents * COMMISSION_RATE);
     const commissionTotalCents = commissionPerTicketCents * quantity;
 
-    // ESTO es lo que se le cobra al cliente en Flow
-    const totalAmountCents = finalPricePerTicketCents * quantity;
-
+    // 🔢 Monto final que se le pasa a Flow
+    const totalAmountCents = baseTotalCents + commissionTotalCents;
     const currency = selectedTicketType.currency || 'CLP';
 
 
@@ -471,12 +471,6 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
             quantity: String(quantity),
             buyerName,
             buyerEmail,
-            // desglose de precios
-            basePriceCents: String(basePriceCents),
-            commissionPerTicketCents: String(commissionPerTicketCents),
-            baseTotalCents: String(baseTotalCents),
-            commissionTotalCents: String(commissionTotalCents),
-            finalTotalCents: String(totalAmountCents),
           },
         });
 
@@ -534,11 +528,6 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
           ticketTypeId,
           quantity: String(quantity),
           buyerUserId: userId,
-          basePriceCents: String(basePriceCents),
-          commissionPerTicketCents: String(commissionPerTicketCents),
-          baseTotalCents: String(baseTotalCents),
-          commissionTotalCents: String(commissionTotalCents),
-          finalTotalCents: String(totalAmountCents),
         },
       });
 
