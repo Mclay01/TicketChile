@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { API_BASE_URL } from './api';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 
 type PublicOrderResponse = {
   id: string;
@@ -24,12 +23,31 @@ type PublicOrderResponse = {
 const MAX_ATTEMPTS = 20;
 const RETRY_DELAY_MS = 3000;
 
+// Helper para traer el QR como dataURL (base64) para jsPDF
+async function fetchQrDataUrl(code: string, size = 260): Promise<string> {
+  const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(
+    code
+  )}`;
+
+  const res = await fetch(url);
+  const blob = await res.blob();
+
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 export default function CompraExitosaPage() {
   const [order, setOrder] = useState<PublicOrderResponse | null>(null);
   const [status, setStatus] = useState<
     'loading' | 'waiting' | 'not-found' | 'error' | 'done'
   >('loading');
 
+  // El ref lo dejamos por si quieres usarlo luego,
+  // pero ya no lo usamos para el PDF.
   const cardRef = useRef<HTMLDivElement | null>(null);
 
   const search = typeof window !== 'undefined' ? window.location.search : '';
@@ -102,31 +120,120 @@ export default function CompraExitosaPage() {
     };
   }, [token]);
 
+  // ✅ Generar PDF real, no pantallazo
   const handleDownloadPdf = async () => {
-    if (!cardRef.current || !order) return;
+    if (!order || order.tickets.length === 0) return;
 
     try {
-      const element = cardRef.current;
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
+      // Primero cargamos todos los QRs como dataURL
+      const qrDataUrls = await Promise.all(
+        order.tickets.map((t) => fetchQrDataUrl(t.code, 260))
+      );
 
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
 
-      const margin = 10;
-      const imgWidth = pageWidth - margin * 2;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      order.tickets.forEach((ticket, index) => {
+        if (index > 0) {
+          pdf.addPage();
+        }
 
-      const x = margin;
-      const y = Math.max(margin, (pageHeight - imgHeight) / 2);
+        let y = 20;
 
-      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+        // Título del evento
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(20);
+        pdf.setTextColor(55, 65, 81); // gris oscuro
+        pdf.text(order.event.title, pageWidth / 2, y, { align: 'center' });
+
+        y += 10;
+
+        // Subtítulo "Compra exitosa"
+        pdf.setFontSize(16);
+        pdf.setTextColor(22, 163, 74); // verde
+        pdf.text('Compra exitosa', pageWidth / 2, y, { align: 'center' });
+
+        y += 10;
+
+        // Email comprador
+        if (order.buyerEmail) {
+          pdf.setFontSize(11);
+          pdf.setTextColor(55, 65, 81);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(order.buyerEmail, pageWidth / 2, y, {
+            align: 'center',
+          });
+          y += 8;
+        }
+
+        // Datos del evento
+        pdf.setFontSize(11);
+        pdf.setTextColor(17, 24, 39);
+        const fechaTexto = formatDateTime(order.event.startDateTime);
+        pdf.text(
+          `Fecha - Horario: ${fechaTexto}`,
+          pageWidth / 2,
+          y,
+          { align: 'center' }
+        );
+        y += 6;
+        pdf.text(
+          `Dirección: ${order.event.venueName} – ${order.event.venueAddress}`,
+          pageWidth / 2,
+          y,
+          { align: 'center', maxWidth: pageWidth - 30 }
+        );
+
+        y += 14;
+
+        // Etiqueta bonita "Ticket X de N"
+        pdf.setFontSize(11);
+        pdf.setTextColor(31, 41, 55);
+        const label = `Ticket ${index + 1} de ${order.tickets.length}`;
+        pdf.text(label, pageWidth / 2, y, { align: 'center' });
+
+        y += 6;
+
+        // QR centrado
+        const qrSizeMm = 70; // tamaño del QR en mm
+        const qrX = (pageWidth - qrSizeMm) / 2;
+        const qrY = y;
+
+        pdf.addImage(
+          qrDataUrls[index],
+          'PNG',
+          qrX,
+          qrY,
+          qrSizeMm,
+          qrSizeMm
+        );
+
+        y = qrY + qrSizeMm + 8;
+
+        // Código del ticket debajo
+        pdf.setFontSize(10);
+        pdf.setTextColor(17, 24, 39);
+        pdf.text(
+          ticket.code,
+          pageWidth / 2,
+          y,
+          { align: 'center', maxWidth: pageWidth - 30 }
+        );
+
+        y += 14;
+
+        // Nota pequeña
+        pdf.setFontSize(9);
+        pdf.setTextColor(107, 114, 128);
+        pdf.text(
+          'Presenta este QR en la entrada del evento.',
+          pageWidth / 2,
+          y,
+          { align: 'center' }
+        );
+      });
+
       const filename = `ticket-${order.id || 'compra'}.pdf`;
       pdf.save(filename);
     } catch (err) {
@@ -247,7 +354,7 @@ export default function CompraExitosaPage() {
             </p>
           </div>
 
-          {/* 🔹 AQUÍ mostramos TODOS los tickets con su QR y código */}
+          {/* 🔹 Aquí mostramos TODOS los tickets con un chip "Ticket X de N" más bonito */}
           <div
             style={{
               marginTop: 12,
@@ -268,8 +375,27 @@ export default function CompraExitosaPage() {
                   maxWidth: 220,
                 }}
               >
+                <div
+                  style={{
+                    marginBottom: 6,
+                    padding: '2px 10px',
+                    borderRadius: 999,
+                    backgroundColor: '#e5e7eb',
+                    color: '#111827',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.4,
+                  }}
+                >
+                  Ticket {index + 1}
+                  {order.tickets.length > 1
+                    ? ` de ${order.tickets.length}`
+                    : ''}
+                </div>
+
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(
                     ticket.code
                   )}`}
                   width={220}
@@ -292,16 +418,6 @@ export default function CompraExitosaPage() {
                 >
                   {ticket.code}
                 </p>
-                {order.tickets.length > 1 && (
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: '#6b7280',
-                    }}
-                  >
-                    Ticket {index + 1} de {order.tickets.length}
-                  </span>
-                )}
               </div>
             ))}
           </div>
