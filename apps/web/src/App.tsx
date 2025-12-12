@@ -2342,7 +2342,7 @@ function App() {
             <span style={{ color: '#38bdf8' }}>Tiketera</span> MVP
           </span>
           <p style={{ fontSize: '12px', opacity: 0.7 }}>
-            Backend: {API_BASE_URL}
+            Ticketera: Tus entrada mas rapidas al evento.
           </p>
         </div>
 
