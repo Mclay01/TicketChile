@@ -52,40 +52,30 @@ export function verifyFlowSignature(
 export async function createCheckoutSession(params: {
   amountCents: number;
   currency: string;
-  successUrl: string; // lo seguimos recibiendo, aunque Flow ya no lo usa directo
+  successUrl: string;
   cancelUrl: string;
   metadata?: Record<string, string>;
 }) {
   if (!FLOW_API_KEY || !FLOW_SECRET_KEY) {
     throw new AppError(
       500,
-      'No se pudo crear la sesión de pago en Flow: credenciales no configuradas.'
+      'No se pudo crear la sesión de pago en Flow: credenciales no configuradas.',
     );
   }
 
-  // --- desestructuramos y damos default a metadata ---
-  const { amountCents, currency, metadata = {} } = params;
+  const { amountCents, currency, metadata } = params;
 
-  // =====================================================
-  // 1) Cálculo de base + comisión (11,19%) SOLO para uso interno
-  //    amountCents ya viene con la comisión incluida desde el frontend.
-  // =====================================================
-  const baseAmountCents = Math.round(amountCents / 1.1119);
-  const feeCents = amountCents - baseAmountCents;
-  const totalAmountCents = baseAmountCents + feeCents;
-
-  // Flow quiere el monto en pesos CLP, entero, sin decimales
-  const amount = Math.round(totalAmountCents / 100);
+  // Flow espera amount sin decimales
+  const amount = Math.round(amountCents / 100);
 
   const urlConfirmation = `${PUBLIC_API_BASE_URL}/payments/flow-confirmation`;
-  // Flow vuelve al backend, no directo al frontend
   const urlReturn = `${PUBLIC_API_BASE_URL}/payments/flow-browser-return`;
 
   const bodyParams: Record<string, string | number> = {
     apiKey: FLOW_API_KEY,
     commerceOrder: `order-${Date.now()}`,
     subject: 'Compra entradas TIKETERA',
-    currency, // normalmente "CLP"
+    currency,
     amount,
     email: FLOW_DEFAULT_EMAIL,
     paymentMethod: 9,
@@ -93,60 +83,53 @@ export async function createCheckoutSession(params: {
     urlReturn,
   };
 
-  // =====================================================
-  // 2) OPTIONAL: mandar SOLO metadatos "cortos" a Flow
-  //    (para no pasar el límite y mantener compatibilidad
-  //     con tu código de flow-confirmation).
-  // =====================================================
-  const safeMetadata: Record<string, string> = {};
+  // --- filtrar y acotar metadata para Flow.optional ---
+  if (metadata && Object.keys(metadata).length > 0) {
+    const allowedKeys = [
+      'mode',
+      'eventId',
+      'ticketTypeId',
+      'quantity',
+      'buyerName',
+      'buyerEmail',
+      'buyerUserId',
+    ] as const;
 
-  const allowedKeys = [
-    'mode',
-    'eventId',
-    'ticketTypeId',
-    'quantity',
-    'buyerName',
-    'buyerEmail',
-    'buyerUserId',
-  ] as const;
+    const safe: Record<string, string> = {};
+    const MAX_NAME_LENGTH = 40;
+    const MAX_EMAIL_LENGTH = 60;
 
-  for (const key of allowedKeys) {
-    const value = metadata[key];
-    if (typeof value === 'string' && value.length > 0) {
-      safeMetadata[key] = value;
+    for (const key of allowedKeys) {
+      const raw = metadata[key];
+      if (typeof raw !== 'string') continue;
+
+      let value = raw.trim();
+      if (key === 'buyerName' && value.length > MAX_NAME_LENGTH) {
+        value = value.slice(0, MAX_NAME_LENGTH);
+      }
+      if (key === 'buyerEmail' && value.length > MAX_EMAIL_LENGTH) {
+        value = value.slice(0, MAX_EMAIL_LENGTH);
+      }
+      if (value) safe[key] = value;
+    }
+
+    if (Object.keys(safe).length > 0) {
+      const json = JSON.stringify(safe);
+
+      // límite conservador (Flow corta alrededor de 255 chars)
+      if (json.length > 255) {
+        throw new AppError(
+          400,
+          'Los datos de comprador son demasiado largos para el pago en Flow. Intenta con un nombre/correo más corto.',
+        );
+      }
+
+      bodyParams.optional = json;
     }
   }
 
-  // Como plus, podemos guardar la info de comisión con claves súper cortas
-  // (pero esto es opcional, si quieres puedes borrar este bloque).
-  safeMetadata.baseAmountCents = String(baseAmountCents);
-  safeMetadata.feeCents = String(feeCents);
-  safeMetadata.totalAmountCents = String(totalAmountCents);
-
-  if (Object.keys(safeMetadata).length > 0) {
-    const optionalStr = JSON.stringify(safeMetadata);
-
-    // Si por alguna razón se pasa de, no sé, 1000 chars, recortamos lo menos importante.
-    const MAX_OPTIONAL_LENGTH = 1000;
-    bodyParams.optional =
-      optionalStr.length > MAX_OPTIONAL_LENGTH
-        ? JSON.stringify({
-            // dejamos solo lo realmente crítico
-            mode: safeMetadata.mode,
-            eventId: safeMetadata.eventId,
-            ticketTypeId: safeMetadata.ticketTypeId,
-            quantity: safeMetadata.quantity,
-            buyerEmail: safeMetadata.buyerEmail,
-          })
-        : optionalStr;
-  }
-
-  // =====================================================
-  // 3) Firmar y llamar a Flow
-  // =====================================================
   const s = signFlowParams(bodyParams);
   const form = new URLSearchParams();
-
   for (const [k, v] of Object.entries(bodyParams)) {
     form.append(k, String(v));
   }
@@ -160,7 +143,7 @@ export async function createCheckoutSession(params: {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-      }
+      },
     );
 
     const data = resp.data as {
@@ -176,6 +159,7 @@ export async function createCheckoutSession(params: {
     throw new AppError(500, 'No se pudo crear la sesión de pago en Flow.');
   }
 }
+
 
 
 /** Llama a Flow para saber el estado del pago. */

@@ -39,7 +39,7 @@ function formatDateTime(iso: string) {
   });
 }
 
-const COMMISSION_RATE = 0.1119; // 11,19%
+const COMMISSION_RATE = 0.1119; // 11,19 %
 
 function calcCommissionCents(priceCents: number) {
   // Redondeamos a centavos
@@ -370,8 +370,9 @@ interface EventCardProps {
   event: Event;
   isLoggedIn: boolean;
   token: string | null;
-  userId: string | null; // 👈 nuevo prop
+  userId: string | null;
 }
+
 function storeFlowTokenFromCheckoutUrl(checkoutUrl: string) {
   if (typeof window === 'undefined') return;
 
@@ -399,6 +400,17 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
   const [buyerName, setBuyerName] = useState('');
   const [buyerEmail, setBuyerEmail] = useState('');
 
+  // --- cálculo de comisión solo para mostrar y para el monto final ---
+  const selectedTicketType =
+    event.ticketTypes.find((tt) => tt.id === ticketTypeId) ??
+    event.ticketTypes[0];
+
+  const basePriceCents = selectedTicketType?.priceCents ?? 0;
+  const commissionPerTicketCents = Math.round(
+    basePriceCents * COMMISSION_RATE,
+  );
+  const displayFinalPriceCents = basePriceCents + commissionPerTicketCents;
+
   async function handleBuyClick() {
     setError(null);
     setSuccess(null);
@@ -412,26 +424,16 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
       return;
     }
 
-    const selectedTicketType = event.ticketTypes.find(
-      (tt) => tt.id === ticketTypeId,
-    );
     if (!selectedTicketType) {
       setError('Tipo de entrada inválido');
       return;
     }
 
-    // 💰 Precio base (sin comisión)
-    const basePriceCents = selectedTicketType.priceCents;
+    // --- montos con comisión ---
     const baseTotalCents = basePriceCents * quantity;
-
-    // 🧾 Comisión 11,19%
-    const commissionPerTicketCents = Math.round(basePriceCents * COMMISSION_RATE);
     const commissionTotalCents = commissionPerTicketCents * quantity;
-
-    // 🔢 Monto final que se le pasa a Flow
     const totalAmountCents = baseTotalCents + commissionTotalCents;
     const currency = selectedTicketType.currency || 'CLP';
-
 
     const successUrl = `${FRONTEND_BASE_URL}/compra-exitosa`;
     const cancelUrl = `${FRONTEND_BASE_URL}?payment=cancel`;
@@ -446,7 +448,6 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
       try {
         setLoading(true);
 
-        // Guardamos info solo para UX después del pago
         localStorage.setItem(
           'tiketera_pending_payment',
           JSON.stringify({
@@ -474,10 +475,7 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
           },
         });
 
-
-        // 👇 guardamos el token de Flow para que /compra-exitosa lo pueda usar
         storeFlowTokenFromCheckoutUrl(checkoutUrl);
-
         window.location.href = checkoutUrl;
       } catch (err) {
         console.error('Public purchase payment error', err);
@@ -496,7 +494,6 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
 
     // 🔵 COMPRA CON LOGIN (usuario autenticado)
     if (!userId) {
-      // seguridad extra + TS feliz
       setError(
         'No se pudo identificar tu sesión. Vuelve a iniciar sesión e intenta de nuevo.',
       );
@@ -506,7 +503,6 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
     try {
       setLoading(true);
 
-      // Solo para decidir qué mensaje mostrar al volver de Flow
       localStorage.setItem(
         'tiketera_pending_payment',
         JSON.stringify({
@@ -531,11 +527,8 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
         },
       });
 
-      // 👇 igual que arriba
       storeFlowTokenFromCheckoutUrl(checkoutUrl);
-
       window.location.href = checkoutUrl;
-
     } catch (err) {
       console.error('Private purchase payment error', err);
       setError(
@@ -587,62 +580,53 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
       </div>
 
       {event.ticketTypes.length > 0 && (
-  <>
-    <div
-      style={{
-        marginTop: '8px',
-        paddingTop: '8px',
-        borderTop: '1px solid #1f2937',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px',
-      }}
-    >
-      <strong style={{ fontSize: '13px' }}>Entradas:</strong>
-      {event.ticketTypes.map((tt) => (
-        <div
-          key={tt.id}
-          style={{
-            fontSize: '13px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-          }}
-        >
+        <>
           <div
             style={{
+              marginTop: '8px',
+              paddingTop: '8px',
+              borderTop: '1px solid #1f2937',
               display: 'flex',
-              justifyContent: 'space-between',
+              flexDirection: 'column',
+              gap: '4px',
             }}
           >
-            <span>{tt.name}</span>
-            {(() => {
-              const base = tt.priceCents;
-              const fee = calcCommissionCents(base);
-              const finalPrice = base + fee;
-              return (
-                <span>{formatPrice(finalPrice, tt.currency)}</span>
-              );
-            })()}
-          </div>
-
-          {(() => {
-            const base = tt.priceCents;
-            const fee = calcCommissionCents(base);
-            return (
-              <span
+            <strong style={{ fontSize: '13px' }}>Entradas:</strong>
+            {event.ticketTypes.map((tt) => (
+              <div
+                key={tt.id}
                 style={{
-                  fontSize: '11px',
-                  opacity: 0.8,
+                  fontSize: '13px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
                 }}
               >
-                Comisión: {formatPrice(fee, tt.currency)}
-              </span>
-            );
-          })()}
-        </div>
-      ))}
-    </div>
+                <span>{tt.name}</span>
+                <span>{formatPrice(tt.priceCents, tt.currency)}</span>
+              </div>
+            ))}
+
+            {selectedTicketType && (
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: '#9ca3af',
+                  marginTop: '4px',
+                }}
+              >
+                Comisión (11,19%):{' '}
+                {formatPrice(
+                  commissionPerTicketCents,
+                  selectedTicketType.currency || 'CLP',
+                )}{' '}
+                · Total por entrada:{' '}
+                {formatPrice(
+                  displayFinalPriceCents,
+                  selectedTicketType.currency || 'CLP',
+                )}
+              </div>
+            )}
+          </div>
 
           <div
             style={{
@@ -756,6 +740,7 @@ function EventCard({ event, isLoggedIn, token, userId }: EventCardProps) {
     </article>
   );
 }
+
 
 
 
