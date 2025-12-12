@@ -8,12 +8,11 @@ type PublicOrderResponse = {
   id: string;
   event: {
     title: string;
-    description?: string; // opcional, por si el backend la envía (no la usamos en el diseño actual)
+    description?: string;
     startDateTime: string;
     venueName: string;
     venueAddress: string;
   };
-  // opcionales, por si más adelante el backend manda estos datos
   buyerEmail?: string;
   buyerName?: string;
   tickets: {
@@ -31,10 +30,8 @@ export default function CompraExitosaPage() {
     'loading' | 'waiting' | 'not-found' | 'error' | 'done'
   >('loading');
 
-  // ref al “tarjetón” para convertirlo en PDF
   const cardRef = useRef<HTMLDivElement | null>(null);
 
-  // leer token de la URL
   const search = typeof window !== 'undefined' ? window.location.search : '';
   const params = new URLSearchParams(search);
   const token = params.get('token');
@@ -70,7 +67,6 @@ export default function CompraExitosaPage() {
         }
 
         if (res.status === 404) {
-          // Orden aún no existe en la API
           if (attempts >= MAX_ATTEMPTS) {
             if (!cancelled) setStatus('not-found');
             return;
@@ -82,7 +78,6 @@ export default function CompraExitosaPage() {
           return;
         }
 
-        // Otro error HTTP
         console.error('Error HTTP en compra-exitosa:', res.status);
         if (!cancelled) setStatus('error');
       } catch (e) {
@@ -107,9 +102,6 @@ export default function CompraExitosaPage() {
     };
   }, [token]);
 
-  // --- helpers de UI (no tocan la lógica de datos) ---
-
-  // Ahora genera un PDF y lo descarga directamente
   const handleDownloadPdf = async () => {
     if (!cardRef.current || !order) return;
 
@@ -117,7 +109,7 @@ export default function CompraExitosaPage() {
       const element = cardRef.current;
 
       const canvas = await html2canvas(element, {
-        scale: 2, // más resolución
+        scale: 2,
         useCORS: true,
       });
 
@@ -127,7 +119,6 @@ export default function CompraExitosaPage() {
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
 
-      // Dejamos márgenes y ajustamos la imagen al ancho de la página
       const margin = 10;
       const imgWidth = pageWidth - margin * 2;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
@@ -140,7 +131,6 @@ export default function CompraExitosaPage() {
       pdf.save(filename);
     } catch (err) {
       console.error('Error generando PDF:', err);
-      // fallback mínimo: si algo explota, al menos no deja el botón muerto
       if (typeof window !== 'undefined') {
         window.alert('No se pudo generar el PDF. Inténtalo nuevamente.');
       }
@@ -157,7 +147,6 @@ export default function CompraExitosaPage() {
     if (status === 'not-found') {
       return 'No pudimos encontrar la compra. Si el cargo aparece en Flow, escríbenos con el correo usado en la compra.';
     }
-    // done
     return 'Gracias por tu compra. Aquí tienes el resumen de tus tickets.';
   };
 
@@ -173,7 +162,6 @@ export default function CompraExitosaPage() {
   };
 
   const renderContent = () => {
-    // Estado principal: tenemos la orden ⇒ mostramos la tarjeta como en el diseño
     if (status === 'done' && order && order.tickets.length > 0) {
       const firstTicket = order.tickets[0];
 
@@ -191,7 +179,6 @@ export default function CompraExitosaPage() {
             textAlign: 'center',
           }}
         >
-          {/* Título del evento */}
           <h1
             style={{
               margin: 0,
@@ -205,7 +192,6 @@ export default function CompraExitosaPage() {
             {order.event.title}
           </h1>
 
-          {/* "Compra exitosa" en verde */}
           <h2
             style={{
               margin: 0,
@@ -218,7 +204,6 @@ export default function CompraExitosaPage() {
             Compra exitosa
           </h2>
 
-          {/* Mensaje + correo del comprador (si viene) */}
           <p
             style={{
               margin: 0,
@@ -240,7 +225,6 @@ export default function CompraExitosaPage() {
             </p>
           )}
 
-          {/* Info de fecha / dirección */}
           <div
             style={{
               marginTop: 14,
@@ -264,7 +248,6 @@ export default function CompraExitosaPage() {
             </p>
           </div>
 
-          {/* QR del ticket principal */}
           <div
             style={{
               marginTop: 12,
@@ -289,7 +272,6 @@ export default function CompraExitosaPage() {
             />
           </div>
 
-          {/* Código debajo del QR */}
           <p
             style={{
               margin: 0,
@@ -302,7 +284,6 @@ export default function CompraExitosaPage() {
             {firstTicket.code}
           </p>
 
-          {/* Nota inferior */}
           <p
             style={{
               marginTop: 16,
@@ -315,7 +296,6 @@ export default function CompraExitosaPage() {
             detalles al correo usado en la compra.
           </p>
 
-          {/* Botón de descarga */}
           <button
             type="button"
             onClick={handleDownloadPdf}
@@ -358,7 +338,6 @@ export default function CompraExitosaPage() {
       );
     }
 
-    // Estados de espera / error envueltos en una tarjeta similar
     return (
       <div
         ref={cardRef}
@@ -406,7 +385,7 @@ export default function CompraExitosaPage() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#6b6b6b', // fondo gris como en la imagen
+        backgroundColor: '#6b6b6b',
         padding: '24px 12px',
         boxSizing: 'border-box',
       }}
