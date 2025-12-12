@@ -13,11 +13,13 @@ type PublicOrderResponse = {
     venueName: string;
     venueAddress: string;
   };
-    buyerEmail: string;
-    buyerName: string;
-    tickets: {
+  buyerEmail?: string | null;
+  buyerName?: string | null;
+  tickets: {
     code: string;
     status: string;
+    attendeeName?: string;
+    attendeeEmail?: string;
   }[];
 };
 
@@ -164,6 +166,12 @@ export default function CompraExitosaPage() {
   const renderContent = () => {
     if (status === 'done' && order && order.tickets.length > 0) {
       const firstTicket = order.tickets[0];
+      
+      const buyerName =
+        order.buyerName || firstTicket.attendeeName || '';
+
+      const buyerEmail =
+        order.buyerEmail || firstTicket.attendeeEmail || '';
 
       return (
         <div
@@ -212,6 +220,7 @@ export default function CompraExitosaPage() {
             }}
           >
             Gracias por tu compra. Aquí tienes el resumen de tus tickets.
+            
           </p>
           {order.buyerEmail && (
             <p
