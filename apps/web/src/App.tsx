@@ -2189,6 +2189,9 @@ function App() {
 
   const isLoggedIn = !!token;
 
+  // 👉 estado para el menú móvil
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   async function refreshEvents() {
     try {
       setEventsLoading(true);
@@ -2275,7 +2278,6 @@ function App() {
   }, [view, token]);
 
   // Manejo de ?payment=cancel / ?payment=success cuando Flow devuelve al home
-  // (para este flujo actual solo usamos "cancel", porque el success va a /compra-exitosa)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -2292,7 +2294,6 @@ function App() {
       setPaymentStatus('cancel');
       setPaymentMessage('El pago fue cancelado o no se completó.');
 
-      // aquí sí podemos limpiar siempre
       localStorage.removeItem('tiketera_pending_payment');
 
       params.delete('payment');
@@ -2304,7 +2305,6 @@ function App() {
 
     if (payment !== 'success') return;
 
-    // En /compra-exitosa dejamos que la propia página muestre el resumen.
     if (!isSuccessPage) {
       let pendingMode: 'PRIVATE' | 'PUBLIC' | undefined;
 
@@ -2333,11 +2333,9 @@ function App() {
         );
       }
 
-      // solo limpiamos acá si NO es la página de compra-exitosa
       localStorage.removeItem('tiketera_pending_payment');
     }
 
-    // en todos los casos quitamos el ?payment= de la URL
     params.delete('payment');
     const newUrl =
       pathname + (params.toString() ? `?${params.toString()}` : '');
@@ -2386,6 +2384,133 @@ function App() {
     void refreshEvents();
   };
 
+  // 👉 los mismos botones de navegación, reutilizados en desktop y móvil
+  const renderNavButtons = (variant: 'desktop' | 'mobile') => {
+    const closeIfMobile = () => {
+      if (variant === 'mobile') setIsMobileMenuOpen(false);
+    };
+
+    return (
+      <>
+        <button
+          onClick={() => {
+            setView('events');
+            closeIfMobile();
+          }}
+          style={{
+            padding: '6px 10px',
+            borderRadius: '6px',
+            border: 'none',
+            background: view === 'events' ? '#1d4ed8' : 'transparent',
+            color: '#e5e7eb',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          Eventos
+        </button>
+
+        {role && role !== 'CUSTOMER' && (
+          <button
+            onClick={() => {
+              goToOrganizer();
+              closeIfMobile();
+            }}
+            style={{
+              padding: '6px 10px',
+              borderRadius: '6px',
+              border: 'none',
+              background: view === 'organizer' ? '#1d4ed8' : 'transparent',
+              color: '#e5e7eb',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            Organizador
+          </button>
+        )}
+
+        {isLoggedIn && (
+          <button
+            onClick={() => {
+              goToMyTickets();
+              closeIfMobile();
+            }}
+            style={{
+              padding: '6px 10px',
+              borderRadius: '6px',
+              border: 'none',
+              background: view === 'myTickets' ? '#1d4ed8' : 'transparent',
+              color: '#e5e7eb',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            Mis tickets
+          </button>
+        )}
+
+        {role && role !== 'CUSTOMER' && (
+          <button
+            onClick={() => {
+              setView('checkin');
+              closeIfMobile();
+            }}
+            style={{
+              padding: '6px 10px',
+              borderRadius: '6px',
+              border: 'none',
+              background: view === 'checkin' ? '#1d4ed8' : 'transparent',
+              color: '#e5e7eb',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            Check-in
+          </button>
+        )}
+
+        {isLoggedIn ? (
+          <button
+            onClick={() => {
+              handleLogout();
+              closeIfMobile();
+            }}
+            style={{
+              padding: '6px 10px',
+              borderRadius: '6px',
+              border: '1px solid #4b5563',
+              background: 'transparent',
+              color: '#e5e7eb',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            Cerrar sesión
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              setView('login');
+              closeIfMobile();
+            }}
+            style={{
+              padding: '6px 10px',
+              borderRadius: '6px',
+              border: '1px solid #4b5563',
+              background: 'transparent',
+              color: '#e5e7eb',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            Iniciar sesión
+          </button>
+        )}
+      </>
+    );
+  };
+
   return (
     <div
       style={{
@@ -2417,108 +2542,82 @@ function App() {
           </p>
         </div>
 
+        {/* Botón hamburguesa (visible solo en móvil via CSS) */}
+        <button
+          className="app-nav-mobile-toggle"
+          onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+          style={{
+            padding: 8,
+            borderRadius: 999,
+            border: '1px solid #4b5563',
+            background: 'transparent',
+            color: '#e5e7eb',
+            cursor: 'pointer',
+            display: 'none', // lo controlamos con CSS en móviles
+          }}
+          aria-label="Abrir menú"
+        >
+          <span
+            style={{
+              display: 'block',
+              width: 18,
+              height: 2,
+              background: 'currentColor',
+              marginBottom: 3,
+              borderRadius: 999,
+            }}
+          />
+          <span
+            style={{
+              display: 'block',
+              width: 18,
+              height: 2,
+              background: 'currentColor',
+              marginBottom: 3,
+              borderRadius: 999,
+            }}
+          />
+          <span
+            style={{
+              display: 'block',
+              width: 18,
+              height: 2,
+              background: 'currentColor',
+              borderRadius: 999,
+            }}
+          />
+        </button>
+
+        {/* Navegación escritorio */}
         <nav
+          className="app-nav-desktop"
           style={{
             display: 'flex',
             gap: '8px',
             alignItems: 'center',
             fontSize: '14px',
-            flexWrap: 'wrap',
           }}
         >
-          <button
-            onClick={() => setView('events')}
-            style={{
-              padding: '6px 10px',
-              borderRadius: '6px',
-              border: 'none',
-              background: view === 'events' ? '#1d4ed8' : 'transparent',
-              color: '#e5e7eb',
-              cursor: 'pointer',
-            }}
-          >
-            Eventos
-          </button>
-
-          {role && role !== 'CUSTOMER' && (
-            <button
-              onClick={goToOrganizer}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: 'none',
-                background: view === 'organizer' ? '#1d4ed8' : 'transparent',
-                color: '#e5e7eb',
-                cursor: 'pointer',
-              }}
-            >
-              Organizador
-            </button>
-          )}
-
-          {isLoggedIn && (
-            <button
-              onClick={goToMyTickets}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: 'none',
-                background: view === 'myTickets' ? '#1d4ed8' : 'transparent',
-                color: '#e5e7eb',
-                cursor: 'pointer',
-              }}
-            >
-              Mis tickets
-            </button>
-          )}
-
-          {role && role !== 'CUSTOMER' && (
-            <button
-              onClick={() => setView('checkin')}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: 'none',
-                background: view === 'checkin' ? '#1d4ed8' : 'transparent',
-                color: '#e5e7eb',
-                cursor: 'pointer',
-              }}
-            >
-              Check-in
-            </button>
-          )}
-
-          {isLoggedIn ? (
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: '1px solid #4b5563',
-                background: 'transparent',
-                color: '#e5e7eb',
-                cursor: 'pointer',
-              }}
-            >
-              Cerrar sesión
-            </button>
-          ) : (
-            <button
-              onClick={() => setView('login')}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: '1px solid #4b5563',
-                background: 'transparent',
-                color: '#e5e7eb',
-                cursor: 'pointer',
-              }}
-            >
-              Iniciar sesión
-            </button>
-          )}
+          {renderNavButtons('desktop')}
         </nav>
       </header>
+
+      {/* Panel desplegable móvil */}
+      {isMobileMenuOpen && (
+        <nav
+          className="app-nav-mobile-panel"
+          style={{
+            padding: '8px 16px 16px',
+            borderBottom: '1px solid #1f2937',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            background: '#020617',
+          }}
+        >
+          {renderNavButtons('mobile')}
+        </nav>
+      )}
 
       <main
         style={{
@@ -2636,6 +2735,7 @@ function App() {
     </div>
   );
 }
+
 
 
 export default App;

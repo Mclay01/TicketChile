@@ -88,3 +88,21 @@ html,
 body {
   overflow-x: hidden;
 }
+
+.app-nav-mobile-toggle {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .app-nav-desktop {
+    display: none !important;
+  }
+
+  .app-nav-mobile-toggle {
+    display: inline-flex !important;
+  }
+
+  .app-nav-mobile-panel {
+    width: 100%;
+  }
+}
