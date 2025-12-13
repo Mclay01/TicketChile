@@ -2544,46 +2544,55 @@ function App() {
 
         {/* Botón hamburguesa (visible solo en móvil via CSS) */}
         <button
-          className="app-nav-mobile-toggle"
           onClick={() => setIsMobileMenuOpen((prev) => !prev)}
           style={{
-            padding: 8,
-            borderRadius: 999,
+            padding: '6px 10px',
+            borderRadius: '999px',
             border: '1px solid #4b5563',
             background: 'transparent',
-            color: '#e5e7eb',
+            color: '#ffffff',
             cursor: 'pointer',
-            display: 'none', // lo controlamos con CSS en móviles
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 40,
+            height: 40,
           }}
-          aria-label="Abrir menú"
+          aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
         >
           <span
             style={{
               display: 'block',
-              width: 18,
-              height: 2,
-              background: 'currentColor',
-              marginBottom: 3,
+              width: 22,
+              height: 3,
               borderRadius: 999,
+              backgroundColor: '#ffffff',
+              marginBottom: 4,
+              transition: 'transform 0.2s ease, opacity 0.2s ease',
+              transform: isMobileMenuOpen ? 'translateY(7px) rotate(45deg)' : 'none',
             }}
           />
           <span
             style={{
               display: 'block',
-              width: 18,
-              height: 2,
-              background: 'currentColor',
-              marginBottom: 3,
+              width: 22,
+              height: 3,
               borderRadius: 999,
+              backgroundColor: '#ffffff',
+              marginBottom: 4,
+              transition: 'opacity 0.2s ease',
+              opacity: isMobileMenuOpen ? 0 : 1,
             }}
           />
           <span
             style={{
               display: 'block',
-              width: 18,
-              height: 2,
-              background: 'currentColor',
+              width: 22,
+              height: 3,
               borderRadius: 999,
+              backgroundColor: '#ffffff',
+              transition: 'transform 0.2s ease, opacity 0.2s ease',
+              transform: isMobileMenuOpen ? 'translateY(-7px) rotate(-45deg)' : 'none',
             }}
           />
         </button>
