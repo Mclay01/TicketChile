@@ -2547,45 +2547,62 @@ function App() {
           className="app-nav-mobile-toggle"
           onClick={() => setIsMobileMenuOpen((prev) => !prev)}
           style={{
-            padding: 8,
+            padding: 6,
             borderRadius: 999,
             border: '1px solid #4b5563',
-            background: 'transparent',
+            background: 'rgba(15,23,42,0.9)',
             color: '#e5e7eb',
             cursor: 'pointer',
-            display: 'none', // lo controlamos con CSS en móviles
+            display: 'none', // controlado por CSS en móviles
           }}
-          aria-label="Abrir menú"
+          aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
         >
-          <span
-            style={{
-              display: 'block',
-              width: 18,
-              height: 2,
-              background: 'currentColor',
-              marginBottom: 3,
-              borderRadius: 999,
-            }}
-          />
-          <span
-            style={{
-              display: 'block',
-              width: 18,
-              height: 2,
-              background: 'currentColor',
-              marginBottom: 3,
-              borderRadius: 999,
-            }}
-          />
-          <span
-            style={{
-              display: 'block',
-              width: 18,
-              height: 2,
-              background: 'currentColor',
-              borderRadius: 999,
-            }}
-          />
+          <svg
+            width={22}
+            height={22}
+            viewBox="0 0 24 24"
+            style={{ display: 'block' }}
+          >
+            {isMobileMenuOpen ? (
+              // Icono de "cerrar" (X)
+              <>
+                <path
+                  d="M6 6L18 18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M18 6L6 18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </>
+            ) : (
+              // Icono hamburguesa
+              <>
+                <path
+                  d="M4 7h16"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M4 12h16"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M4 17h16"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </>
+            )}
+          </svg>
         </button>
 
         {/* Navegación escritorio */}
