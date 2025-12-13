@@ -2145,6 +2145,24 @@ function App() {
 
   const [view, setView] = useState<View>('events');
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const shouldLogin = params.get('login');
+
+    if (shouldLogin === '1') {
+      setView('login');
+
+      // limpiamos el query para que no quede ?login=1 pegado
+      params.delete('login');
+      const newUrl =
+        window.location.pathname +
+        (params.toString() ? `?${params.toString()}` : '');
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
+
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
 
@@ -2313,7 +2331,7 @@ function App() {
         setPaymentMessage(
           'Pago procesado correctamente. Te enviamos los tickets por correo.',
         );
-        setView('events');
+
       }
 
       // solo limpiamos acá si NO es la página de compra-exitosa
@@ -2502,9 +2520,9 @@ function App() {
 
       <main
         style={{
-          padding: '16px',
-          maxWidth: '1200px',     // más ancho en pantallas grandes
-          width: '100%',          // ocupa todo el ancho disponible
+          padding: '16px 5vw',     // margen lateral fluido
+          maxWidth: '1400px',      // se ve mejor en monitores grandes, pero sigue limitado
+          width: '100%',           // ocupa todo el ancho disponible
           margin: '0 auto',
           boxSizing: 'border-box',
         }}

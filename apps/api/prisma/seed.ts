@@ -3,36 +3,54 @@ import { prisma } from '../src/core/db/client';
 import bcrypt from 'bcryptjs';
 
 async function main() {
-  const passwordHash = await bcrypt.hash('superseguro123', 10);
+  // 👉 NUEVOS DATOS DEL ORGANIZADOR
+  const organizerEmailOld = 'juan@example.com';
+  const organizerEmail = 'organizador@ticketchile.com';
+  const organizerPassword = 'ticketpro5'; // PON AQUÍ LA CONTRASEÑA QUE QUIERAS
 
-  // Usuario ORGANIZER de ejemplo
-  await prisma.user.upsert({
-    where: { email: 'juan@example.com' },
-    update: {
+  const organizerPasswordHash = await bcrypt.hash(organizerPassword, 10);
+
+  // 👉 1) Si existe el usuario viejo, actualizamos su email/clave/rol
+  await prisma.user.updateMany({
+    where: { email: organizerEmailOld },
+    data: {
+      email: organizerEmail,
       name: 'PRODUCTORA',
-      password: passwordHash,
-      role: 'ORGANIZER',
-    },
-    create: {
-      name: 'PRODUCTORA',
-      email: 'juan@example.com',
-      password: passwordHash,
+      password: organizerPasswordHash,
       role: 'ORGANIZER',
     },
   });
 
-  // (opcional) un admin
+  // 👉 2) Nos aseguramos de que exista el organizador con el nuevo correo
+  await prisma.user.upsert({
+    where: { email: organizerEmail },
+    update: {
+      name: 'PRODUCTORA',
+      password: organizerPasswordHash,
+      role: 'ORGANIZER',
+    },
+    create: {
+      name: 'PRODUCTORA',
+      email: organizerEmail,
+      password: organizerPasswordHash,
+      role: 'ORGANIZER',
+    },
+  });
+
+  // 👉 Admin (lo dejo igual, cambia la clave si quieres)
+  const adminPasswordHash = await bcrypt.hash('superseguro123', 10);
+
   await prisma.user.upsert({
     where: { email: 'admin@example.com' },
     update: {
       name: 'Admin',
-      password: passwordHash,
+      password: adminPasswordHash,
       role: 'ADMIN',
     },
     create: {
       name: 'Admin',
       email: 'admin@example.com',
-      password: passwordHash,
+      password: adminPasswordHash,
       role: 'ADMIN',
     },
   });
