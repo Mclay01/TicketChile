@@ -66,15 +66,25 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
-html, body, #root {
+html,
+body,
+#root {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
 }
 
+/* Fondo global (para / y /eventos) */
 body {
-  background: #020617;    /* mismo fondo que tu app */
+  background-color: #020617; /* mismo color que tu app */
   color: #e5e7eb;
-  overflow-x: hidden;      /* evita scroll horizontal feo si algo se pasa 1px */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+}
+
+/* Evitar scroll horizontal raro en móvil */
+html,
+body {
+  overflow-x: hidden;
 }

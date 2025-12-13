@@ -2331,7 +2331,6 @@ function App() {
         setPaymentMessage(
           'Pago procesado correctamente. Te enviamos los tickets por correo.',
         );
-
       }
 
       // solo limpiamos acá si NO es la página de compra-exitosa
@@ -2344,7 +2343,6 @@ function App() {
       pathname + (params.toString() ? `?${params.toString()}` : '');
     window.history.replaceState({}, document.title, newUrl);
   }, [isLoggedIn]);
-
 
   function handleLoginSuccess(newToken: string) {
     if (typeof window !== 'undefined') {
@@ -2392,6 +2390,9 @@ function App() {
     <div
       style={{
         minHeight: '100vh',
+        width: '100%',
+        maxWidth: '100%',
+        overflowX: 'hidden',
         background: '#020617',
         color: '#e5e7eb',
       }}
@@ -2409,7 +2410,7 @@ function App() {
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontWeight: 600 }}>
             <span style={{ color: '#0400ffff' }}>TICKET</span>-
-            <span style={{ color: '#960000ff' }}>CHILE</span> 
+            <span style={{ color: '#960000ff' }}>CHILE</span>
           </span>
           <p style={{ fontSize: '12px', opacity: 0.7 }}>
             Tu entrada mas rapida al evento.
@@ -2422,6 +2423,7 @@ function App() {
             gap: '8px',
             alignItems: 'center',
             fontSize: '14px',
+            flexWrap: 'wrap',
           }}
         >
           <button
@@ -2520,9 +2522,9 @@ function App() {
 
       <main
         style={{
-          padding: '16px 5vw',     // margen lateral fluido
-          maxWidth: '1400px',      // se ve mejor en monitores grandes, pero sigue limitado
-          width: '100%',           // ocupa todo el ancho disponible
+          padding: '16px 5vw',
+          maxWidth: '1400px',
+          width: '100%',
           margin: '0 auto',
           boxSizing: 'border-box',
         }}
@@ -2634,6 +2636,7 @@ function App() {
     </div>
   );
 }
+
 
 export default App;
 
