@@ -50,6 +50,6 @@
 /* Móvil: agrandamos el logo */
 @media (max-width: 640px) {
   .tc-logo {
-    height: 88px;   /* súbelo más si aún la ves chica (100, 110, etc.) */
+    height: 64px;   /* súbelo más si aún la ves chica (100, 110, etc.) */
   }
 }
