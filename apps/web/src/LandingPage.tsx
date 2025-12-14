@@ -1,16 +1,42 @@
 // apps/web/src/LandingPage.tsx
 import React, { useState } from 'react';
-import logoTicketchile from './assets/logo-ticketchile.png';
+import logo from './assets/logo-ticketchile.png';
 
 const LandingPage: React.FC = () => {
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const goToEvents = () => {
-    window.location.href = '/eventos';
+  // Ir a /eventos con parámetros opcionales
+  const goToEvents = (extraParams?: Record<string, string>) => {
+    const params = new URLSearchParams();
+
+    if (searchQuery.trim()) {
+      params.set('search', searchQuery.trim());
+    }
+
+    if (extraParams) {
+      for (const [key, value] of Object.entries(extraParams)) {
+        params.set(key, value);
+      }
+    }
+
+    const queryString = params.toString();
+    window.location.href = '/eventos' + (queryString ? `?${queryString}` : '');
   };
 
-  const goToOrganizer = () => {
-    window.location.href = '/eventos?login=1';
+  const handleOrganizerClick = () => {
+    goToEvents({ login: '1' });
+  };
+
+  const handleSearchKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (e.key === 'Enter') {
+      goToEvents();
+    }
+  };
+
+  const handleCategoryClick = (category: string) => {
+    goToEvents({ category });
   };
 
   return (
@@ -23,315 +49,403 @@ const LandingPage: React.FC = () => {
         flexDirection: 'column',
       }}
     >
-      {/* NAVBAR */}
+      {/* NAV ROJO CON LOGO */}
       <header
         style={{
-          backgroundColor: '#7b1414', // rojo oscuro
+          backgroundColor: '#7f1d1d', // rojo oscuro
           color: '#f9fafb',
+          padding: '10px 5vw',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxSizing: 'border-box',
         }}
       >
         <div
           style={{
-            maxWidth: '1200px',
-            margin: '0 auto',
-            padding: '10px 16px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
+            gap: 12,
           }}
         >
-          {/* Logo grande */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img
-              src={logoTicketchile}
-              alt="TicketChile"
-              style={{
-                height: 44,
-                width: 'auto',
-                objectFit: 'contain',
-                display: 'block',
-              }}
-            />
-          </div>
-
-          {/* NAV DESKTOP */}
-          <nav
-            className="landing-nav-desktop"
+          <img
+            src={logo}
+            alt="TicketChile"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
+              height: 40,
+              width: 'auto',
+              objectFit: 'contain',
+            }}
+          />
+        </div>
+
+        <nav
+          style={{
+            display: 'flex',
+            gap: 8,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => goToEvents()}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 999,
+              border: 'none',
+              background:
+                'linear-gradient(135deg, #dc2626 0%, #f97316 100%)',
+              color: '#f9fafb',
+              fontWeight: 600,
               fontSize: 14,
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
             }}
           >
-            <button
-              onClick={goToEvents}
-              style={{
-                padding: '7px 14px',
-                borderRadius: 999,
-                border: 'none',
-                backgroundColor: '#f97373',
-                color: '#111827',
-                fontWeight: 600,
-                cursor: 'pointer',
-                boxShadow: '0 8px 18px rgba(0,0,0,0.22)',
-              }}
-            >
-              Ver eventos
-            </button>
+            Ver eventos
+          </button>
 
-            <button
-              onClick={goToOrganizer}
-              style={{
-                padding: '7px 14px',
-                borderRadius: 999,
-                border: '1px solid rgba(249,250,251,0.6)',
-                backgroundColor: 'transparent',
-                color: '#f9fafb',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              Soy organizador
-            </button>
-          </nav>
-
-          {/* BOTÓN MENÚ MOBILE */}
           <button
-            className="landing-nav-toggle"
-            onClick={() => setMobileOpen((o) => !o)}
-            aria-label="Abrir menú"
+            type="button"
+            onClick={handleOrganizerClick}
             style={{
-              display: 'none', // se muestra solo con el media query
-              border: 'none',
-              background: 'transparent',
-              padding: 6,
+              padding: '8px 16px',
+              borderRadius: 999,
+              border: '1px solid rgba(248,250,252,0.6)',
+              backgroundColor: 'transparent',
+              color: '#f9fafb',
+              fontWeight: 500,
+              fontSize: 14,
               cursor: 'pointer',
             }}
           >
-            {/* ícono hamburguesa más “pro” */}
-            <div
-              style={{
-                width: 24,
-                height: 20,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }}
-            >
-              {[0, 1, 2].map((i) => (
-                <span
-                  key={i}
-                  style={{
-                    height: 2,
-                    borderRadius: 999,
-                    backgroundColor: '#f9fafb',
-                    width: i === 1 ? 18 : 24,
-                    alignSelf: i === 1 ? 'flex-end' : 'flex-start',
-                    transition: 'transform 0.2s ease, width 0.2s ease',
-                  }}
-                />
-              ))}
-            </div>
+            Soy organizador
           </button>
-        </div>
-
-        {/* NAV MOBILE DROPDOWN */}
-        {mobileOpen && (
-          <div
-            className="landing-nav-mobile"
-            style={{
-              display: 'block',
-              borderTop: '1px solid rgba(248,250,252,0.1)',
-              backgroundColor: '#691010',
-            }}
-          >
-            <div
-              style={{
-                maxWidth: '1200px',
-                margin: '0 auto',
-                padding: '8px 16px 12px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-              }}
-            >
-              <button
-                onClick={goToEvents}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: 8,
-                  border: 'none',
-                  backgroundColor: '#f97373',
-                  color: '#111827',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Ver eventos
-              </button>
-
-              <button
-                onClick={goToOrganizer}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: 8,
-                  border: '1px solid rgba(249,250,251,0.6)',
-                  backgroundColor: 'transparent',
-                  color: '#f9fafb',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
-                Soy organizador
-              </button>
-            </div>
-          </div>
-        )}
+        </nav>
       </header>
 
-      {/* CONTENIDO PRINCIPAL (similar al del .zip pero sin tarjetas de ejemplo) */}
+      {/* CONTENIDO PRINCIPAL */}
       <main
         style={{
           flex: 1,
-          width: '100%',
-          maxWidth: '1200px',
-          margin: '0 auto',
-          padding: '32px 16px 40px',
+          padding: '32px 5vw 40px',
           boxSizing: 'border-box',
+          display: 'flex',
+          justifyContent: 'center',
         }}
       >
-        {/* Hero */}
-        <section
+        <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1.5fr)',
-            gap: 32,
-            alignItems: 'center',
+            width: '100%',
+            maxWidth: 1120,
           }}
         >
-          <div>
+          {/* HERO */}
+          <section
+            style={{
+              textAlign: 'center',
+              marginBottom: 32,
+            }}
+          >
             <h1
               style={{
-                fontSize: '32px',
-                lineHeight: 1.1,
+                fontSize: 'clamp(32px, 5vw, 44px)',
                 fontWeight: 800,
-                color: '#111827',
                 marginBottom: 12,
+                color: '#111827',
               }}
             >
-              Vende y compra entradas
-              <br />
-              <span style={{ color: '#b91c1c' }}>en minutos</span>
+              Vive experiencias{' '}
+              <span
+                style={{
+                  background:
+                    'linear-gradient(90deg, #dc2626, #f97316)',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                }}
+              >
+                inolvidables
+              </span>
             </h1>
+
             <p
               style={{
                 fontSize: 16,
+                maxWidth: 640,
+                margin: '0 auto 24px',
                 color: '#4b5563',
-                maxWidth: 520,
-                marginBottom: 20,
               }}
             >
-              Publica tu evento, cobra online y valida tickets con código QR.
-              Sin contratos raros, sin complicaciones.
+              Encuentra y compra tickets para los mejores eventos en Chile.
+              Vende tus entradas y controla el acceso con códigos QR en tiempo real.
             </p>
 
+            {/* BUSCADOR */}
+            <div
+              style={{
+                maxWidth: 640,
+                margin: '0 auto 24px',
+                display: 'flex',
+                gap: 8,
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Buscar eventos, artistas, lugares..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: 999,
+                  border: '1px solid #e5e7eb',
+                  fontSize: 14,
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => goToEvents()}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: 999,
+                  border: 'none',
+                  background:
+                    'linear-gradient(135deg, #b91c1c 0%, #f97316 100%)',
+                  color: '#f9fafb',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Buscar
+              </button>
+            </div>
+
+            {/* CATEGORÍAS (solo visual, llevan a /eventos) */}
+            <div
+              style={{
+                marginBottom: 28,
+              }}
+            >
+              <p
+                style={{
+                  fontSize: 13,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.08,
+                  color: '#6b7280',
+                  marginBottom: 8,
+                }}
+              >
+                Explora por categoría
+              </p>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                  gap: 10,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => goToEvents()}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 999,
+                    border: '1px solid #e5e7eb',
+                    backgroundColor: '#ffffff',
+                    fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Todos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCategoryClick('musica')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 999,
+                    border: 'none',
+                    background:
+                      'linear-gradient(135deg, #dc2626 0%, #f97316 100%)',
+                    color: '#f9fafb',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Música
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCategoryClick('deportes')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 999,
+                    border: '1px solid #e5e7eb',
+                    backgroundColor: '#ffffff',
+                    fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Deportes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCategoryClick('teatro')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 999,
+                    border: '1px solid #e5e7eb',
+                    backgroundColor: '#ffffff',
+                    fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Teatro
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCategoryClick('festivales')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 999,
+                    border: '1px solid #e5e7eb',
+                    backgroundColor: '#ffffff',
+                    fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Festivales
+                </button>
+              </div>
+            </div>
+
+            {/* CTAs PRINCIPALES */}
             <div
               style={{
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: 10,
-                marginBottom: 18,
+                justifyContent: 'center',
+                gap: 12,
+                marginBottom: 20,
               }}
             >
               <button
-                onClick={goToEvents}
+                type="button"
+                onClick={() => goToEvents()}
                 style={{
-                  padding: '10px 18px',
+                  padding: '12px 22px',
                   borderRadius: 999,
                   border: 'none',
                   background:
-                    'linear-gradient(135deg, #ef4444, #b91c1c)',
+                    'linear-gradient(135deg, #dc2626 0%, #f97316 100%)',
                   color: '#f9fafb',
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  fontSize: 14,
                   cursor: 'pointer',
-                  boxShadow: '0 8px 24px rgba(185,28,28,0.35)',
+                  boxShadow: '0 12px 30px rgba(185,28,28,0.35)',
                 }}
               >
                 Ver eventos disponibles
               </button>
-
               <button
-                onClick={goToOrganizer}
+                type="button"
+                onClick={handleOrganizerClick}
                 style={{
-                  padding: '10px 18px',
+                  padding: '12px 22px',
                   borderRadius: 999,
-                  border: '1px solid #b91c1c',
-                  backgroundColor: '#ffffff',
+                  border: '1px solid #dc2626',
+                  backgroundColor: '#fff',
                   color: '#b91c1c',
                   fontWeight: 600,
+                  fontSize: 14,
                   cursor: 'pointer',
                 }}
               >
-                Crear mi evento
+                Publicar mi evento
               </button>
             </div>
 
-            <p
+            {/* BENEFICIOS */}
+            <div
               style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: 16,
                 fontSize: 13,
                 color: '#6b7280',
               }}
             >
-              Validación con QR en puerta, envío automático de tickets por
-              correo y control de acceso en tiempo real.
-            </p>
-          </div>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  borderRadius: 999,
+                  backgroundColor: '#fef2f2',
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '999px',
+                    backgroundColor: '#dc2626',
+                  }}
+                />
+                Sin costos fijos para publicar
+              </div>
 
-          {/* Columna derecha vacía (solo diseño), SIN tarjeta de evento fake */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <div
-              style={{
-                width: '100%',
-                maxWidth: 420,
-                minHeight: 220,
-                borderRadius: 24,
-                border: '1px dashed rgba(75,85,99,0.3)',
-                background:
-                  'radial-gradient(circle at top left, #fee2e2, #ffffff)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 20,
-                textAlign: 'center',
-                color: '#4b5563',
-                fontSize: 14,
-              }}
-            >
-              Tus próximos eventos destacados aparecerán aquí.
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  borderRadius: 999,
+                  backgroundColor: '#fef2f2',
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '999px',
+                    backgroundColor: '#dc2626',
+                  }}
+                />
+                Pagos seguros con Flow
+              </div>
+
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  borderRadius: 999,
+                  backgroundColor: '#fef2f2',
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '999px',
+                    backgroundColor: '#dc2626',
+                  }}
+                />
+                QR único por asistente
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </main>
-
-      <footer
-        style={{
-          borderTop: '1px solid #e5e7eb',
-          padding: '12px 16px',
-          fontSize: 12,
-          color: '#6b7280',
-          textAlign: 'center',
-        }}
-      >
-        © {new Date().getFullYear()} TicketChile. Todos los derechos reservados.
-      </footer>
     </div>
   );
 };
