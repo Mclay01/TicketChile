@@ -32,7 +32,7 @@ export default function LandingPage() {
             src={logoTicketChile}
             alt="TicketChile"
             style={{
-              height: 40,
+              height: 70,
               width: 'auto',
               display: 'block',
             }}
