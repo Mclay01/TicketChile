@@ -30,7 +30,7 @@ const CATEGORIES: { key: CategoryKey; label: string }[] = [
   { key: 'Conferencias', label: 'Conferencias' },
 ];
 
-// Eventos solo visuales para la landing
+// Eventos solo visuales de la landing (no tocan tu API)
 const LANDING_EVENTS: LandingEvent[] = [
   {
     id: 'velada-boxeo-san-joaquin',
@@ -39,8 +39,8 @@ const LANDING_EVENTS: LandingEvent[] = [
     featured: true,
     dateLabel: 'vie, 19 dic · 7:00 p. m.',
     location: 'Casa de la Juventud · San Joaquín',
-    ticketsLabel: '1000 tickets disponibles',
-    minPriceLabel: '$8.000',
+    ticketsLabel: 'Entradas disponibles',
+    minPriceLabel: '$8.895',
     imageUrl:
       'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
@@ -63,7 +63,7 @@ const LANDING_EVENTS: LandingEvent[] = [
     featured: true,
     dateLabel: 'mié, 11 feb · 12:00',
     location: "Parque O'Higgins · Santiago",
-    ticketsLabel: '10000 tickets disponibles',
+    ticketsLabel: '10.000 tickets disponibles',
     minPriceLabel: '$120.000',
     imageUrl:
       'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=800',
@@ -109,6 +109,7 @@ const LandingPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] =
     useState<CategoryKey>('Todos');
   const [searchQuery, setSearchQuery] = useState('');
+  const [modalEvent, setModalEvent] = useState<LandingEvent | null>(null);
 
   const filteredEvents = useMemo(() => {
     let list = LANDING_EVENTS;
@@ -142,11 +143,17 @@ const LandingPage: React.FC = () => {
     window.location.href = '/eventos?login=1';
   };
 
-  // 👇 cuando haces click en un evento lo lleva a /eventos?evento=Titulo
-  const handleEventClick = (event: LandingEvent) => {
+  // CTA para ir a la compra REAL (Flow) en /eventos
+  const goToEventPurchase = (event: LandingEvent) => {
     if (typeof window === 'undefined') return;
-    const tituloParam = encodeURIComponent(event.title);
-    window.location.href = `/eventos?evento=${tituloParam}`;
+
+    if (event.title === 'Velada de Boxeo San Joaquín') {
+      const tituloParam = encodeURIComponent(event.title);
+      window.location.href = `/eventos?evento=${tituloParam}`;
+    } else {
+      // resto de eventos demo → listado normal
+      window.location.href = '/eventos';
+    }
   };
 
   return (
@@ -175,7 +182,7 @@ const LandingPage: React.FC = () => {
           <img
             src="/logo-ticketchile.png"
             alt="TicketChile"
-            style={{ height: 42, width: 'auto', display: 'block' }}
+            style={{ height: 48, width: 'auto', display: 'block' }}
           />
         </div>
 
@@ -461,7 +468,7 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Eventos */}
+        {/* Listado de eventos */}
         {filteredEvents.length > 0 ? (
           <>
             {featuredEvents.length > 0 && (
@@ -499,7 +506,7 @@ const LandingPage: React.FC = () => {
                     <LandingEventCard
                       key={event.id}
                       event={event}
-                      onClick={handleEventClick}
+                      onClick={setModalEvent}
                     />
                   ))}
                 </div>
@@ -531,7 +538,7 @@ const LandingPage: React.FC = () => {
                     <LandingEventCard
                       key={event.id}
                       event={event}
-                      onClick={handleEventClick}
+                      onClick={setModalEvent}
                     />
                   ))}
                 </div>
@@ -551,6 +558,300 @@ const LandingPage: React.FC = () => {
           </section>
         )}
       </main>
+
+      {/* MODAL DE DETALLE DEL EVENTO (solo UI, compra real en /eventos) */}
+      {modalEvent && (
+        <div
+          onClick={() => setModalEvent(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15,23,42,0.65)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 50,
+            padding: '16px',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#f9fafb',
+              borderRadius: 24,
+              maxWidth: 900,
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 24px 80px rgba(15,23,42,0.5)',
+            }}
+          >
+            {/* Header imagen */}
+            <div
+              style={{
+                position: 'relative',
+                height: 220,
+                overflow: 'hidden',
+              }}
+            >
+              <img
+                src={modalEvent.imageUrl}
+                alt={modalEvent.title}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background:
+                    'linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.1))',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 18,
+                  left: 18,
+                  padding: '6px 12px',
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(15,23,42,0.85)',
+                  color: '#f9fafb',
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                {modalEvent.category}
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalEvent(null)}
+                style={{
+                  position: 'absolute',
+                  top: 16,
+                  right: 16,
+                  width: 32,
+                  height: 32,
+                  borderRadius: '999px',
+                  border: 'none',
+                  backgroundColor: 'rgba(15,23,42,0.7)',
+                  color: '#f9fafb',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: 18,
+                }}
+              >
+                ×
+              </button>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 24,
+                  bottom: 20,
+                  color: '#f9fafb',
+                }}
+              >
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: 26,
+                    fontWeight: 800,
+                  }}
+                >
+                  {modalEvent.title}
+                </h2>
+              </div>
+            </div>
+
+            {/* Contenido scrollable */}
+            <div
+              style={{
+                padding: '18px 20px 0',
+                overflowY: 'auto',
+              }}
+            >
+              {/* Info principal tipo “cards” */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: 12,
+                  marginBottom: 16,
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: '#eef2ff',
+                    borderRadius: 16,
+                    padding: '10px 14px',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: '#4b5563',
+                      marginBottom: 4,
+                    }}
+                  >
+                    Fecha
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      color: '#111827',
+                    }}
+                  >
+                    {modalEvent.dateLabel}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: '#eff6ff',
+                    borderRadius: 16,
+                    padding: '10px 14px',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: '#4b5563',
+                      marginBottom: 4,
+                    }}
+                  >
+                    Ubicación
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      color: '#111827',
+                    }}
+                  >
+                    {modalEvent.location}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: '#ecfdf5',
+                    borderRadius: 16,
+                    padding: '10px 14px',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: '#4b5563',
+                      marginBottom: 4,
+                    }}
+                  >
+                    Disponibilidad
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      color: '#15803d',
+                    }}
+                  >
+                    {modalEvent.ticketsLabel}
+                  </div>
+                </div>
+              </div>
+
+              {/* Descripción corta */}
+              <div style={{ marginBottom: 18 }}>
+                <h3
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: '#111827',
+                    marginBottom: 4,
+                  }}
+                >
+                  Descripción
+                </h3>
+                <p
+                  style={{
+                    fontSize: 14,
+                    color: '#4b5563',
+                    margin: 0,
+                  }}
+                >
+                  Vive una experiencia única con artistas y producción
+                  profesional. Al comprar tus tickets recibirás un código QR
+                  único por asistente para el acceso al evento.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer precio + CTA */}
+            <div
+              style={{
+                marginTop: 'auto',
+                padding: '14px 20px 18px',
+                borderTop: '1px solid #e5e7eb',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 16,
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background:
+                  'linear-gradient(to right, #fef2f2, #fee2e2, #ffe4e6)',
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: '#6b7280',
+                    marginBottom: 2,
+                  }}
+                >
+                  Precio desde
+                </div>
+                <div
+                  style={{
+                    fontSize: 22,
+                    fontWeight: 800,
+                    color: '#b91c1c',
+                  }}
+                >
+                  {modalEvent.minPriceLabel}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => goToEventPurchase(modalEvent)}
+                style={{
+                  padding: '12px 26px',
+                  borderRadius: 999,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: 15,
+                  backgroundImage:
+                    'linear-gradient(90deg,#f97316,#fb923c,#b91c1c)',
+                  color: '#ffffff',
+                  boxShadow: '0 16px 36px rgba(185,28,28,0.55)',
+                  minWidth: 210,
+                }}
+              >
+                Comprar tickets
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
