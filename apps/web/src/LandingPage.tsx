@@ -29,11 +29,12 @@ export default function LandingPage() {
         {/* LOGO (sin texto TICKET-CHILE) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img
-            src={logoTicketChile}
-            alt="TicketChile"
+            src="/logo-ticketchile.png"
+            alt="Ticketchile"
             style={{
-              height: 40,
+              height: '64px',        // 👈 más grande en todas las pantallas
               width: 'auto',
+              objectFit: 'contain',
               display: 'block',
             }}
           />
