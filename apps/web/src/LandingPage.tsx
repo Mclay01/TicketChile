@@ -24,7 +24,7 @@ export default function LandingPage() {
         flexDirection: 'column',
       }}
     >
-      {/* NAVBAR */}
+      {/* NAVBAR ROJO OSCURO */}
       <header
         style={{
           backgroundColor: '#7f1d1d', // rojo oscuro
@@ -108,7 +108,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* CONTENIDO */}
+      {/* CONTENIDO PRINCIPAL */}
       <main
         style={{
           flex: 1,
@@ -119,236 +119,153 @@ export default function LandingPage() {
           boxSizing: 'border-box',
         }}
       >
-        {/* HERO */}
+        {/* HERO – SOLO TEXTO (SIN TARJETA EXTRA) */}
         <section
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 0.9fr)',
-            gap: 32,
-            alignItems: 'center',
+            maxWidth: 900,
+            margin: '0 auto 40px auto',
+            textAlign: 'center',
           }}
         >
-          {/* Texto principal */}
-          <div>
-            <p
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#b91c1c',
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
-                marginBottom: 8,
-              }}
-            >
-              Tu entrada más rápida al evento
-            </p>
-
-            <h1
-              style={{
-                fontSize: 32,
-                lineHeight: 1.1,
-                margin: 0,
-                marginBottom: 12,
-                color: '#111827',
-              }}
-            >
-              Vende y compra tickets
-              <br />
-              en segundos con{' '}
-              <span style={{ color: '#b91c1c' }}>TicketChile</span>
-            </h1>
-
-            <p
-              style={{
-                margin: 0,
-                marginBottom: 16,
-                fontSize: 15,
-                color: '#4b5563',
-                maxWidth: 520,
-              }}
-            >
-              Crea tu evento, configura tus entradas y recibe pagos en línea de
-              forma simple y segura. Sin vueltas, sin formularios eternos.
-            </p>
-
-            {/* Botones hero */}
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 10,
-                marginTop: 8,
-                marginBottom: 18,
-              }}
-            >
-              <button
-                type="button"
-                onClick={goToEventos}
-                style={{
-                  padding: '10px 18px',
-                  borderRadius: 999,
-                  border: 'none',
-                  background:
-                    'linear-gradient(135deg, #b91c1c 0%, #7f1d1d 50%, #450a0a 100%)',
-                  color: '#f9fafb',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: 14,
-                  boxShadow: '0 10px 22px rgba(127,29,29,0.45)',
-                }}
-              >
-                Ver eventos disponibles
-              </button>
-
-              <button
-                type="button"
-                onClick={goToOrganizer}
-                style={{
-                  padding: '10px 18px',
-                  borderRadius: 999,
-                  border: '1px solid #b91c1c',
-                  backgroundColor: '#ffffff',
-                  color: '#7f1d1d',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: 14,
-                }}
-              >
-                Publicar mi evento
-              </button>
-            </div>
-
-            {/* Pills / highlights */}
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 8,
-                fontSize: 12,
-              }}
-            >
-              <span
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  backgroundColor: '#fee2e2',
-                  color: '#991b1b',
-                  fontWeight: 500,
-                }}
-              >
-                Pagos con Flow
-              </span>
-              <span
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  backgroundColor: '#fef3c7',
-                  color: '#92400e',
-                  fontWeight: 500,
-                }}
-              >
-                QR para control de acceso
-              </span>
-              <span
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  backgroundColor: '#ede9fe',
-                  color: '#5b21b6',
-                  fontWeight: 500,
-                }}
-              >
-                Panel organizador incluido
-              </span>
-            </div>
-          </div>
-
-          {/* Lado derecho – tarjetita informativa (SIN evento hardcodeado) */}
-          <div
+          <p
             style={{
-              justifySelf: 'stretch',
-              display: 'flex',
-              justifyContent: 'center',
+              fontSize: 14,
+              fontWeight: 600,
+              color: '#b91c1c',
+              letterSpacing: 0.5,
+              textTransform: 'uppercase',
+              marginBottom: 8,
             }}
           >
-            <div
+            Tu entrada más rápida al evento
+          </p>
+
+          <h1
+            style={{
+              fontSize: 32,
+              lineHeight: 1.1,
+              margin: 0,
+              marginBottom: 12,
+              color: '#111827',
+            }}
+          >
+            Vive experiencias{' '}
+            <span style={{ color: '#b91c1c' }}>inolvidables</span> en Chile
+          </h1>
+
+          <p
+            style={{
+              margin: 0,
+              marginBottom: 20,
+              fontSize: 15,
+              color: '#4b5563',
+              maxWidth: 600,
+              marginInline: 'auto',
+            }}
+          >
+            Encuentra y compra tickets para los mejores eventos en Chile.
+            Si eres organizador, publica tu evento y vende entradas online
+            en minutos.
+          </p>
+
+          {/* Botones hero */}
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: 10,
+              marginTop: 8,
+              marginBottom: 18,
+            }}
+          >
+            <button
+              type="button"
+              onClick={goToEventos}
               style={{
-                width: '100%',
-                maxWidth: 420,
-                borderRadius: 24,
-                border: '1px solid #fee2e2',
+                padding: '10px 18px',
+                borderRadius: 999,
+                border: 'none',
                 background:
-                  'linear-gradient(145deg, #fef2f2 0%, #ffffff 45%, #fee2e2 100%)',
-                padding: 18,
-                boxShadow: '0 18px 40px rgba(0,0,0,0.15)',
-                boxSizing: 'border-box',
+                  'linear-gradient(135deg, #b91c1c 0%, #7f1d1d 50%, #450a0a 100%)',
+                color: '#f9fafb',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: 14,
+                boxShadow: '0 10px 22px rgba(127,29,29,0.45)',
               }}
             >
-              <p
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: '#991b1b',
-                  margin: 0,
-                  marginBottom: 6,
-                }}
-              >
-                ¿Eres productor o organizador?
-              </p>
-              <p
-                style={{
-                  fontSize: 13,
-                  color: '#4b5563',
-                  margin: 0,
-                  marginBottom: 12,
-                }}
-              >
-                Publica tus eventos y recibe los pagos de tus entradas
-                directamente. TicketChile se encarga de la venta y el control
-                de acceso.
-              </p>
+              Ver eventos disponibles
+            </button>
 
-              <ul
-                style={{
-                  paddingLeft: 18,
-                  margin: 0,
-                  marginBottom: 14,
-                  fontSize: 13,
-                  color: '#374151',
-                }}
-              >
-                <li>Configura distintos tipos de entradas</li>
-                <li>Comisiones transparentes por ticket vendido</li>
-                <li>Escáner QR para validar el acceso</li>
-              </ul>
+            <button
+              type="button"
+              onClick={goToOrganizer}
+              style={{
+                padding: '10px 18px',
+                borderRadius: 999,
+                border: '1px solid #b91c1c',
+                backgroundColor: '#ffffff',
+                color: '#7f1d1d',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: 14,
+              }}
+            >
+              Publicar mi evento
+            </button>
+          </div>
 
-              <button
-                type="button"
-                onClick={goToOrganizer}
-                style={{
-                  marginTop: 4,
-                  width: '100%',
-                  padding: '9px 14px',
-                  borderRadius: 999,
-                  border: 'none',
-                  background:
-                    'linear-gradient(135deg, #b91c1c 0%, #7f1d1d 60%, #450a0a 100%)',
-                  color: '#f9fafb',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: 14,
-                }}
-              >
-                Empezar como organizador
-              </button>
-            </div>
+          {/* Pills / highlights */}
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: 8,
+              fontSize: 12,
+            }}
+          >
+            <span
+              style={{
+                padding: '4px 10px',
+                borderRadius: 999,
+                backgroundColor: '#fee2e2',
+                color: '#991b1b',
+                fontWeight: 500,
+              }}
+            >
+              Pagos con Flow
+            </span>
+            <span
+              style={{
+                padding: '4px 10px',
+                borderRadius: 999,
+                backgroundColor: '#fef3c7',
+                color: '#92400e',
+                fontWeight: 500,
+              }}
+            >
+              QR para control de acceso
+            </span>
+            <span
+              style={{
+                padding: '4px 10px',
+                borderRadius: 999,
+                backgroundColor: '#ede9fe',
+                color: '#5b21b6',
+                fontWeight: 500,
+              }}
+            >
+              Panel organizador incluido
+            </span>
           </div>
         </section>
 
-        {/* Sección pequeña de “cómo funciona” */}
+        {/* Sección “Cómo funciona” */}
         <section
           style={{
-            marginTop: 40,
+            marginTop: 10,
             borderTop: '1px solid #e5e7eb',
             paddingTop: 24,
           }}
@@ -359,6 +276,7 @@ export default function LandingPage() {
               fontWeight: 600,
               marginBottom: 12,
               color: '#111827',
+              textAlign: 'center',
             }}
           >
             ¿Cómo funciona TicketChile?
@@ -467,7 +385,7 @@ export default function LandingPage() {
         </section>
       </main>
 
-      {/* FOOTER SIMPLE */}
+      {/* FOOTER */}
       <footer
         style={{
           borderTop: '1px solid #e5e7eb',
