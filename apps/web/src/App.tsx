@@ -2142,9 +2142,10 @@ function App() {
 
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState<string | null>(null);
-
   const [view, setView] = useState<View>('events');
-
+  const [highlightEventTitle, setHighlightEventTitle] = useState<string | null>(
+    null,
+  );
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -2160,6 +2161,15 @@ function App() {
         window.location.pathname +
         (params.toString() ? `?${params.toString()}` : '');
       window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
+  
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const ev = params.get('evento');
+    if (ev) {
+      setHighlightEventTitle(ev.trim().toLowerCase());
     }
   }, []);
 
@@ -2700,18 +2710,32 @@ function App() {
                 gap: '16px',
               }}
             >
-              {events
-                .filter((event) => event.status !== 'CANCELLED')
-                .map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    isLoggedIn={isLoggedIn}
-                    token={token}
-                    userId={userId}
-                  />
-                ))}
+              {(() => {
+                const nonCancelled = events.filter(
+                  (event) => event.status !== 'CANCELLED',
+                );
+
+                if (!highlightEventTitle) {
+                  return nonCancelled;
+                }
+
+                const match = nonCancelled.find(
+                  (event) =>
+                    event.title.trim().toLowerCase() === highlightEventTitle,
+                );
+
+                return match ? [match] : nonCancelled;
+              })().map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  isLoggedIn={isLoggedIn}
+                  token={token}
+                  userId={userId}
+                />
+              ))}
             </div>
+
           </section>
         )}
 

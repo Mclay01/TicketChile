@@ -30,18 +30,17 @@ const CATEGORIES: { key: CategoryKey; label: string }[] = [
   { key: 'Conferencias', label: 'Conferencias' },
 ];
 
-// 👉 Eventos solo para la landing (no toca tu API real)
+// Eventos solo visuales para la landing
 const LANDING_EVENTS: LandingEvent[] = [
   {
     id: 'velada-boxeo-san-joaquin',
     title: 'Velada de Boxeo San Joaquín',
     category: 'Deportes',
     featured: true,
-    dateLabel: 'vie, 19 dic · 19:00',
+    dateLabel: 'vie, 19 dic · 7:00 p. m.',
     location: 'Casa de la Juventud · San Joaquín',
     ticketsLabel: '1000 tickets disponibles',
     minPriceLabel: '$8.000',
-    // usa cualquier foto tipo boxeo; aquí dejo la de ejemplo de Bolt
     imageUrl:
       'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
@@ -50,7 +49,7 @@ const LANDING_EVENTS: LandingEvent[] = [
     title: 'Festival de Rock 2025',
     category: 'Música',
     featured: true,
-    dateLabel: 'lun, 12 ene · 20:00',
+    dateLabel: 'lun, 12 ene · 8:00 p. m.',
     location: 'Movistar Arena · Santiago',
     ticketsLabel: '500 tickets disponibles',
     minPriceLabel: '$45.000',
@@ -67,13 +66,13 @@ const LANDING_EVENTS: LandingEvent[] = [
     ticketsLabel: '10000 tickets disponibles',
     minPriceLabel: '$120.000',
     imageUrl:
-      'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinsyrgb&w=800',
+      'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
   {
     id: 'standup-comedy-night',
     title: 'Stand Up Comedy Night',
     category: 'Teatro',
-    dateLabel: 'sáb, 20 dic · 21:00',
+    dateLabel: 'sáb, 20 dic · 9:00 p. m.',
     location: 'Teatro Caupolicán · Santiago',
     ticketsLabel: '300 tickets disponibles',
     minPriceLabel: '$18.000',
@@ -84,8 +83,8 @@ const LANDING_EVENTS: LandingEvent[] = [
     id: 'tech-summit-2025',
     title: 'Tech Summit 2025',
     category: 'Conferencias',
-    dateLabel: 'mar, 27 ene · 09:00',
-    location: 'Centro de Eventos CasaPiedra · Santiago',
+    dateLabel: 'mar, 27 ene · 9:00 a. m.',
+    location: 'CasaPiedra · Santiago',
     ticketsLabel: '800 tickets disponibles',
     minPriceLabel: '$35.000',
     imageUrl:
@@ -95,7 +94,7 @@ const LANDING_EVENTS: LandingEvent[] = [
     id: 'concierto-sinfonico-ano-nuevo',
     title: 'Concierto Sinfónico de Año Nuevo',
     category: 'Música',
-    dateLabel: 'vie, 13 mar · 19:30',
+    dateLabel: 'vie, 13 mar · 7:30 p. m.',
     location: 'Teatro Municipal · Santiago',
     ticketsLabel: '400 tickets disponibles',
     minPriceLabel: '$28.000',
@@ -105,7 +104,6 @@ const LANDING_EVENTS: LandingEvent[] = [
 ];
 
 const PRIMARY_RED = '#7c1515';
-const PRIMARY_ORANGE = '#f97316';
 
 const LandingPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] =
@@ -134,19 +132,21 @@ const LandingPage: React.FC = () => {
   const featuredEvents = filteredEvents.filter((e) => e.featured);
   const regularEvents = filteredEvents.filter((e) => !e.featured);
 
-  const handleGoToEvents = () => {
+  const goToEvents = () => {
     if (typeof window === 'undefined') return;
     window.location.href = '/eventos';
   };
 
-  const handleGoToOrganizer = () => {
+  const goToOrganizer = () => {
     if (typeof window === 'undefined') return;
     window.location.href = '/eventos?login=1';
   };
 
-  const handleEventClick = () => {
-    // No tocamos la lógica de pagos: simplemente llevamos a /eventos
-    handleGoToEvents();
+  // 👇 cuando haces click en un evento lo lleva a /eventos?evento=Titulo
+  const handleEventClick = (event: LandingEvent) => {
+    if (typeof window === 'undefined') return;
+    const tituloParam = encodeURIComponent(event.title);
+    window.location.href = `/eventos?evento=${tituloParam}`;
   };
 
   return (
@@ -182,7 +182,7 @@ const LandingPage: React.FC = () => {
         <nav style={{ display: 'flex', gap: 12 }}>
           <button
             type="button"
-            onClick={handleGoToEvents}
+            onClick={goToEvents}
             style={{
               padding: '8px 18px',
               borderRadius: 999,
@@ -201,7 +201,7 @@ const LandingPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={handleGoToOrganizer}
+            onClick={goToOrganizer}
             style={{
               padding: '8px 18px',
               borderRadius: 999,
@@ -218,7 +218,7 @@ const LandingPage: React.FC = () => {
         </nav>
       </header>
 
-      {/* CONTENIDO PRINCIPAL */}
+      {/* CONTENIDO */}
       <main
         style={{
           flex: 1,
@@ -228,7 +228,7 @@ const LandingPage: React.FC = () => {
           boxSizing: 'border-box',
         }}
       >
-        {/* HERO */}
+        {/* Hero */}
         <section
           style={{
             textAlign: 'center',
@@ -270,7 +270,7 @@ const LandingPage: React.FC = () => {
           </p>
         </section>
 
-        {/* CTA PRINCIPALES */}
+        {/* Botones principales */}
         <section
           style={{
             display: 'flex',
@@ -282,7 +282,7 @@ const LandingPage: React.FC = () => {
         >
           <button
             type="button"
-            onClick={handleGoToEvents}
+            onClick={goToEvents}
             style={{
               padding: '14px 28px',
               borderRadius: 999,
@@ -302,7 +302,7 @@ const LandingPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={handleGoToOrganizer}
+            onClick={goToOrganizer}
             style={{
               padding: '14px 28px',
               borderRadius: 999,
@@ -320,7 +320,7 @@ const LandingPage: React.FC = () => {
           </button>
         </section>
 
-        {/* BENEFICIOS */}
+        {/* Beneficios */}
         <section style={{ marginBottom: 32 }}>
           <div
             style={{
@@ -364,9 +364,8 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        {/* 🔍 BUSCADOR + CATEGORÍAS (ABAJO DE LOS BENEFICIOS) */}
+        {/* Buscador + categorías */}
         <section style={{ marginBottom: 40 }}>
-          {/* Buscador */}
           <div
             style={{
               maxWidth: 720,
@@ -393,9 +392,6 @@ const LandingPage: React.FC = () => {
             />
             <button
               type="button"
-              onClick={() => {
-                /* filtro ya es en vivo */
-              }}
               style={{
                 padding: '11px 24px',
                 borderRadius: 999,
@@ -413,7 +409,6 @@ const LandingPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Categorías */}
           <div
             style={{
               textAlign: 'center',
@@ -466,7 +461,7 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        {/* LISTADO DE EVENTOS (DESTACADOS + MÁS EVENTOS) */}
+        {/* Eventos */}
         {filteredEvents.length > 0 ? (
           <>
             {featuredEvents.length > 0 && (
@@ -562,13 +557,13 @@ const LandingPage: React.FC = () => {
 
 type CardProps = {
   event: LandingEvent;
-  onClick: () => void;
+  onClick: (event: LandingEvent) => void;
 };
 
 const LandingEventCard: React.FC<CardProps> = ({ event, onClick }) => {
   return (
     <div
-      onClick={onClick}
+      onClick={() => onClick(event)}
       style={{
         backgroundColor: '#ffffff',
         borderRadius: 18,
@@ -580,15 +575,14 @@ const LandingEventCard: React.FC<CardProps> = ({ event, onClick }) => {
         transition: 'transform 0.18s ease, box-shadow 0.18s ease',
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.transform =
-          'translateY(-4px)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow =
-          '0 18px 40px rgba(15,23,42,0.25)';
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.transform = 'translateY(-4px)';
+        el.style.boxShadow = '0 18px 40px rgba(15,23,42,0.25)';
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow =
-          '0 14px 30px rgba(15,23,42,0.18)';
+        const el = e.currentTarget as HTMLDivElement;
+        el.style.transform = 'translateY(0)';
+        el.style.boxShadow = '0 14px 30px rgba(15,23,42,0.18)';
       }}
     >
       <div
@@ -716,7 +710,7 @@ const LandingEventCard: React.FC<CardProps> = ({ event, onClick }) => {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onClick();
+              onClick(event);
             }}
             style={{
               padding: '8px 16px',
