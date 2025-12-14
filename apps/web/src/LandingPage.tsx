@@ -29,9 +29,13 @@ export default function LandingPage() {
         {/* LOGO (sin texto TICKET-CHILE) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img
-            src="/logo-ticketchile.png"
-            alt="Ticketchile"
-            className="tc-logo"
+            src={logoTicketChile}
+            alt="TicketChile"
+            style={{
+              height: 40,
+              width: 'auto',
+              display: 'block',
+            }}
           />
         </div>
 
