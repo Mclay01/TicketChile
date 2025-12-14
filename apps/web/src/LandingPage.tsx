@@ -1,19 +1,12 @@
 // apps/web/src/LandingPage.tsx
 import React, { useMemo, useState } from 'react';
 
-type CategoryKey =
-  | 'Todos'
-  | 'Música'
-  | 'Deportes'
-  | 'Teatro'
-  | 'Festivales'
-  | 'Conferencias';
+type CategoryKey = 'Todos' | 'Deportes';
 
 type LandingEvent = {
   id: string;
   title: string;
   category: Exclude<CategoryKey, 'Todos'>;
-  featured?: boolean;
   dateLabel: string;
   location: string;
   ticketsLabel: string;
@@ -23,83 +16,21 @@ type LandingEvent = {
 
 const CATEGORIES: { key: CategoryKey; label: string }[] = [
   { key: 'Todos', label: 'Todos' },
-  { key: 'Música', label: 'Música' },
   { key: 'Deportes', label: 'Deportes' },
-  { key: 'Teatro', label: 'Teatro' },
-  { key: 'Festivales', label: 'Festivales' },
-  { key: 'Conferencias', label: 'Conferencias' },
 ];
 
-// Eventos solo visuales de la landing (no tocan tu API)
+// 🔴 ÚNICO EVENTO REAL DE LA LANDING
 const LANDING_EVENTS: LandingEvent[] = [
   {
     id: 'velada-boxeo-san-joaquin',
     title: 'Velada de Boxeo San Joaquín',
     category: 'Deportes',
-    featured: true,
     dateLabel: 'vie, 19 dic · 7:00 p. m.',
-    location: 'Casa de la Juventud · San Joaquín',
+    location: 'Casa de la Juventud · Pintor Murillo #5369 · San Joaquín',
     ticketsLabel: 'Entradas disponibles',
     minPriceLabel: '$8.895',
     imageUrl:
       'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: 'festival-rock-2025',
-    title: 'Festival de Rock 2025',
-    category: 'Música',
-    featured: true,
-    dateLabel: 'lun, 12 ene · 8:00 p. m.',
-    location: 'Movistar Arena · Santiago',
-    ticketsLabel: '500 tickets disponibles',
-    minPriceLabel: '$45.000',
-    imageUrl:
-      'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: 'lollapalooza-chile-2025',
-    title: 'Lollapalooza Chile 2025',
-    category: 'Festivales',
-    featured: true,
-    dateLabel: 'mié, 11 feb · 12:00',
-    location: "Parque O'Higgins · Santiago",
-    ticketsLabel: '10.000 tickets disponibles',
-    minPriceLabel: '$120.000',
-    imageUrl:
-      'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: 'standup-comedy-night',
-    title: 'Stand Up Comedy Night',
-    category: 'Teatro',
-    dateLabel: 'sáb, 20 dic · 9:00 p. m.',
-    location: 'Teatro Caupolicán · Santiago',
-    ticketsLabel: '300 tickets disponibles',
-    minPriceLabel: '$18.000',
-    imageUrl:
-      'https://images.pexels.com/photos/1116073/pexels-photo-1116073.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: 'tech-summit-2025',
-    title: 'Tech Summit 2025',
-    category: 'Conferencias',
-    dateLabel: 'mar, 27 ene · 9:00 a. m.',
-    location: 'CasaPiedra · Santiago',
-    ticketsLabel: '800 tickets disponibles',
-    minPriceLabel: '$35.000',
-    imageUrl:
-      'https://images.pexels.com/photos/1181562/pexels-photo-1181562.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: 'concierto-sinfonico-ano-nuevo',
-    title: 'Concierto Sinfónico de Año Nuevo',
-    category: 'Música',
-    dateLabel: 'vie, 13 mar · 7:30 p. m.',
-    location: 'Teatro Municipal · Santiago',
-    ticketsLabel: '400 tickets disponibles',
-    minPriceLabel: '$28.000',
-    imageUrl:
-      'https://images.pexels.com/photos/1116073/pexels-photo-1116073.jpeg?auto=compress&cs=tinysrgb&w=800',
   },
 ];
 
@@ -111,6 +42,7 @@ const LandingPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [modalEvent, setModalEvent] = useState<LandingEvent | null>(null);
 
+  // 🔍 Filtrado (aunque hoy solo hay 1 evento, esto queda listo para más)
   const filteredEvents = useMemo(() => {
     let list = LANDING_EVENTS;
 
@@ -130,8 +62,8 @@ const LandingPage: React.FC = () => {
     return list;
   }, [selectedCategory, searchQuery]);
 
-  const featuredEvents = filteredEvents.filter((e) => e.featured);
-  const regularEvents = filteredEvents.filter((e) => !e.featured);
+  const featuredEvents = filteredEvents; // solo uno
+  const regularEvents: LandingEvent[] = []; // no hay otros
 
   const goToEvents = () => {
     if (typeof window === 'undefined') return;
@@ -143,17 +75,14 @@ const LandingPage: React.FC = () => {
     window.location.href = '/eventos?login=1';
   };
 
-  // CTA para ir a la compra REAL (Flow) en /eventos
+  // 👉 Botón "Comprar tickets" del modal:
+  // usamos la misma página real de compra que ya tienes (/eventos?evento=...)
   const goToEventPurchase = (event: LandingEvent) => {
     if (typeof window === 'undefined') return;
 
-    if (event.title === 'Velada de Boxeo San Joaquín') {
-      const tituloParam = encodeURIComponent(event.title);
-      window.location.href = `/eventos?evento=${tituloParam}`;
-    } else {
-      // resto de eventos demo → listado normal
-      window.location.href = '/eventos';
-    }
+    // Enlazamos con la página real del evento que dispara Flow
+    const encoded = encodeURIComponent(event.title);
+    window.location.href = `/eventos?evento=${encoded}`;
   };
 
   return (
@@ -468,83 +397,46 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Listado de eventos */}
+        {/* Listado de eventos – solo la velada */}
         {filteredEvents.length > 0 ? (
-          <>
-            {featuredEvents.length > 0 && (
-              <section style={{ marginBottom: 28 }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginBottom: 16,
-                  }}
-                >
-                  <span style={{ fontSize: 20 }}>✨</span>
-                  <h2
-                    style={{
-                      fontSize: 22,
-                      fontWeight: 700,
-                      margin: 0,
-                      color: '#111827',
-                    }}
-                  >
-                    Eventos destacados
-                  </h2>
-                </div>
+          <section>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 16,
+              }}
+            >
+              <span style={{ fontSize: 20 }}>✨</span>
+              <h2
+                style={{
+                  fontSize: 22,
+                  fontWeight: 700,
+                  margin: 0,
+                  color: '#111827',
+                }}
+              >
+                Eventos disponibles
+              </h2>
+            </div>
 
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns:
-                      'repeat(auto-fit, minmax(260px, 1fr))',
-                    gap: 18,
-                  }}
-                >
-                  {featuredEvents.map((event) => (
-                    <LandingEventCard
-                      key={event.id}
-                      event={event}
-                      onClick={setModalEvent}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {regularEvents.length > 0 && (
-              <section>
-                <h2
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 700,
-                    marginBottom: 16,
-                    color: '#111827',
-                  }}
-                >
-                  {featuredEvents.length ? 'Más eventos' : 'Todos los eventos'}
-                </h2>
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns:
-                      'repeat(auto-fit, minmax(260px, 1fr))',
-                    gap: 18,
-                  }}
-                >
-                  {regularEvents.map((event) => (
-                    <LandingEventCard
-                      key={event.id}
-                      event={event}
-                      onClick={setModalEvent}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-          </>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: 18,
+              }}
+            >
+              {filteredEvents.map((event) => (
+                <LandingEventCard
+                  key={event.id}
+                  event={event}
+                  onClick={setModalEvent}
+                />
+              ))}
+            </div>
+          </section>
         ) : (
           <section
             style={{
@@ -559,7 +451,7 @@ const LandingPage: React.FC = () => {
         )}
       </main>
 
-      {/* MODAL DE DETALLE DEL EVENTO (solo UI, compra real en /eventos) */}
+      {/* MODAL DE DETALLE DEL EVENTO */}
       {modalEvent && (
         <div
           onClick={() => setModalEvent(null)}
@@ -669,14 +561,13 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Contenido scrollable */}
+            {/* Contenido */}
             <div
               style={{
                 padding: '18px 20px 0',
                 overflowY: 'auto',
               }}
             >
-              {/* Info principal tipo “cards” */}
               <div
                 style={{
                   display: 'grid',
@@ -767,7 +658,6 @@ const LandingPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Descripción corta */}
               <div style={{ marginBottom: 18 }}>
                 <h3
                   style={{
@@ -786,9 +676,9 @@ const LandingPage: React.FC = () => {
                     margin: 0,
                   }}
                 >
-                  Vive una experiencia única con artistas y producción
-                  profesional. Al comprar tus tickets recibirás un código QR
-                  único por asistente para el acceso al evento.
+                  Velada de boxeo con combates nacionales e internacionales,
+                  transmisión en vivo y control de acceso con código QR único
+                  por asistente.
                 </p>
               </div>
             </div>
@@ -903,25 +793,6 @@ const LandingEventCard: React.FC<CardProps> = ({ event, onClick }) => {
             display: 'block',
           }}
         />
-
-        {event.featured && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 10,
-              left: 10,
-              padding: '4px 10px',
-              borderRadius: 999,
-              backgroundImage:
-                'linear-gradient(90deg,#f97316,#fb923c,#f97316)',
-              color: '#ffffff',
-              fontSize: 11,
-              fontWeight: 700,
-            }}
-          >
-            Destacado
-          </div>
-        )}
 
         <div
           style={{
