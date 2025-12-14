@@ -42,7 +42,7 @@
 }
 /* Logo Ticketchile */
 .tc-logo {
-  height: 50px;      /* tamaño por defecto (desktop / tablet) */
+  height: 30px;      /* tamaño por defecto (desktop / tablet) */
   width: auto;
   display: block;
 }
@@ -50,6 +50,6 @@
 /* Móvil: agrandamos el logo */
 @media (max-width: 640px) {
   .tc-logo {
-    height: 50px;   /* súbelo más si aún la ves chica (100, 110, etc.) */
+    height: 30px;   /* súbelo más si aún la ves chica (100, 110, etc.) */
   }
 }
