@@ -52,10 +52,10 @@ export default function LandingPage() {
             }}
           >
             <img
-              src="/ticketchile-logo.png"
+              src="/logo-ticketchile.png"   // <- antes era /ticketchile-logo.png
               alt="TicketChile"
               style={{
-                height: 40,
+                height: 52,
                 width: 'auto',
                 objectFit: 'contain',
               }}
