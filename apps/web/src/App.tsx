@@ -3122,7 +3122,7 @@ function EventDetailView({
             </li>
             {event.organizer?.name && (
               <li>
-                <strong>Organiza:</strong> {event.organizer.name}
+                <strong>Organiza:</strong> Productora
               </li>
             )}
           </ul>
