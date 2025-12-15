@@ -2695,6 +2695,240 @@ function App() {
   );
 }
 
+/* ==================== EVENT DETAIL VIEW ==================== */
+
+type EventDetailViewProps = {
+  event: Event;
+  isLoggedIn: boolean;
+  userId: string | null;
+  onBack?: () => void;
+};
+
+function EventDetailView({ event, isLoggedIn, userId, onBack }: EventDetailViewProps) {
+  const [buyerName, setBuyerName] = useState('');
+  const [buyerEmail, setBuyerEmail] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const mainTicket = event.ticketTypes?.[0];
+  const COMMISSION_PERCENT = 0.1119;
+
+  const basePriceCents = mainTicket?.priceCents ?? 0;
+  const commissionPerTicketCents = Math.round(basePriceCents * COMMISSION_PERCENT);
+  const finalTotalCents = (basePriceCents + commissionPerTicketCents) * quantity;
+
+  const formatMoney = (cents: number) =>
+    new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: mainTicket?.currency || 'CLP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(cents / 100);
+
+  const formatDateTimeLocal = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleString('es-CL', {
+        dateStyle: 'full',
+        timeStyle: 'short',
+      });
+    } catch {
+      return iso;
+    }
+  };
+
+  async function handleBuy() {
+    if (!mainTicket) return;
+
+    // Si no hay login, pedimos datos (mismo comportamiento que tu UI)
+    if (!isLoggedIn) {
+      if (!buyerName.trim() || !buyerEmail.trim()) {
+        setError('Ingresa tu nombre y correo para continuar.');
+        return;
+      }
+    }
+
+    try {
+      setError(null);
+      setLoading(true);
+
+      const successUrl = `${window.location.origin}/compra-exitosa`;
+
+      // ✅ CLAVE: volvemos a "/" (no /eventos) y mantenemos ?evento=
+      const cancelUrl = `${window.location.origin}/?evento=${encodeURIComponent(
+        event.title,
+      )}&payment=cancel`;
+
+      const checkoutUrl = await createCheckoutSession({
+        amountCents: finalTotalCents,
+        currency: mainTicket.currency || 'CLP',
+        successUrl,
+        cancelUrl,
+        metadata: {
+          mode: isLoggedIn ? 'PRIVATE' : 'PUBLIC',
+          eventId: event.id,
+          ticketTypeId: mainTicket.id,
+          quantity: String(quantity),
+          ...(buyerName ? { buyerName } : {}),
+          ...(buyerEmail ? { buyerEmail } : {}),
+          ...(userId ? { buyerUserId: userId } : {}),
+        },
+      });
+
+      // Mantén tu formato actual si ya lo usas en CompraExitosaPage
+      localStorage.setItem(
+        'tiketera_pending_payment',
+        JSON.stringify({ mode: isLoggedIn ? 'PRIVATE' : 'PUBLIC' }),
+      );
+
+      window.location.href = checkoutUrl;
+    } catch (e) {
+      console.error(e);
+      setError('No se pudo crear la sesión de pago en Flow.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div style={{ color: '#f9fafb' }}>
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          style={{
+            marginBottom: 16,
+            padding: '6px 10px',
+            borderRadius: 999,
+            border: '1px solid #4b5563',
+            background: 'transparent',
+            color: '#e5e7eb',
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
+        >
+          ← Volver
+        </button>
+      )}
+
+      <div
+        style={{
+          borderRadius: 16,
+          border: '1px solid #1f2937',
+          background: '#111827',
+          padding: 16,
+        }}
+      >
+        <h1 style={{ margin: 0, marginBottom: 8, fontSize: 22, fontWeight: 800 }}>
+          {event.title}
+        </h1>
+
+        <p style={{ marginTop: 0, opacity: 0.9 }}>{event.description}</p>
+
+        <div style={{ fontSize: 13, opacity: 0.9 }}>
+          <div>
+            <strong>Fecha:</strong> {formatDateTimeLocal(event.startDateTime)}
+          </div>
+          <div>
+            <strong>Lugar:</strong> {event.venueName} · {event.venueAddress}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 14, borderTop: '1px solid #1f2937', paddingTop: 14 }}>
+          {!mainTicket ? (
+            <p style={{ margin: 0 }}>Este evento todavía no tiene tickets disponibles.</p>
+          ) : (
+            <>
+              {!isLoggedIn && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                  <input
+                    placeholder="Tu nombre"
+                    value={buyerName}
+                    onChange={(e) => setBuyerName(e.target.value)}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 999,
+                      border: '1px solid #4b5563',
+                      background: '#020617',
+                      color: '#e5e7eb',
+                      fontSize: 13,
+                    }}
+                  />
+                  <input
+                    placeholder="Tu correo"
+                    value={buyerEmail}
+                    onChange={(e) => setBuyerEmail(e.target.value)}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 999,
+                      border: '1px solid #4b5563',
+                      background: '#020617',
+                      color: '#e5e7eb',
+                      fontSize: 13,
+                    }}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 13, opacity: 0.9 }}>
+                  <div>
+                    <strong>{mainTicket.name}</strong>
+                  </div>
+                  <div style={{ fontSize: 12, opacity: 0.8 }}>
+                    Base: {formatMoney(basePriceCents)} · Comisión: {formatMoney(commissionPerTicketCents)}
+                  </div>
+                </div>
+
+                <input
+                  type="number"
+                  min={1}
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
+                  style={{
+                    width: 80,
+                    padding: '8px 10px',
+                    borderRadius: 999,
+                    border: '1px solid #4b5563',
+                    background: '#020617',
+                    color: '#e5e7eb',
+                    fontSize: 13,
+                  }}
+                />
+
+                <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                  <div style={{ fontSize: 12, opacity: 0.8 }}>Total</div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>{formatMoney(finalTotalCents)}</div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleBuy}
+                  disabled={loading}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 999,
+                    border: 'none',
+                    background: loading ? '#4b5563' : '#22c55e',
+                    color: '#020617',
+                    fontWeight: 700,
+                    cursor: loading ? 'default' : 'pointer',
+                  }}
+                >
+                  {loading ? 'Redirigiendo…' : 'Comprar'}
+                </button>
+              </div>
+
+              {error && <p style={{ marginTop: 10, color: '#f87171', fontSize: 13 }}>{error}</p>}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
 
 
 
