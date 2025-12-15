@@ -6,14 +6,18 @@ import LandingPage from './LandingPage.tsx';
 import './index.css';
 
 const path = window.location.pathname.toLowerCase();
+const params = new URLSearchParams(window.location.search);
 
-// /  => Landing
-// /eventos, /compra-exitosa, etc. => App (la app que ya tenías)
-const RootComponent = path === '/' ? LandingPage : App;
+// ✅ Si hay "modo app" por query, montamos App aunque el path sea "/"
+const shouldUseApp =
+  path !== '/' ||
+  params.has('evento') ||
+  params.has('payment') ||
+  params.has('login');
 
-ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement,
-).render(
+const RootComponent = shouldUseApp ? App : LandingPage;
+
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <RootComponent />
   </React.StrictMode>,
