@@ -2192,7 +2192,7 @@ function App() {
 
   const isLoggedIn = !!token;
 
-  // normalizador para comparar títulos ignorando mayúsculas y tildes
+  // normalizador para comparar títulos ignorando tildes
   const normalizeText = (s: string) =>
     s
       .normalize('NFD')
@@ -2306,7 +2306,6 @@ function App() {
   }, [view, token]);
 
   // Manejo de ?payment=cancel / ?payment=success cuando Flow devuelve al home
-  // (para este flujo actual solo usamos "cancel", porque el success va a /compra-exitosa)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -2323,7 +2322,6 @@ function App() {
       setPaymentStatus('cancel');
       setPaymentMessage('El pago fue cancelado o no se completó.');
 
-      // aquí sí podemos limpiar siempre
       localStorage.removeItem('tiketera_pending_payment');
 
       params.delete('payment');
@@ -2364,7 +2362,6 @@ function App() {
         );
       }
 
-      // solo limpiamos acá si NO es la página de compra-exitosa
       localStorage.removeItem('tiketera_pending_payment');
     }
 
@@ -2606,7 +2603,6 @@ function App() {
               <EventDetailView
                 event={highlightedEvent}
                 isLoggedIn={isLoggedIn}
-                token={token}
                 userId={userId}
                 onBack={clearHighlightedEvent}
               />
@@ -2697,7 +2693,6 @@ function App() {
 type EventDetailViewProps = {
   event: Event;
   isLoggedIn: boolean;
-  token: string | null;
   userId: string | null;
   onBack?: () => void;
 };
@@ -2705,7 +2700,6 @@ type EventDetailViewProps = {
 function EventDetailView({
   event,
   isLoggedIn,
-  token,
   userId,
   onBack,
 }: EventDetailViewProps) {
@@ -2715,7 +2709,18 @@ function EventDetailView({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // usamos el primer tipo de ticket del evento
+  // 💡 flag responsive
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false,
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
   const mainTicket = event.ticketTypes?.[0];
 
   const COMMISSION_PERCENT = 0.1119;
@@ -2765,7 +2770,6 @@ function EventDetailView({
         event.title,
       )}&payment=cancel`;
 
-      // 💸 misma lógica de compra/Flow que en la tarjeta normal
       const checkoutUrl = await createCheckoutSession({
         amountCents: finalTotalCents,
         currency: 'CLP',
@@ -2825,11 +2829,11 @@ function EventDetailView({
       {/* HERO DEL EVENTO */}
       <div
         style={{
-          borderRadius: 32,
-          padding: 20,
+          borderRadius: isMobile ? 20 : 32,
+          padding: isMobile ? 12 : 20,
           background:
             'radial-gradient(circle at top, #4b5563 0, #020617 45%, #020617 100%)',
-          marginBottom: 24,
+          marginBottom: isMobile ? 20 : 24,
         }}
       >
         <div
@@ -2838,10 +2842,12 @@ function EventDetailView({
             overflow: 'hidden',
             background:
               'linear-gradient(135deg, #111827 0%, #020617 40%, #111827 100%)',
-            padding: 16,
+            padding: isMobile ? 12 : 16,
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
-            gap: 24,
+            gridTemplateColumns: isMobile
+              ? '1fr'
+              : 'minmax(0, 2fr) minmax(0, 1fr)',
+            gap: isMobile ? 16 : 24,
             alignItems: 'stretch',
           }}
         >
@@ -2859,7 +2865,7 @@ function EventDetailView({
             </p>
             <h1
               style={{
-                fontSize: 32,
+                fontSize: isMobile ? 26 : 32,
                 lineHeight: 1.1,
                 fontWeight: 800,
                 margin: 0,
@@ -2872,7 +2878,7 @@ function EventDetailView({
               style={{
                 fontSize: 14,
                 color: '#d1d5db',
-                maxWidth: 520,
+                maxWidth: isMobile ? '100%' : 520,
               }}
             >
               {event.description}
@@ -2882,7 +2888,9 @@ function EventDetailView({
               style={{
                 marginTop: 16,
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gridTemplateColumns: isMobile
+                  ? '1fr'
+                  : 'repeat(auto-fit, minmax(180px, 1fr))',
                 gap: 12,
               }}
             >
@@ -2969,6 +2977,7 @@ function EventDetailView({
               flexDirection: 'column',
               justifyContent: 'space-between',
               padding: 16,
+              marginTop: isMobile ? 4 : 0,
             }}
           >
             <div>
@@ -2985,7 +2994,7 @@ function EventDetailView({
               </p>
               <h2
                 style={{
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: 800,
                   margin: '4px 0 8px',
                 }}
@@ -3039,8 +3048,10 @@ function EventDetailView({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
-          gap: 24,
+          gridTemplateColumns: isMobile
+            ? '1fr'
+            : 'minmax(0, 1.4fr) minmax(0, 1fr)',
+          gap: isMobile ? 16 : 24,
         }}
       >
         <div
@@ -3144,9 +3155,11 @@ function EventDetailView({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
+                gridTemplateColumns: isMobile
+                  ? '1fr'
+                  : 'minmax(0, 2fr) minmax(0, 1fr)',
                 gap: 16,
-                alignItems: 'center',
+                alignItems: isMobile ? 'flex-start' : 'center',
                 marginBottom: 16,
               }}
             >
@@ -3175,9 +3188,10 @@ function EventDetailView({
               <div
                 style={{
                   display: 'flex',
-                  justifyContent: 'flex-end',
+                  justifyContent: isMobile ? 'space-between' : 'flex-end',
                   gap: 12,
                   alignItems: 'center',
+                  flexWrap: 'wrap',
                 }}
               >
                 <div
@@ -3228,7 +3242,11 @@ function EventDetailView({
                   </button>
                 </div>
 
-                <div style={{ textAlign: 'right' }}>
+                <div
+                  style={{
+                    textAlign: isMobile ? 'left' : 'right',
+                  }}
+                >
                   <p
                     style={{
                       margin: 0,
@@ -3318,7 +3336,7 @@ function EventDetailView({
             position: 'sticky',
             bottom: 0,
             marginTop: 24,
-            padding: '12px 0 4px',
+            padding: isMobile ? '12px 16px 8px' : '12px 0 4px',
             background:
               'linear-gradient(to top, rgba(15,23,42,0.98), rgba(15,23,42,0.8), transparent)',
             backdropFilter: 'blur(10px)',
@@ -3327,10 +3345,11 @@ function EventDetailView({
           <div
             style={{
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 16,
-              flexWrap: 'wrap',
+              flexDirection: isMobile ? 'column' : 'row',
+              justifyContent: isMobile ? 'center' : 'space-between',
+              alignItems: isMobile ? 'stretch' : 'center',
+              gap: 12,
+              textAlign: isMobile ? 'center' : 'left',
             }}
           >
             <div
@@ -3348,6 +3367,7 @@ function EventDetailView({
               onClick={handleBuy}
               disabled={loading}
               style={{
+                width: isMobile ? '100%' : 'auto',
                 padding: '12px 32px',
                 borderRadius: 999,
                 border: 'none',
@@ -3371,5 +3391,6 @@ function EventDetailView({
 }
 
 export default App;
+
 
 
