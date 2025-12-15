@@ -16,6 +16,35 @@ import {
 import { NativeQrScanner } from './NativeQrScanner';
 import CompraExitosaPage from './CompraExitosaPage';
 
+const EVENTS_CACHE_KEY = 'tiketera_events_cache_v1';
+const EVENTS_CACHE_TTL_MS = 1000 * 60 * 3; // 3 min
+
+function readEventsCache(): Event[] | null {
+  try {
+    const raw = localStorage.getItem(EVENTS_CACHE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as { ts: number; data: Event[] };
+    if (!parsed?.ts || !Array.isArray(parsed.data)) return null;
+
+    const fresh = Date.now() - parsed.ts <= EVENTS_CACHE_TTL_MS;
+    return fresh ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeEventsCache(data: Event[]) {
+  try {
+    localStorage.setItem(
+      EVENTS_CACHE_KEY,
+      JSON.stringify({ ts: Date.now(), data }),
+    );
+  } catch {
+    // storage bloqueado / lleno: no nos morimos
+  }
+}
+
 // Status interno normalizado para el check-in
 type CheckInStatus = 'OK' | 'ALREADY_USED' | 'NOT_FOUND' | 'INVALID';
 
@@ -2134,13 +2163,20 @@ function PaymentSuccessView(props: {
 /* ==================== APP ROOT ==================== */
 
 function App() {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<Event[]>(() => {
+    if (typeof window === 'undefined') return [];
+    return readEventsCache() ?? [];
+  });
 
   const handleEventDeleted = (eventId: string) => {
     setEvents((prev) => prev.filter((e) => e.id !== eventId));
   };
 
-  const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventsLoading, setEventsLoading] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return readEventsCache() ? false : true;
+  });
+  const [eventsRefreshing, setEventsRefreshing] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
 
   const [view, setView] = useState<View>('events');
@@ -2200,19 +2236,25 @@ function App() {
       .toLowerCase()
       .trim();
 
-  async function refreshEvents() {
+  async function refreshEvents(opts?: { silent?: boolean }) {
     try {
-      setEventsLoading(true);
+      if (opts?.silent) setEventsRefreshing(true);
+      else setEventsLoading(true);
+
       setEventsError(null);
+
       const data = await fetchEvents();
       setEvents(data);
+      if (typeof window !== 'undefined') writeEventsCache(data);
     } catch (err) {
       console.error(err);
       setEventsError('No se pudieron cargar los eventos');
     } finally {
       setEventsLoading(false);
+      setEventsRefreshing(false);
     }
   }
+
 
   // 🔁 Ruta especial: /compra-exitosa → página dedicada de confirmación
   if (
@@ -2224,8 +2266,10 @@ function App() {
 
   // Cargar eventos al inicio
   useEffect(() => {
-    void refreshEvents();
+    const hasCache = typeof window !== 'undefined' && !!readEventsCache();
+    void refreshEvents({ silent: hasCache });
   }, []);
+
 
   // Cuando ya tenemos eventos, miramos si viene ?evento= en la URL
   useEffect(() => {
@@ -2618,7 +2662,9 @@ function App() {
                   Eventos
                 </h1>
 
-                {eventsLoading && <p>Cargando eventos...</p>}
+                {eventsRefreshing && !eventsLoading && (
+                  <p style={{ fontSize: 12, opacity: 0.7 }}>Actualizando eventos…</p>
+                )}
                 {eventsError && (
                   <p style={{ color: '#f87171' }}>{eventsError}</p>
                 )}

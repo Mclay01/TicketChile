@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import compression from 'compression';
 import { errorHandler } from './core/errors/errorHandler';
 import { usersRouter } from './modules/users/users.routes';
 import { authRouter } from './modules/auth/auth.routes';
@@ -24,6 +25,7 @@ app.use(
 );
 
 app.use(helmet());
+app.use(compression());
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(morgan('dev'));

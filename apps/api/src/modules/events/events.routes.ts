@@ -8,6 +8,14 @@ import {
   deleteEventHandler,
 } from './events.controller';
 
+const EVENTS_CACHE_CONTROL = 'public, max-age=30, stale-while-revalidate=300';
+
+function eventsCacheHeaders(_req: any, res: any, next: any) {
+  res.setHeader('Cache-Control', EVENTS_CACHE_CONTROL);
+  next();
+}
+
+
 export const eventsRouter = Router();
 
 // Público: lista de eventos publicados
