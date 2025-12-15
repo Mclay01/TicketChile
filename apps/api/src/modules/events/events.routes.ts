@@ -20,7 +20,7 @@ export const eventsRouter = Router();
 
 // Público: lista de eventos publicados
 // GET /api/events
-eventsRouter.get('/', listEventsHandler);
+eventsRouter.get('/', eventsCacheHeaders, listEventsHandler);
 
 // Público: detalle evento
 // GET /api/events/:id

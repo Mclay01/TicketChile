@@ -11,6 +11,7 @@ const params = new URLSearchParams(window.location.search);
 // ✅ Si hay "modo app" por query, montamos App aunque el path sea "/"
 const shouldUseApp =
   path !== '/' ||
+  params.has('app') ||
   params.has('evento') ||
   params.has('payment') ||
   params.has('login');

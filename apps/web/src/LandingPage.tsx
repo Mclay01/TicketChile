@@ -67,23 +67,23 @@ const LandingPage: React.FC = () => {
 
   const goToEvents = () => {
     if (typeof window === 'undefined') return;
-    window.location.href = '/eventos';
+    window.location.href = '/?app=1';
   };
 
   const goToOrganizer = () => {
     if (typeof window === 'undefined') return;
-    window.location.href = '/eventos?login=1';
+    window.location.href = '/?login=1';
   };
+
 
   // 👉 Botón "Comprar tickets" del modal:
   // usamos la misma página real de compra que ya tienes (/eventos?evento=...)
   const goToEventPurchase = (event: LandingEvent) => {
     if (typeof window === 'undefined') return;
-
-    // Enlazamos con la página real del evento que dispara Flow
     const encoded = encodeURIComponent(event.title);
-    window.location.href = `/eventos?evento=${encoded}`;
+    window.location.href = `/?evento=${encoded}`;
   };
+
 
   return (
     <div
