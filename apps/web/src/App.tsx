@@ -2184,9 +2184,25 @@ function App() {
   // Evento destacado según ?evento=...
   const [highlightedEvent, setHighlightedEvent] = useState<Event | null>(null);
 
+  // normalizador para comparar títulos ignorando tildes
+  const normalizeText = (s: string) =>
+    s
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+  // ✅ Canonizar /eventos?... -> /?... y manejar ?login=1
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    // 1) Si cae a /eventos, lo dejamos en / (misma query)
+    if (window.location.pathname === '/eventos') {
+      const newUrl = '/' + window.location.search;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+
+    // 2) Manejo de ?login=1
     const params = new URLSearchParams(window.location.search);
     const shouldLogin = params.get('login');
 
@@ -2195,9 +2211,7 @@ function App() {
 
       // limpiamos el query para que no quede ?login=1 pegado
       params.delete('login');
-      const newUrl =
-        window.location.pathname +
-        (params.toString() ? `?${params.toString()}` : '');
+      const newUrl = '/' + (params.toString() ? `?${params.toString()}` : '');
       window.history.replaceState({}, document.title, newUrl);
     }
   }, []);
@@ -2206,9 +2220,7 @@ function App() {
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
 
   const [token, setToken] = useState<string | null>(() =>
-    typeof window === 'undefined'
-      ? null
-      : localStorage.getItem('tiketera_token'),
+    typeof window === 'undefined' ? null : localStorage.getItem('tiketera_token'),
   );
   const [role, setRole] = useState<UserRole | null>(() =>
     typeof window === 'undefined'
@@ -2228,14 +2240,6 @@ function App() {
 
   const isLoggedIn = !!token;
 
-  // normalizador para comparar títulos ignorando tildes
-  const normalizeText = (s: string) =>
-    s
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-
   async function refreshEvents(opts?: { silent?: boolean }) {
     try {
       if (opts?.silent) setEventsRefreshing(true);
@@ -2245,6 +2249,7 @@ function App() {
 
       const data = await fetchEvents();
       setEvents(data);
+
       if (typeof window !== 'undefined') writeEventsCache(data);
     } catch (err) {
       console.error(err);
@@ -2255,12 +2260,8 @@ function App() {
     }
   }
 
-
   // 🔁 Ruta especial: /compra-exitosa → página dedicada de confirmación
-  if (
-    typeof window !== 'undefined' &&
-    window.location.pathname === '/compra-exitosa'
-  ) {
+  if (typeof window !== 'undefined' && window.location.pathname === '/compra-exitosa') {
     return <CompraExitosaPage />;
   }
 
@@ -2270,8 +2271,7 @@ function App() {
     void refreshEvents({ silent: hasCache });
   }, []);
 
-
-  // Cuando ya tenemos eventos, miramos si viene ?evento= en la URL
+  // ✅ Cuando tenemos eventos, resolvemos ?evento=... (esto te faltaba)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -2284,11 +2284,10 @@ function App() {
     }
 
     const normalizedParam = normalizeText(eventoParam);
-
     const match =
       events.find((e) => normalizeText(e.title) === normalizedParam) ?? null;
 
-    setHighlightedEvent(match || null);
+    setHighlightedEvent(match);
   }, [events]);
 
   // Cargar / refrescar "Mis tickets" cuando se entra a esa vista
@@ -2327,9 +2326,7 @@ function App() {
       } finally {
         if (!canceled) {
           setTicketsLoading(false);
-          if (firstTicketsLoad) {
-            setFirstTicketsLoad(false);
-          }
+          if (firstTicketsLoad) setFirstTicketsLoad(false);
         }
       }
     }
@@ -2342,24 +2339,22 @@ function App() {
 
     return () => {
       canceled = true;
-      if (intervalId !== undefined) {
-        window.clearInterval(intervalId);
-      }
+      if (intervalId !== undefined) window.clearInterval(intervalId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, token]);
 
-  // Manejo de ?payment=cancel / ?payment=success cuando Flow devuelve al home
+  // Manejo de ?payment=cancel / ?payment=success cuando Flow devuelve
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const params = new URLSearchParams(window.location.search);
     const payment = params.get('payment');
-
     if (!payment) return;
 
     const pathname = window.location.pathname;
-    const isSuccessPage = pathname === '/compra-exitosa';
+    const basePath = pathname === '/eventos' ? '/' : pathname;
+    const isSuccessPage = basePath === '/compra-exitosa';
 
     // Cancelado
     if (payment === 'cancel') {
@@ -2369,8 +2364,7 @@ function App() {
       localStorage.removeItem('tiketera_pending_payment');
 
       params.delete('payment');
-      const newUrl =
-        pathname + (params.toString() ? `?${params.toString()}` : '');
+      const newUrl = basePath + (params.toString() ? `?${params.toString()}` : '');
       window.history.replaceState({}, document.title, newUrl);
       return;
     }
@@ -2401,18 +2395,15 @@ function App() {
         setView(isLoggedIn ? 'myTickets' : 'login');
       } else {
         setPaymentStatus('success');
-        setPaymentMessage(
-          'Pago procesado correctamente. Te enviamos los tickets por correo.',
-        );
+        setPaymentMessage('Pago procesado correctamente. Te enviamos los tickets por correo.');
       }
 
       localStorage.removeItem('tiketera_pending_payment');
     }
 
-    // en todos los casos quitamos el ?payment= de la URL
+    // Quitamos ?payment= de la URL
     params.delete('payment');
-    const newUrl =
-      pathname + (params.toString() ? `?${params.toString()}` : '');
+    const newUrl = basePath + (params.toString() ? `?${params.toString()}` : '');
     window.history.replaceState({}, document.title, newUrl);
   }, [isLoggedIn]);
 
@@ -2420,9 +2411,9 @@ function App() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       params.delete('evento');
-      const newUrl =
-        window.location.pathname +
-        (params.toString() ? `?${params.toString()}` : '');
+
+      // ✅ Forzamos volver a la raíz siempre
+      const newUrl = '/' + (params.toString() ? `?${params.toString()}` : '');
       window.history.replaceState({}, document.title, newUrl);
     }
     setHighlightedEvent(null);
@@ -2435,7 +2426,6 @@ function App() {
     setToken(newToken);
     setRole(getRoleFromToken(newToken));
     setUserId(getUserIdFromToken(newToken));
-
     setView('myTickets');
   }
 
@@ -2452,19 +2442,11 @@ function App() {
   }
 
   function goToMyTickets() {
-    if (!isLoggedIn) {
-      setView('login');
-    } else {
-      setView('myTickets');
-    }
+    setView(isLoggedIn ? 'myTickets' : 'login');
   }
 
   function goToOrganizer() {
-    if (!isLoggedIn) {
-      setView('login');
-    } else {
-      setView('organizer');
-    }
+    setView(isLoggedIn ? 'organizer' : 'login');
   }
 
   const handleEventCreated = () => {
@@ -2472,13 +2454,7 @@ function App() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: '#020617',
-        color: '#e5e7eb',
-      }}
-    >
+    <div style={{ minHeight: '100vh', background: '#020617', color: '#e5e7eb' }}>
       <header
         style={{
           borderBottom: '1px solid #1f2937',
@@ -2500,14 +2476,7 @@ function App() {
           </p>
         </div>
 
-        <nav
-          style={{
-            display: 'flex',
-            gap: '8px',
-            alignItems: 'center',
-            fontSize: '14px',
-          }}
-        >
+        <nav style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '14px' }}>
           <button
             onClick={() => {
               clearHighlightedEvent();
@@ -2652,22 +2621,17 @@ function App() {
               />
             ) : (
               <>
-                <h1
-                  style={{
-                    fontSize: '20px',
-                    fontWeight: 600,
-                    marginBottom: '12px',
-                  }}
-                >
+                <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '12px' }}>
                   Eventos
                 </h1>
+
+                {eventsLoading && events.length === 0 && <p>Cargando eventos...</p>}
 
                 {eventsRefreshing && !eventsLoading && (
                   <p style={{ fontSize: 12, opacity: 0.7 }}>Actualizando eventos…</p>
                 )}
-                {eventsError && (
-                  <p style={{ color: '#f87171' }}>{eventsError}</p>
-                )}
+
+                {eventsError && <p style={{ color: '#f87171' }}>{eventsError}</p>}
 
                 {!eventsLoading && !eventsError && events.length === 0 && (
                   <p>No hay eventos publicados todavía.</p>
@@ -2676,8 +2640,7 @@ function App() {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns:
-                      'repeat(auto-fit, minmax(320px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
                     gap: '16px',
                   }}
                 >
@@ -2711,11 +2674,7 @@ function App() {
         )}
 
         {view === 'checkin' && (
-          <CheckInPanel
-            token={token}
-            role={role}
-            onRequireLogin={() => setView('login')}
-          />
+          <CheckInPanel token={token} role={role} onRequireLogin={() => setView('login')} />
         )}
 
         {view === 'organizer' && (
@@ -2736,707 +2695,6 @@ function App() {
   );
 }
 
-type EventDetailViewProps = {
-  event: Event;
-  isLoggedIn: boolean;
-  userId: string | null;
-  onBack?: () => void;
-};
-
-function EventDetailView({
-  event,
-  isLoggedIn,
-  userId,
-  onBack,
-}: EventDetailViewProps) {
-  const [buyerName, setBuyerName] = useState('');
-  const [buyerEmail, setBuyerEmail] = useState('');
-  const [quantity, setQuantity] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // 💡 flag responsive
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== 'undefined' ? window.innerWidth < 768 : false,
-  );
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handler = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
-  }, []);
-
-  const mainTicket = event.ticketTypes?.[0];
-
-  const COMMISSION_PERCENT = 0.1119;
-
-  const basePriceCents = mainTicket?.priceCents ?? 0;
-  const commissionPerTicketCents = Math.round(
-    basePriceCents * COMMISSION_PERCENT,
-  );
-  const baseTotalCents = basePriceCents * quantity;
-  const commissionTotalCents = commissionPerTicketCents * quantity;
-  const finalTotalCents = baseTotalCents + commissionTotalCents;
-
-  const formatMoney = (cents: number) =>
-    new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(cents / 100);
-
-  const formatDateTime = (iso: string) => {
-    try {
-      const date = new Date(iso);
-      return date.toLocaleString('es-CL', {
-        dateStyle: 'full',
-        timeStyle: 'short',
-      });
-    } catch {
-      return iso;
-    }
-  };
-
-  async function handleBuy() {
-    if (!mainTicket) return;
-
-    if (!buyerName.trim() || !buyerEmail.trim()) {
-      setError('Ingresa tu nombre y correo para continuar.');
-      return;
-    }
-
-    try {
-      setError(null);
-      setLoading(true);
-
-      const successUrl = `${window.location.origin}/compra-exitosa`;
-      const cancelUrl = `${window.location.origin}/eventos?evento=${encodeURIComponent(
-        event.title,
-      )}&payment=cancel`;
-
-      const checkoutUrl = await createCheckoutSession({
-        amountCents: finalTotalCents,
-        currency: 'CLP',
-        successUrl,
-        cancelUrl,
-        metadata: {
-          mode: isLoggedIn ? 'PRIVATE' : 'PUBLIC',
-          eventId: event.id,
-          ticketTypeId: mainTicket.id,
-          quantity: String(quantity),
-          buyerName,
-          buyerEmail,
-          ...(userId ? { buyerUserId: userId } : {}),
-          basePriceCents: String(basePriceCents),
-          commissionPerTicketCents: String(commissionPerTicketCents),
-          baseTotalCents: String(baseTotalCents),
-          commissionTotalCents: String(commissionTotalCents),
-          finalTotalCents: String(finalTotalCents),
-        },
-      });
-
-      localStorage.setItem(
-        'tiketera_pending_payment',
-        JSON.stringify({ mode: isLoggedIn ? 'PRIVATE' : 'PUBLIC' }),
-      );
-
-      window.location.href = checkoutUrl;
-    } catch (e) {
-      console.error(e);
-      setError('No se pudo crear la sesión de pago en Flow.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div style={{ color: '#f9fafb' }}>
-      {onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          style={{
-            marginBottom: 16,
-            padding: '6px 10px',
-            borderRadius: 999,
-            border: '1px solid #4b5563',
-            background: 'transparent',
-            color: '#e5e7eb',
-            cursor: 'pointer',
-            fontSize: 13,
-          }}
-        >
-          ← Volver a todos los eventos
-        </button>
-      )}
-
-      {/* HERO DEL EVENTO */}
-      <div
-        style={{
-          borderRadius: isMobile ? 20 : 32,
-          padding: isMobile ? 12 : 20,
-          background:
-            'radial-gradient(circle at top, #4b5563 0, #020617 45%, #020617 100%)',
-          marginBottom: isMobile ? 20 : 24,
-        }}
-      >
-        <div
-          style={{
-            borderRadius: 24,
-            overflow: 'hidden',
-            background:
-              'linear-gradient(135deg, #111827 0%, #020617 40%, #111827 100%)',
-            padding: isMobile ? 12 : 16,
-            display: 'grid',
-            gridTemplateColumns: isMobile
-              ? '1fr'
-              : 'minmax(0, 2fr) minmax(0, 1fr)',
-            gap: isMobile ? 16 : 24,
-            alignItems: 'stretch',
-          }}
-        >
-          <div>
-            <p
-              style={{
-                fontSize: 12,
-                textTransform: 'uppercase',
-                letterSpacing: 2,
-                color: '#fecaca',
-                marginBottom: 4,
-              }}
-            >
-              Velada
-            </p>
-            <h1
-              style={{
-                fontSize: isMobile ? 26 : 32,
-                lineHeight: 1.1,
-                fontWeight: 800,
-                margin: 0,
-                marginBottom: 8,
-              }}
-            >
-              {event.title}
-            </h1>
-            <p
-              style={{
-                fontSize: 14,
-                color: '#d1d5db',
-                maxWidth: isMobile ? '100%' : 520,
-              }}
-            >
-              {event.description}
-            </p>
-
-            <div
-              style={{
-                marginTop: 16,
-                display: 'grid',
-                gridTemplateColumns: isMobile
-                  ? '1fr'
-                  : 'repeat(auto-fit, minmax(180px, 1fr))',
-                gap: 12,
-              }}
-            >
-              <div
-                style={{
-                  background: '#020617',
-                  borderRadius: 16,
-                  padding: 12,
-                  border: '1px solid #374151',
-                }}
-              >
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 11,
-                    textTransform: 'uppercase',
-                    color: '#9ca3af',
-                    letterSpacing: 1,
-                  }}
-                >
-                  Fecha & hora
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    marginTop: 4,
-                    fontSize: 14,
-                    fontWeight: 600,
-                  }}
-                >
-                  {formatDateTime(event.startDateTime)}
-                </p>
-              </div>
-
-              <div
-                style={{
-                  background: '#020617',
-                  borderRadius: 16,
-                  padding: 12,
-                  border: '1px solid #374151',
-                }}
-              >
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 11,
-                    textTransform: 'uppercase',
-                    color: '#9ca3af',
-                    letterSpacing: 1,
-                  }}
-                >
-                  Lugar
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    marginTop: 4,
-                    fontSize: 14,
-                    fontWeight: 600,
-                  }}
-                >
-                  {event.venueName}
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 12,
-                    color: '#9ca3af',
-                  }}
-                >
-                  {event.venueAddress}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* MINI AFICHE LATERAL */}
-          <div
-            style={{
-              borderRadius: 24,
-              background:
-                'radial-gradient(circle at top, #b91c1c 0, #7f1d1d 40%, #020617 100%)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              padding: 16,
-              marginTop: isMobile ? 4 : 0,
-            }}
-          >
-            <div>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 11,
-                  textTransform: 'uppercase',
-                  letterSpacing: 2,
-                  color: '#fee2e2',
-                }}
-              >
-                Evento especial
-              </p>
-              <h2
-                style={{
-                  fontSize: 18,
-                  fontWeight: 800,
-                  margin: '4px 0 8px',
-                }}
-              >
-                Velada de Boxeo
-              </h2>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 12,
-                  color: '#fee2e2',
-                }}
-              >
-                Casa de la Juventud · San Joaquín
-              </p>
-            </div>
-
-            <div
-              style={{
-                alignSelf: 'flex-end',
-                textAlign: 'right',
-                marginTop: 16,
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 11,
-                  textTransform: 'uppercase',
-                  color: '#fecaca',
-                  letterSpacing: 2,
-                }}
-              >
-                Viernes 19 de diciembre
-              </p>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 24,
-                  fontWeight: 800,
-                }}
-              >
-                19:00 hrs
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* DETALLE + INFO RÁPIDA */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile
-            ? '1fr'
-            : 'minmax(0, 1.4fr) minmax(0, 1fr)',
-          gap: isMobile ? 16 : 24,
-        }}
-      >
-        <div
-          style={{
-            background: '#020617',
-            borderRadius: 24,
-            border: '1px solid #374151',
-            padding: 18,
-          }}
-        >
-          <h2
-            style={{
-              margin: 0,
-              marginBottom: 12,
-              fontSize: 18,
-              fontWeight: 700,
-            }}
-          >
-            Detalles del evento
-          </h2>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 14,
-              color: '#d1d5db',
-              whiteSpace: 'pre-line',
-            }}
-          >
-            {event.description}
-          </p>
-        </div>
-
-        <div
-          style={{
-            background: '#020617',
-            borderRadius: 24,
-            border: '1px solid #374151',
-            padding: 18,
-          }}
-        >
-          <h3
-            style={{
-              margin: 0,
-              marginBottom: 12,
-              fontSize: 16,
-              fontWeight: 700,
-            }}
-          >
-            Información rápida
-          </h3>
-          <ul
-            style={{
-              listStyle: 'none',
-              padding: 0,
-              margin: 0,
-              fontSize: 13,
-              color: '#e5e7eb',
-            }}
-          >
-            <li>
-              <strong>Fecha:</strong> {formatDateTime(event.startDateTime)}
-            </li>
-            <li>
-              <strong>Lugar:</strong> {event.venueName}
-            </li>
-            <li>
-              <strong>Dirección:</strong> {event.venueAddress}
-            </li>
-            {event.organizer?.name && (
-              <li>
-                <strong>Organiza:</strong> Productora
-              </li>
-            )}
-          </ul>
-        </div>
-      </div>
-
-      {/* TICKETS */}
-      <div
-        style={{
-          marginTop: 28,
-          background: '#020617',
-          borderRadius: 24,
-          border: '1px solid #374151',
-          padding: 18,
-        }}
-      >
-        <h2
-          style={{
-            margin: 0,
-            marginBottom: 16,
-            fontSize: 18,
-            fontWeight: 700,
-          }}
-        >
-          Tickets disponibles
-        </h2>
-
-        {mainTicket ? (
-          <>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile
-                  ? '1fr'
-                  : 'minmax(0, 2fr) minmax(0, 1fr)',
-                gap: 16,
-                alignItems: isMobile ? 'flex-start' : 'center',
-                marginBottom: 16,
-              }}
-            >
-              <div>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 14,
-                    fontWeight: 600,
-                  }}
-                >
-                  {mainTicket.name}
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 12,
-                    color: '#9ca3af',
-                  }}
-                >
-                  Precio base: {formatMoney(basePriceCents)}
-                  {' · '} Comisión: {formatMoney(commissionPerTicketCents)}
-                </p>
-              </div>
-
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: isMobile ? 'space-between' : 'flex-end',
-                  gap: 12,
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: 999,
-                    border: '1px solid #4b5563',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setQuantity((q) => (q > 1 ? q - 1 : 1))
-                    }
-                    style={{
-                      padding: '6px 10px',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#e5e7eb',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    −
-                  </button>
-                  <span
-                    style={{
-                      minWidth: 32,
-                      textAlign: 'center',
-                      fontSize: 14,
-                    }}
-                  >
-                    {quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => q + 1)}
-                    style={{
-                      padding: '6px 10px',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#e5e7eb',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div
-                  style={{
-                    textAlign: isMobile ? 'left' : 'right',
-                  }}
-                >
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 11,
-                      color: '#9ca3af',
-                    }}
-                  >
-                    Total
-                  </p>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 18,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {formatMoney(finalTotalCents)}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Datos comprador */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: 12,
-                marginTop: 8,
-              }}
-            >
-              <input
-                type="text"
-                placeholder="Tu nombre"
-                value={buyerName}
-                onChange={(e) => setBuyerName(e.target.value)}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 999,
-                  border: '1px solid #4b5563',
-                  background: '#020617',
-                  color: '#e5e7eb',
-                  fontSize: 14,
-                  outline: 'none',
-                }}
-              />
-              <input
-                type="email"
-                placeholder="Tu correo"
-                value={buyerEmail}
-                onChange={(e) => setBuyerEmail(e.target.value)}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 999,
-                  border: '1px solid #4b5563',
-                  background: '#020617',
-                  color: '#e5e7eb',
-                  fontSize: 14,
-                  outline: 'none',
-                }}
-              />
-            </div>
-
-            {error && (
-              <p
-                style={{
-                  marginTop: 10,
-                  fontSize: 13,
-                  color: '#fecaca',
-                }}
-              >
-                {error}
-              </p>
-            )}
-          </>
-        ) : (
-          <p style={{ fontSize: 14 }}>
-            Este evento todavía no tiene tickets disponibles.
-          </p>
-        )}
-      </div>
-
-      {/* BOTÓN FLOTANTE */}
-      {mainTicket && (
-        <div
-          style={{
-            position: 'sticky',
-            bottom: 0,
-            marginTop: 24,
-            padding: isMobile ? '12px 16px 8px' : '12px 0 4px',
-            background:
-              'linear-gradient(to top, rgba(15,23,42,0.98), rgba(15,23,42,0.8), transparent)',
-            backdropFilter: 'blur(10px)',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              justifyContent: isMobile ? 'center' : 'space-between',
-              alignItems: isMobile ? 'stretch' : 'center',
-              gap: 12,
-              textAlign: isMobile ? 'center' : 'left',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 14,
-                color: '#d1d5db',
-              }}
-            >
-              <span style={{ opacity: 0.8 }}>Total a pagar:</span>{' '}
-              <strong>{formatMoney(finalTotalCents)}</strong>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleBuy}
-              disabled={loading}
-              style={{
-                width: isMobile ? '100%' : 'auto',
-                padding: '12px 32px',
-                borderRadius: 999,
-                border: 'none',
-                cursor: loading ? 'default' : 'pointer',
-                fontSize: 15,
-                fontWeight: 700,
-                background:
-                  'linear-gradient(135deg, #b91c1c 0%, #ef4444 40%, #f97316 100%)',
-                color: '#f9fafb',
-                boxShadow: '0 12px 30px rgba(220,38,38,0.4)',
-                opacity: loading ? 0.8 : 1,
-              }}
-            >
-              {loading ? 'Redirigiendo a Flow...' : 'Comprar ticket'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default App;
 
 
 
