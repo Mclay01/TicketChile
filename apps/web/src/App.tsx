@@ -2145,7 +2145,7 @@ function App() {
 
   const [view, setView] = useState<View>('events');
 
-  // 👉 NUEVO: evento destacado según ?evento=...
+  // Evento destacado según ?evento=...
   const [highlightedEvent, setHighlightedEvent] = useState<Event | null>(null);
 
   useEffect(() => {
@@ -2192,6 +2192,14 @@ function App() {
 
   const isLoggedIn = !!token;
 
+  // normalizador para comparar títulos ignorando mayúsculas y tildes
+  const normalizeText = (s: string) =>
+    s
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
   async function refreshEvents() {
     try {
       setEventsLoading(true);
@@ -2219,7 +2227,7 @@ function App() {
     void refreshEvents();
   }, []);
 
-  // 👉 NUEVO: cuando ya tenemos eventos, miramos si viene ?evento= en la URL
+  // Cuando ya tenemos eventos, miramos si viene ?evento= en la URL
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -2231,12 +2239,10 @@ function App() {
       return;
     }
 
-    const normalizedParam = eventoParam.trim().toLowerCase();
+    const normalizedParam = normalizeText(eventoParam);
 
     const match =
-      events.find(
-        (e) => e.title.trim().toLowerCase() === normalizedParam,
-      ) ?? null;
+      events.find((e) => normalizeText(e.title) === normalizedParam) ?? null;
 
     setHighlightedEvent(match || null);
   }, [events]);
@@ -2709,7 +2715,7 @@ function EventDetailView({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔴 CAMBIO: usar la propiedad real del tipo Event
+  // usamos el primer tipo de ticket del evento
   const mainTicket = event.ticketTypes?.[0];
 
   const COMMISSION_PERCENT = 0.1119;
@@ -2773,7 +2779,6 @@ function EventDetailView({
           buyerName,
           buyerEmail,
           ...(userId ? { buyerUserId: userId } : {}),
-          // desglose (igual que en la card)
           basePriceCents: String(basePriceCents),
           commissionPerTicketCents: String(commissionPerTicketCents),
           baseTotalCents: String(baseTotalCents),
@@ -3104,7 +3109,6 @@ function EventDetailView({
             <li>
               <strong>Dirección:</strong> {event.venueAddress}
             </li>
-            {/* 🔴 CAMBIO: usar organizer.name */}
             {event.organizer?.name && (
               <li>
                 <strong>Organiza:</strong> {event.organizer.name}
