@@ -1,5 +1,5 @@
 // apps/web/src/App.tsx
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   fetchEvents,
   type Event,
@@ -58,6 +58,46 @@ type View =
 type UserRole = 'ADMIN' | 'ORGANIZER' | 'CUSTOMER';
 
 type PaymentStatus = 'idle' | 'success' | 'cancel' | 'error';
+
+const PRIMARY_RED = '#7c1515';
+const FALLBACK_EVENT_IMAGE =
+  'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=1200';
+
+function formatDateLabel(iso: string) {
+  try {
+    const d = new Date(iso);
+    const weekday = d.toLocaleDateString('es-CL', { weekday: 'short' });
+    const dayMonth = d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' });
+    const time = d.toLocaleTimeString('es-CL', { hour: 'numeric', minute: '2-digit' });
+    return `${weekday}, ${dayMonth} · ${time}`;
+  } catch {
+    return iso;
+  }
+}
+
+function getEventImageUrl(event: Event) {
+  const anyEvent = event as any;
+  return (
+    anyEvent.imageUrl ||
+    anyEvent.coverImageUrl ||
+    anyEvent.bannerUrl ||
+    FALLBACK_EVENT_IMAGE
+  );
+}
+
+function getMinFinalPriceLabel(event: Event) {
+  const tts = event.ticketTypes ?? [];
+  if (tts.length === 0) return '—';
+
+  // OJO: asumimos misma moneda (CLP). Si mezclas monedas, ahí sí hay que decidir regla.
+  const currency = tts[0]?.currency || 'CLP';
+
+  const minFinal = Math.min(
+    ...tts.map((tt) => (tt.priceCents ?? 0) + Math.round((tt.priceCents ?? 0) * COMMISSION_RATE)),
+  );
+
+  return formatPrice(minFinal, currency);
+}
 
 
 function formatDateTime(iso: string) {
@@ -2406,6 +2446,15 @@ function App() {
     const newUrl = basePath + (params.toString() ? `?${params.toString()}` : '');
     window.history.replaceState({}, document.title, newUrl);
   }, [isLoggedIn]);
+  
+  function openEvent(e: Event) {
+    // setea URL shareable: /?evento=...
+    const params = new URLSearchParams(window.location.search);
+    params.set('evento', e.title);
+    window.history.pushState({}, document.title, '/' + (params.toString() ? `?${params.toString()}` : ''));
+    setHighlightedEvent(e);
+    setView('events');
+  }
 
   function clearHighlightedEvent() {
     if (typeof window !== 'undefined') {
@@ -2453,244 +2502,192 @@ function App() {
     void refreshEvents();
   };
 
+  const publicChrome = view === 'events' || view === 'login';
+
   return (
-    <div style={{ minHeight: '100vh', background: '#020617', color: '#e5e7eb' }}>
-      <header
-        style={{
-          borderBottom: '1px solid #1f2937',
-          padding: '12px 16px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '12px',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <img
-            src="/logo-ticketchile.png"
-            alt="TicketChile"
-            style={{ height: 40, objectFit: 'contain' }}
-          />
-          <p style={{ fontSize: '12px', opacity: 0.7 }}>
-            Tu entrada mas rapida al evento.
-          </p>
-        </div>
-
-        <nav style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '14px' }}>
-          <button
-            onClick={() => {
-              clearHighlightedEvent();
-              setView('events');
-            }}
-            style={{
-              padding: '6px 10px',
-              borderRadius: '6px',
-              border: 'none',
-              background: view === 'events' ? '#1d4ed8' : 'transparent',
-              color: '#e5e7eb',
-              cursor: 'pointer',
-            }}
-          >
-            Eventos
-          </button>
-
-          {role && role !== 'CUSTOMER' && (
-            <button
-              onClick={goToOrganizer}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: 'none',
-                background: view === 'organizer' ? '#1d4ed8' : 'transparent',
-                color: '#e5e7eb',
-                cursor: 'pointer',
-              }}
-            >
-              Organizador
-            </button>
-          )}
-
-          {isLoggedIn && (
-            <button
-              onClick={goToMyTickets}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: 'none',
-                background: view === 'myTickets' ? '#1d4ed8' : 'transparent',
-                color: '#e5e7eb',
-                cursor: 'pointer',
-              }}
-            >
-              Mis tickets
-            </button>
-          )}
-
-          {role && role !== 'CUSTOMER' && (
-            <button
-              onClick={() => setView('checkin')}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: 'none',
-                background: view === 'checkin' ? '#1d4ed8' : 'transparent',
-                color: '#e5e7eb',
-                cursor: 'pointer',
-              }}
-            >
-              Check-in
-            </button>
-          )}
-
-          {isLoggedIn ? (
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: '1px solid #4b5563',
-                background: 'transparent',
-                color: '#e5e7eb',
-                cursor: 'pointer',
-              }}
-            >
-              Cerrar sesión
-            </button>
-          ) : (
-            <button
-              onClick={() => setView('login')}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: '1px solid #4b5563',
-                background: 'transparent',
-                color: '#e5e7eb',
-                cursor: 'pointer',
-              }}
-            >
-              Iniciar sesión
-            </button>
-          )}
-        </nav>
-      </header>
-
-      <main
-        style={{
-          padding: '16px 5vw',
-          maxWidth: '1200px',
-          width: '100%',
-          margin: '0 auto',
-          boxSizing: 'border-box',
-        }}
-      >
-        {paymentStatus !== 'idle' && paymentMessage && (
-          <div
-            style={{
-              marginBottom: '12px',
-              padding: '8px 12px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              border: '1px solid',
-              background:
-                paymentStatus === 'success'
-                  ? '#022c22'
-                  : paymentStatus === 'cancel'
-                  ? '#451a1a'
-                  : '#3f1f1f',
-              borderColor:
-                paymentStatus === 'success'
-                  ? '#16a34a'
-                  : paymentStatus === 'cancel'
-                  ? '#f97316'
-                  : '#f87171',
-              color: '#e5e7eb',
-            }}
-          >
-            {paymentMessage}
+    <div
+      style={{
+        minHeight: '100vh',
+        background: publicChrome ? '#ffffff' : '#020617',
+        color: publicChrome ? '#111827' : '#e5e7eb',
+      }}
+    >
+      {publicChrome ? (
+        <PublicHeader
+          isLoggedIn={isLoggedIn}
+          role={role}
+          onGoEvents={() => {
+            clearHighlightedEvent();
+            setView('events');
+          }}
+          onGoLogin={() => setView('login')}
+          onGoMyTickets={goToMyTickets}
+          onGoOrganizer={goToOrganizer}
+          onLogout={handleLogout}
+        />
+      ) : (
+        // tu header oscuro original (déjalo tal cual lo tenías)
+        <header
+          style={{
+            borderBottom: '1px solid #1f2937',
+            padding: '12px 16px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <img src="/logo-ticketchile.png" alt="TicketChile" style={{ height: 40, objectFit: 'contain' }} />
+            <p style={{ fontSize: '12px', opacity: 0.7 }}>Tu entrada mas rapida al evento.</p>
           </div>
-        )}
 
-        {view === 'events' && (
-          <section>
-            {highlightedEvent ? (
-              <EventDetailView
-                event={highlightedEvent}
-                isLoggedIn={isLoggedIn}
-                userId={userId}
-                onBack={clearHighlightedEvent}
-              />
-            ) : (
-              <>
-                <h1 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '12px' }}>
-                  Eventos
-                </h1>
+          <nav style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '14px' }}>
+            <button
+              onClick={() => {
+                clearHighlightedEvent();
+                setView('events');
+              }}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'transparent',
+                color: '#e5e7eb',
+                cursor: 'pointer',
+              }}
+            >
+              Eventos
+            </button>
 
-                {eventsLoading && events.length === 0 && <p>Cargando eventos...</p>}
-
-                {eventsRefreshing && !eventsLoading && (
-                  <p style={{ fontSize: 12, opacity: 0.7 }}>Actualizando eventos…</p>
-                )}
-
-                {eventsError && <p style={{ color: '#f87171' }}>{eventsError}</p>}
-
-                {!eventsLoading && !eventsError && events.length === 0 && (
-                  <p>No hay eventos publicados todavía.</p>
-                )}
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                    gap: '16px',
-                  }}
-                >
-                  {events
-                    .filter((event) => event.status !== 'CANCELLED')
-                    .map((event) => (
-                      <EventCard
-                        key={event.id}
-                        event={event}
-                        isLoggedIn={isLoggedIn}
-                        token={token}
-                        userId={userId}
-                      />
-                    ))}
-                </div>
-              </>
+            {role && role !== 'CUSTOMER' && (
+              <button
+                onClick={goToOrganizer}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: view === 'organizer' ? '#1d4ed8' : 'transparent',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                }}
+              >
+                Organizador
+              </button>
             )}
-          </section>
-        )}
 
-        {view === 'login' && <LoginForm onSuccess={handleLoginSuccess} />}
+            {isLoggedIn && (
+              <button
+                onClick={goToMyTickets}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: view === 'myTickets' ? '#1d4ed8' : 'transparent',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                }}
+              >
+                Mis tickets
+              </button>
+            )}
 
-        {view === 'myTickets' && (
-          <MyTicketsSection
-            tickets={tickets}
-            loading={ticketsLoading}
-            error={ticketsError}
-            isLoggedIn={isLoggedIn}
-            onRequireLogin={() => setView('login')}
-          />
-        )}
+            {role && role !== 'CUSTOMER' && (
+              <button
+                onClick={() => setView('checkin')}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: view === 'checkin' ? '#1d4ed8' : 'transparent',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                }}
+              >
+                Check-in
+              </button>
+            )}
 
-        {view === 'checkin' && (
-          <CheckInPanel token={token} role={role} onRequireLogin={() => setView('login')} />
-        )}
+            {isLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #4b5563',
+                  background: 'transparent',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                }}
+              >
+                Cerrar sesión
+              </button>
+            ) : (
+              <button
+                onClick={() => setView('login')}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #4b5563',
+                  background: 'transparent',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                }}
+              >
+                Iniciar sesión
+              </button>
+            )}
+          </nav>
+        </header>
+      )}
 
-        {view === 'organizer' && (
-          <OrganizerPanel
-            token={token}
-            role={role}
-            userId={userId}
-            events={events}
-            eventsLoading={eventsLoading}
-            eventsError={eventsError}
-            onRequireLogin={() => setView('login')}
-            onEventCreated={handleEventCreated}
-            onEventDeleted={handleEventDeleted}
-          />
-        )}
-      </main>
+      {/* Si estás en modo landing-style, el main lo maneja PublicEventsIndex */}
+      {!publicChrome && (
+        <main
+          style={{
+            padding: '16px 5vw',
+            maxWidth: '1200px',
+            width: '100%',
+            margin: '0 auto',
+            boxSizing: 'border-box',
+          }}
+        >
+          {/* ... aquí dejas tus vistas internas tal cual */}
+        </main>
+      )}
+
+      {publicChrome && (
+        <>
+          {view === 'events' && (
+            <>
+              {highlightedEvent ? (
+                <div style={{ padding: '24px 16px', maxWidth: 1000, margin: '0 auto' }}>
+                  <EventDetailView
+                    event={highlightedEvent}
+                    isLoggedIn={isLoggedIn}
+                    userId={userId}
+                    onBack={clearHighlightedEvent}
+                  />
+                </div>
+              ) : (
+                <PublicEventsIndex
+                  events={events}
+                  loading={eventsLoading}
+                  error={eventsError}
+                  onOpen={openEvent}
+                />
+              )}
+            </>
+          )}
+
+          {view === 'login' && (
+            <div style={{ padding: '32px 16px', maxWidth: 520, margin: '0 auto' }}>
+              {/* tu LoginForm actual funciona; si lo quieres “blanco” también, lo tuneamos después */}
+              <LoginForm onSuccess={handleLoginSuccess} />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -2925,6 +2922,350 @@ function EventDetailView({ event, isLoggedIn, userId, onBack }: EventDetailViewP
         </div>
       </div>
     </div>
+  );
+}
+
+function PublicHeader(props: {
+  isLoggedIn: boolean;
+  role: UserRole | null;
+  onGoEvents: () => void;
+  onGoLogin: () => void;
+  onGoMyTickets: () => void;
+  onGoOrganizer: () => void;
+  onLogout: () => void;
+}) {
+  const { isLoggedIn, role, onGoEvents, onGoLogin, onGoMyTickets, onGoOrganizer, onLogout } = props;
+
+  return (
+    <header
+      style={{
+        backgroundColor: PRIMARY_RED,
+        color: '#ffffff',
+        padding: '10px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <img
+          src="/logo-ticketchile.png"
+          alt="TicketChile"
+          style={{ height: 48, width: 'auto', display: 'block' }}
+        />
+      </div>
+
+      <nav style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={onGoEvents}
+          style={{
+            padding: '8px 18px',
+            borderRadius: 999,
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: 14,
+            backgroundImage: 'linear-gradient(90deg,#f97316,#fb923c,#f97316)',
+            color: '#ffffff',
+            boxShadow: '0 10px 24px rgba(0,0,0,0.3)',
+          }}
+        >
+          Eventos
+        </button>
+
+        {role && role !== 'CUSTOMER' && (
+          <button
+            type="button"
+            onClick={onGoOrganizer}
+            style={{
+              padding: '8px 18px',
+              borderRadius: 999,
+              border: '1px solid rgba(255,255,255,0.55)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 14,
+              backgroundColor: 'transparent',
+              color: '#ffffff',
+            }}
+          >
+            Organizador
+          </button>
+        )}
+
+        {isLoggedIn && (
+          <button
+            type="button"
+            onClick={onGoMyTickets}
+            style={{
+              padding: '8px 18px',
+              borderRadius: 999,
+              border: '1px solid rgba(255,255,255,0.55)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 14,
+              backgroundColor: 'transparent',
+              color: '#ffffff',
+            }}
+          >
+            Mis tickets
+          </button>
+        )}
+
+        {isLoggedIn ? (
+          <button
+            type="button"
+            onClick={onLogout}
+            style={{
+              padding: '8px 18px',
+              borderRadius: 999,
+              border: '1px solid rgba(255,255,255,0.55)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 14,
+              backgroundColor: 'transparent',
+              color: '#ffffff',
+            }}
+          >
+            Cerrar sesión
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onGoLogin}
+            style={{
+              padding: '8px 18px',
+              borderRadius: 999,
+              border: '1px solid rgba(255,255,255,0.55)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 14,
+              backgroundColor: 'transparent',
+              color: '#ffffff',
+            }}
+          >
+            Iniciar sesión
+          </button>
+        )}
+      </nav>
+    </header>
+  );
+}
+
+function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
+  const { event, onOpen } = props;
+
+  const imageUrl = getEventImageUrl(event);
+  const dateLabel = formatDateLabel(event.startDateTime);
+  const minPrice = getMinFinalPriceLabel(event);
+
+  return (
+    <div
+      onClick={() => onOpen(event)}
+      style={{
+        backgroundColor: '#ffffff',
+        borderRadius: 18,
+        overflow: 'hidden',
+        boxShadow: '0 14px 30px rgba(15,23,42,0.18)',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-4px)';
+        e.currentTarget.style.boxShadow = '0 18px 40px rgba(15,23,42,0.25)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = '0 14px 30px rgba(15,23,42,0.18)';
+      }}
+    >
+      <div style={{ position: 'relative', height: 190, overflow: 'hidden' }}>
+        <img
+          src={imageUrl}
+          alt={event.title}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: '8px 12px',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0.1))',
+            color: '#f9fafb',
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+        >
+          {dateLabel}
+        </div>
+      </div>
+
+      <div style={{ padding: '14px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#111827' }}>
+          {event.title}
+        </h3>
+
+        <div style={{ fontSize: 13, color: '#4b5563', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div>{event.venueName}</div>
+          <div>{event.venueAddress}</div>
+          <div>{(event.ticketTypes?.length ?? 0) > 0 ? 'Entradas disponibles' : 'Sin tickets'}</div>
+        </div>
+
+        <div
+          style={{
+            marginTop: 'auto',
+            paddingTop: 10,
+            borderTop: '1px solid #f3f4f6',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Desde</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#b91c1c' }}>{minPrice}</div>
+          </div>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(event);
+            }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 999,
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: 700,
+              backgroundImage: 'linear-gradient(90deg,#f97316,#fb923c,#b91c1c)',
+              color: '#ffffff',
+              boxShadow: '0 10px 24px rgba(185,28,28,0.45)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Ver más
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PublicEventsIndex(props: {
+  events: Event[];
+  loading: boolean;
+  error: string | null;
+  onOpen: (e: Event) => void;
+}) {
+  const { events, loading, error, onOpen } = props;
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return (events ?? [])
+      .filter((e) => e.status !== 'CANCELLED')
+      .filter((e) => {
+        if (!q) return true;
+        return (
+          e.title.toLowerCase().includes(q) ||
+          e.venueName.toLowerCase().includes(q) ||
+          e.venueAddress.toLowerCase().includes(q)
+        );
+      });
+  }, [events, searchQuery]);
+
+  return (
+    <main
+      style={{
+        padding: '32px 16px 56px',
+        maxWidth: 1200,
+        margin: '0 auto',
+        boxSizing: 'border-box',
+      }}
+    >
+      <section style={{ textAlign: 'center', marginBottom: 28, padding: '0 8px' }}>
+        <h1 style={{ fontSize: 'clamp(2.1rem, 4vw, 3rem)', fontWeight: 900, lineHeight: 1.1, marginBottom: 10, color: '#111827' }}>
+          Eventos{' '}
+          <span
+            style={{
+              backgroundImage: 'linear-gradient(90deg,#f97316,#fb923c,#dc2626)',
+              WebkitBackgroundClip: 'text',
+              color: 'transparent',
+            }}
+          >
+            disponibles
+          </span>
+        </h1>
+        <p style={{ maxWidth: 720, margin: '0 auto', fontSize: 16, color: '#4b5563' }}>
+          Compra en segundos, entra con QR y que nadie te cuente el show.
+        </p>
+      </section>
+
+      <section style={{ marginBottom: 26 }}>
+        <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', gap: 12, alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="Buscar eventos, lugares..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '12px 18px',
+              borderRadius: 999,
+              border: '2px solid #e5e7eb',
+              fontSize: 15,
+              outline: 'none',
+              backgroundColor: '#f9fafb',
+            }}
+          />
+          <button
+            type="button"
+            style={{
+              padding: '11px 24px',
+              borderRadius: 999,
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: 14,
+              backgroundImage: 'linear-gradient(90deg,#f97316,#fb923c,#b91c1c)',
+              color: '#ffffff',
+              boxShadow: '0 10px 24px rgba(185,28,28,0.45)',
+            }}
+          >
+            Buscar
+          </button>
+        </div>
+      </section>
+
+      {loading && filtered.length === 0 && <p style={{ textAlign: 'center', color: '#6b7280' }}>Cargando eventos…</p>}
+      {error && <p style={{ textAlign: 'center', color: '#b91c1c', fontWeight: 600 }}>{error}</p>}
+
+      {!loading && !error && filtered.length === 0 && (
+        <p style={{ textAlign: 'center', color: '#6b7280' }}>No hay eventos publicados todavía.</p>
+      )}
+
+      <section>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: 18,
+          }}
+        >
+          {filtered.map((event) => (
+            <PublicEventCard key={event.id} event={event} onOpen={onOpen} />
+          ))}
+        </div>
+      </section>
+    </main>
   );
 }
 
