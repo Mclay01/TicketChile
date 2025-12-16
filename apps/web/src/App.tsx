@@ -2503,6 +2503,7 @@ function App() {
   };
 
   const publicChrome = view === 'events' || view === 'login';
+  const isEventsActive = view === 'events';
 
   return (
     <div
@@ -2552,7 +2553,7 @@ function App() {
                 padding: '6px 10px',
                 borderRadius: '6px',
                 border: 'none',
-                background: 'transparent',
+                background: isEventsActive ? '#1d4ed8' : 'transparent',
                 color: '#e5e7eb',
                 cursor: 'pointer',
               }}
@@ -2652,9 +2653,67 @@ function App() {
             boxSizing: 'border-box',
           }}
         >
-          {/* ... aquí dejas tus vistas internas tal cual */}
+          {paymentStatus !== 'idle' && paymentMessage && (
+            <div
+              style={{
+                marginBottom: '12px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                border: '1px solid',
+                background:
+                  paymentStatus === 'success'
+                    ? '#022c22'
+                    : paymentStatus === 'cancel'
+                    ? '#451a1a'
+                    : '#3f1f1f',
+                borderColor:
+                  paymentStatus === 'success'
+                    ? '#16a34a'
+                    : paymentStatus === 'cancel'
+                    ? '#f97316'
+                    : '#f87171',
+                color: '#e5e7eb',
+              }}
+            >
+              {paymentMessage}
+            </div>
+          )}
+
+          {view === 'myTickets' && (
+            <MyTicketsSection
+              tickets={tickets}
+              loading={ticketsLoading}
+              error={ticketsError}
+              isLoggedIn={isLoggedIn}
+              onRequireLogin={() => setView('login')}
+            />
+          )}
+
+          {view === 'checkin' && (
+            <CheckInPanel
+              token={token}
+              role={role}
+              onRequireLogin={() => setView('login')}
+            />
+          )}
+
+          {view === 'organizer' && (
+            <OrganizerPanel
+              token={token}
+              role={role}
+              userId={userId}
+              events={events}
+              eventsLoading={eventsLoading}
+              eventsError={eventsError}
+              onRequireLogin={() => setView('login')}
+              onEventCreated={handleEventCreated}
+              onEventDeleted={handleEventDeleted}
+            />
+          )}
         </main>
       )}
+
 
       {publicChrome && (
         <>
