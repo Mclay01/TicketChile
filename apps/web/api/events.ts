@@ -1,40 +1,75 @@
 // apps/web/api/events.ts
-export default async function handler(req: any, res: any) {
+export const config = { runtime: 'edge' };
+
+function json(data: unknown, init?: ResponseInit) {
+  return new Response(JSON.stringify(data), {
+    ...init,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
+export default async function handler(req: Request) {
   if (req.method !== 'GET') {
-    res.statusCode = 405;
-    return res.json({ error: 'Method not allowed' });
+    return json({ error: 'Method not allowed' }, { status: 405 });
   }
 
-  // ✅ evita el error TS de "process"
+  // ✅ evita TS "process" y funciona en Edge
   const env = (globalThis as any).process?.env ?? {};
 
+  // 👇 SOLO el serverless/edge debería leer UPSTREAM_API_URL (no VITE_*).
   const upstream =
-    env.UPSTREAM_API_URL || 'https://ticket-chile-api.onrender.com/api';
+    env.UPSTREAM_API_URL ||
+    env.VITE_API_URL || // fallback por si lo dejaste puesto
+    'https://ticket-chile-api.onrender.com/api';
 
   const base = String(upstream).replace(/\/$/, '');
   const url = `${base}/events`;
 
+  // ✅ cache CDN Vercel
+  const cacheHeaders = {
+    // 5 min cache en edge, y si expira, sirve “stale” mientras revalida
+    'cache-control':
+      'public, max-age=0, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400',
+  };
+
+  // ✅ timeout para no quedar colgado si Render se pone lento
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
   try {
     const upstreamRes = await fetch(url, {
-      headers: { Accept: 'application/json' },
+      headers: { accept: 'application/json' },
+      signal: controller.signal,
     });
 
     if (!upstreamRes.ok) {
-      res.statusCode = upstreamRes.status;
-      return res.json({ error: `Upstream error ${upstreamRes.status}` });
+      // Igual mandamos cache headers (sirve para edge behavior)
+      return json(
+        { error: `Upstream error ${upstreamRes.status}` },
+        { status: upstreamRes.status, headers: cacheHeaders },
+      );
     }
 
-    const data = await upstreamRes.json();
+    // OJO: usamos text() para no rehacer JSON innecesariamente
+    const body = await upstreamRes.text();
 
-    // ✅ cache en CDN de Vercel (clave para que deje de pegarle a Render)
-    res.setHeader(
-      'Cache-Control',
-      'public, s-maxage=60, stale-while-revalidate=600',
-    );
-
-    return res.status(200).json(data);
+    return new Response(body, {
+      status: 200,
+      headers: {
+        ...cacheHeaders,
+        'content-type': 'application/json; charset=utf-8',
+      },
+    });
   } catch (e: any) {
-    res.statusCode = 500;
-    return res.json({ error: e?.message ?? 'Failed to fetch events' });
+    const isTimeout = e?.name === 'AbortError';
+    return json(
+      { error: isTimeout ? 'Upstream timeout' : e?.message ?? 'Failed to fetch events' },
+      { status: 500 },
+    );
+  } finally {
+    clearTimeout(timeout);
   }
 }
