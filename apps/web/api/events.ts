@@ -9,7 +9,7 @@ export default async function handler(req: any, res: any) {
   const env = (globalThis as any).process?.env ?? {};
 
   const upstream =
-    env.VITE_API_URL || 'https://ticket-chile-api.onrender.com/api';
+    env.UPSTREAM_API_URL || 'https://ticket-chile-api.onrender.com/api';
 
   const base = String(upstream).replace(/\/$/, '');
   const url = `${base}/events`;

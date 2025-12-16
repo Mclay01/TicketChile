@@ -1,7 +1,6 @@
 {
   "redirects": [
-    { "source": "/eventos", "destination": "/", "permanent": false },
-    { "source": "/eventos/", "destination": "/", "permanent": false }
+    { "source": "/eventos", "destination": "/", "permanent": false }
   ],
   "rewrites": [
     { "source": "/compra-exitosa", "destination": "/" }

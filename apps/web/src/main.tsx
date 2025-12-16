@@ -8,15 +8,15 @@ import './index.css';
 const path = window.location.pathname.toLowerCase();
 const params = new URLSearchParams(window.location.search);
 
-// ✅ Si hay "modo app" por query, montamos App aunque el path sea "/"
-const shouldUseApp =
+// Usamos App si hay intención de “app real” aunque estemos en "/"
+const shouldRenderApp =
   path !== '/' ||
-  params.has('app') ||
   params.has('evento') ||
+  params.get('login') === '1' ||
   params.has('payment') ||
-  params.has('login');
+  params.get('view') === 'events';
 
-const RootComponent = shouldUseApp ? App : LandingPage;
+const RootComponent = shouldRenderApp ? App : LandingPage;
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

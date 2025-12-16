@@ -66,12 +66,10 @@ const LandingPage: React.FC = () => {
   const regularEvents: LandingEvent[] = []; // no hay otros
 
   const goToEvents = () => {
-    if (typeof window === 'undefined') return;
-    window.location.href = '/?app=1';
+    window.location.href = '/?view=events';
   };
 
   const goToOrganizer = () => {
-    if (typeof window === 'undefined') return;
     window.location.href = '/?login=1';
   };
 
@@ -79,7 +77,6 @@ const LandingPage: React.FC = () => {
   // 👉 Botón "Comprar tickets" del modal:
   // usamos la misma página real de compra que ya tienes (/eventos?evento=...)
   const goToEventPurchase = (event: LandingEvent) => {
-    if (typeof window === 'undefined') return;
     const encoded = encodeURIComponent(event.title);
     window.location.href = `/?evento=${encoded}`;
   };

@@ -198,11 +198,8 @@ async function fetchWithFallback(urls: string[], init?: RequestInit) {
 // ---------- Endpoints -----------
 
 export async function fetchEvents(): Promise<Event[]> {
-  const url = import.meta.env.PROD
-    ? '/api/events'
-    : `${API_BASE_URL}/events`;
-
-  const res = await fetch(url, { method: 'GET' });
+  const url = import.meta.env.PROD ? '/api/events' : `${API_BASE_URL}/events`;
+  const res = await fetch(url);
   const data = await handleJsonResponse<{ events: Event[] }>(res);
   return data.events;
 }
