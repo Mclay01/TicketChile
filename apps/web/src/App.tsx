@@ -75,6 +75,32 @@ function formatDateLabel(iso: string) {
   }
 }
 
+function getEventCardImage(event: Event) {
+  const src = getEventImageUrl(event) || '/event-fallback.jpg';
+
+  // local o raro => no proxy
+  if (src.startsWith('/') || src.startsWith('data:') || src.startsWith('blob:')) {
+    return { src, srcSet: undefined as string | undefined, sizes: undefined as string | undefined };
+  }
+
+  // solo proxy si es http(s)
+  if (!/^https?:\/\//i.test(src)) {
+    return { src: '/event-fallback.jpg', srcSet: undefined, sizes: undefined };
+  }
+
+  const enc = encodeURIComponent(src);
+  const src480 = `/api/img?url=${enc}&w=480&q=70`;
+  const src800 = `/api/img?url=${enc}&w=800&q=72`;
+  const src1200 = `/api/img?url=${enc}&w=1200&q=75`;
+
+  return {
+    src: src800,
+    srcSet: `${src480} 480w, ${src800} 800w, ${src1200} 1200w`,
+    sizes: '(max-width: 640px) 100vw, (max-width: 1200px) 50vw, 33vw',
+  };
+}
+
+
 function getEventImageUrl(event: Event) {
   const anyEvent = event as any;
   return (
@@ -3115,38 +3141,89 @@ function PublicHeader(props: {
 function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
   const { event, onOpen } = props;
 
-  const imageUrl = getEventImageUrl(event);
-  const dateLabel = formatDateLabel(event.startDateTime);
-  const minPrice = getMinFinalPriceLabel(event);
+  const [hovered, setHovered] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  const dateLabel = useMemo(
+    () => formatDateLabel(event.startDateTime),
+    [event.startDateTime],
+  );
+  const minPrice = useMemo(() => getMinFinalPriceLabel(event), [event]);
+
+  // ✅ Imagen optimizada (proxy /api/img) + responsive
+  const { src, srcSet, sizes } = useMemo(() => getEventCardImage(event), [event]);
+
+  // fallback real (un asset en /public)
+  const fallbackUrl = '/event-fallback.jpg';
+
+  // si falló, usamos fallback local (sin proxy)
+  const finalSrc = imgError ? fallbackUrl : src;
+  const finalSrcSet = imgError ? undefined : srcSet;
+  const finalSizes = imgError ? undefined : sizes;
+
+  const shimmer: React.CSSProperties = {
+    backgroundImage:
+      'linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%)',
+    backgroundSize: '200% 100%',
+    animation: 'tc-shimmer 1.2s infinite',
+  };
 
   return (
     <div
       onClick={() => onOpen(event)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         backgroundColor: '#ffffff',
         borderRadius: 18,
         overflow: 'hidden',
-        boxShadow: '0 14px 30px rgba(15,23,42,0.18)',
+        boxShadow: hovered
+          ? '0 18px 40px rgba(15,23,42,0.25)'
+          : '0 14px 30px rgba(15,23,42,0.18)',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         transition: 'transform 0.18s ease, box-shadow 0.18s ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow = '0 18px 40px rgba(15,23,42,0.25)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 14px 30px rgba(15,23,42,0.18)';
+        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+        willChange: 'transform',
+        border: '1px solid #eef2f7',
       }}
     >
-      <div style={{ position: 'relative', height: 190, overflow: 'hidden' }}>
+      <div
+        style={{
+          position: 'relative',
+          aspectRatio: '16 / 9',
+          overflow: 'hidden',
+          background: '#f3f4f6',
+        }}
+      >
+        {!imgLoaded && <div style={{ position: 'absolute', inset: 0, ...shimmer }} />}
+
         <img
-          src={imageUrl}
+          src={finalSrc}
+          srcSet={finalSrcSet}
+          sizes={finalSizes}
           alt={event.title}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setImgLoaded(true)}
+          onError={() => {
+            setImgError(true);
+            setImgLoaded(true);
+          }}
+          width={1200}
+          height={675}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+            opacity: imgLoaded ? 1 : 0,
+            transition: 'opacity 0.25s ease',
+          }}
         />
+
         <div
           style={{
             position: 'absolute',
@@ -3154,7 +3231,8 @@ function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
             left: 0,
             right: 0,
             padding: '8px 12px',
-            background: 'linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0.1))',
+            background:
+              'linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0.1))',
             color: '#f9fafb',
             fontSize: 12,
             fontWeight: 600,
@@ -3164,12 +3242,28 @@ function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
         </div>
       </div>
 
-      <div style={{ padding: '14px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+      <div
+        style={{
+          padding: '14px 16px 12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          flex: 1,
+        }}
+      >
         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#111827' }}>
           {event.title}
         </h3>
 
-        <div style={{ fontSize: 13, color: '#4b5563', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div
+          style={{
+            fontSize: 13,
+            color: '#4b5563',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
           <div>{event.venueName}</div>
           <div>{event.venueAddress}</div>
           <div>{(event.ticketTypes?.length ?? 0) > 0 ? 'Entradas disponibles' : 'Sin tickets'}</div>
@@ -3187,8 +3281,12 @@ function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
           }}
         >
           <div>
-            <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Desde</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#b91c1c' }}>{minPrice}</div>
+            <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>
+              Desde
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#b91c1c' }}>
+              {minPrice}
+            </div>
           </div>
 
           <button
@@ -3218,6 +3316,8 @@ function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
   );
 }
 
+
+
 function PublicEventsIndex(props: {
   events: Event[];
   loading: boolean;
@@ -3226,6 +3326,8 @@ function PublicEventsIndex(props: {
 }) {
   const { events, loading, error, onOpen } = props;
   const [searchQuery, setSearchQuery] = useState('');
+
+  const hasEvents = (events?.length ?? 0) > 0;
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -3241,6 +3343,18 @@ function PublicEventsIndex(props: {
       });
   }, [events, searchQuery]);
 
+  // ✅ Skeleton solo cuando NO hay nada para mostrar todavía
+  const showSkeleton = loading && !hasEvents;
+
+  // ✅ “Actualizando…” solo cuando ya estamos mostrando algo (cache) y llega el refresh
+  const showRefreshing = loading && hasEvents;
+
+  const showEmptySearch =
+    !loading && !error && filtered.length === 0 && searchQuery.trim() && hasEvents;
+
+  const showEmptyNoEvents =
+    !loading && !error && filtered.length === 0 && !searchQuery.trim() && !hasEvents;
+
   return (
     <main
       style={{
@@ -3250,8 +3364,24 @@ function PublicEventsIndex(props: {
         boxSizing: 'border-box',
       }}
     >
+      {/* Keyframes para shimmer (sin tocar tu CSS global) */}
+      <style>{`
+        @keyframes tc-shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+      `}</style>
+
       <section style={{ textAlign: 'center', marginBottom: 28, padding: '0 8px' }}>
-        <h1 style={{ fontSize: 'clamp(2.1rem, 4vw, 3rem)', fontWeight: 900, lineHeight: 1.1, marginBottom: 10, color: '#111827' }}>
+        <h1
+          style={{
+            fontSize: 'clamp(2.1rem, 4vw, 3rem)',
+            fontWeight: 900,
+            lineHeight: 1.1,
+            marginBottom: 10,
+            color: '#111827',
+          }}
+        >
           Eventos{' '}
           <span
             style={{
@@ -3304,11 +3434,29 @@ function PublicEventsIndex(props: {
         </div>
       </section>
 
-      {loading && filtered.length === 0 && <p style={{ textAlign: 'center', color: '#6b7280' }}>Cargando eventos…</p>}
-      {error && <p style={{ textAlign: 'center', color: '#b91c1c', fontWeight: 600 }}>{error}</p>}
+      {/* Error: si hay cache, no lo trates como “pantalla de muerte” */}
+      {error && (
+        <p style={{ textAlign: 'center', color: '#b91c1c', fontWeight: 600, marginBottom: 12 }}>
+          {hasEvents ? 'No se pudo actualizar (mostrando datos guardados).' : error}
+        </p>
+      )}
 
-      {!loading && !error && filtered.length === 0 && (
-        <p style={{ textAlign: 'center', color: '#6b7280' }}>No hay eventos publicados todavía.</p>
+      {showRefreshing && (
+        <p style={{ textAlign: 'center', color: '#6b7280', fontSize: 12, marginBottom: 12 }}>
+          Actualizando eventos…
+        </p>
+      )}
+
+      {showEmptySearch && (
+        <p style={{ textAlign: 'center', color: '#6b7280' }}>
+          No se encontraron eventos para “{searchQuery.trim()}”.
+        </p>
+      )}
+
+      {showEmptyNoEvents && (
+        <p style={{ textAlign: 'center', color: '#6b7280' }}>
+          No hay eventos publicados todavía.
+        </p>
       )}
 
       <section>
@@ -3319,12 +3467,58 @@ function PublicEventsIndex(props: {
             gap: 18,
           }}
         >
-          {filtered.map((event) => (
-            <PublicEventCard key={event.id} event={event} onOpen={onOpen} />
-          ))}
+          {showSkeleton ? (
+            <SkeletonGrid count={6} />
+          ) : (
+            filtered.map((event) => (
+              <PublicEventCard key={event.id} event={event} onOpen={onOpen} />
+            ))
+          )}
         </div>
       </section>
     </main>
+  );
+}
+
+function SkeletonGrid({ count }: { count: number }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonCard key={i} />
+      ))}
+    </>
+  );
+}
+
+function SkeletonCard() {
+  const shimmer: React.CSSProperties = {
+    backgroundImage: 'linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%)',
+    backgroundSize: '200% 100%',
+    animation: 'tc-shimmer 1.2s infinite',
+  };
+
+  return (
+    <div
+      style={{
+        borderRadius: 18,
+        overflow: 'hidden',
+        background: '#ffffff',
+        boxShadow: '0 14px 30px rgba(15,23,42,0.10)',
+        border: '1px solid #eef2f7',
+      }}
+    >
+      <div style={{ height: 190, ...shimmer }} />
+      <div style={{ padding: '14px 16px 12px' }}>
+        <div style={{ height: 18, width: '70%', borderRadius: 8, marginBottom: 10, ...shimmer }} />
+        <div style={{ height: 12, width: '90%', borderRadius: 8, marginBottom: 8, ...shimmer }} />
+        <div style={{ height: 12, width: '80%', borderRadius: 8, marginBottom: 8, ...shimmer }} />
+        <div style={{ height: 12, width: '60%', borderRadius: 8, marginBottom: 14, ...shimmer }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+          <div style={{ height: 18, width: 90, borderRadius: 999, ...shimmer }} />
+          <div style={{ height: 34, width: 110, borderRadius: 999, ...shimmer }} />
+        </div>
+      </div>
+    </div>
   );
 }
 
