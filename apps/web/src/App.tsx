@@ -3030,24 +3030,38 @@ function PublicHeader(props: {
         {isMobile && (
           <button
             type="button"
-            aria-label="Abrir menú"
-            aria-expanded={menuOpen}
             onClick={() => setMenuOpen((v) => !v)}
+            aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
             style={{
-              height: 44,
               width: 44,
+              height: 44,
+              padding: 0,
               borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.55)',
+              border: '1px solid rgba(255,255,255,0.35)',
               background: 'transparent',
-              color: '#ffffff',
+              color: '#fff',
               cursor: 'pointer',
-              fontSize: 22,
-              fontWeight: 900,
-              lineHeight: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
-            ⋮
+            {/* SVG kebab (3 puntos verticales) centrado real */}
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              style={{ display: 'block' }}
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="5" r="1.8" />
+              <circle cx="12" cy="12" r="1.8" />
+              <circle cx="12" cy="19" r="1.8" />
+            </svg>
           </button>
+
         )}
       </div>
 
