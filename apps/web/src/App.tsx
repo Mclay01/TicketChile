@@ -1,5 +1,5 @@
 // apps/web/src/App.tsx
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import {
   fetchEvents,
   type Event,
@@ -2266,6 +2266,15 @@ function App() {
 
   const [view, setView] = useState<View>('events');
 
+  const isMobile = useIsMobile(640);
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    // si vuelves a desktop, cerramos el menú mobile
+    if (!isMobile) setNavOpen(false);
+  }, [isMobile]);
+
+
   // Evento destacado según ?evento=...
   const [highlightedEvent, setHighlightedEvent] = useState<Event | null>(null);
 
@@ -2567,9 +2576,9 @@ function App() {
           setView('events');
         }}
         onGoLogin={() => setView('login')}
-        onGoMyTickets={() => setView(isLoggedIn ? 'myTickets' : 'login')}
-        onGoOrganizer={() => setView(isLoggedIn ? 'organizer' : 'login')}
-        onGoCheckin={() => setView(isLoggedIn ? 'checkin' : 'login')}
+        onGoMyTickets={goToMyTickets}
+        onGoOrganizer={goToOrganizer}
+        onGoCheckin={() => setView('checkin')}
         onLogout={handleLogout}
       />
 
@@ -2863,6 +2872,24 @@ function EventDetailView({ event, isLoggedIn, userId, onBack }: EventDetailViewP
   );
 }
 
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+
+    const update = () => setIsMobile(mq.matches);
+    update();
+
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
+
+
 function PublicHeader(props: {
   view: View;
   isLoggedIn: boolean;
@@ -2886,78 +2913,230 @@ function PublicHeader(props: {
     onLogout,
   } = props;
 
-  const pill = (active: boolean): React.CSSProperties => ({
-    padding: '8px 18px',
+  const isMobile = useIsMobile(768);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const isStaff = !!role && role !== 'CUSTOMER';
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
+
+  const pill = (active: boolean): CSSProperties => ({
+    padding: '10px 18px',
     borderRadius: 999,
-    cursor: 'pointer',
-    fontWeight: active ? 800 : 600,
-    fontSize: 14,
     border: active ? 'none' : '1px solid rgba(255,255,255,0.55)',
-    backgroundImage: active
-      ? 'linear-gradient(90deg,#f97316,#fb923c,#f97316)'
-      : 'none',
-    backgroundColor: active ? 'transparent' : 'transparent',
+    background: active ? 'linear-gradient(90deg,#fb923c,#f97316,#b91c1c)' : 'transparent',
     color: '#ffffff',
-    boxShadow: active ? '0 10px 24px rgba(0,0,0,0.3)' : 'none',
+    fontWeight: 800,
+    fontSize: 14,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
   });
+
+  const menuItem = (active: boolean): CSSProperties => ({
+    width: '100%',
+    textAlign: 'left',
+    padding: '12px 14px',
+    borderRadius: 12,
+    border: '1px solid #e5e7eb',
+    background: active ? '#111827' : '#ffffff',
+    color: active ? '#ffffff' : '#111827',
+    fontWeight: 800,
+    cursor: 'pointer',
+  });
+
+  const menuDanger: CSSProperties = {
+    width: '100%',
+    textAlign: 'left',
+    padding: '12px 14px',
+    borderRadius: 12,
+    border: '1px solid #fecaca',
+    background: '#fff1f2',
+    color: '#9f1239',
+    fontWeight: 900,
+    cursor: 'pointer',
+  };
+
+  const items = [
+    { key: 'events', label: 'Eventos', show: true, onClick: onGoEvents, active: view === 'events' },
+    { key: 'organizer', label: 'Organizador', show: isStaff, onClick: onGoOrganizer, active: view === 'organizer' },
+    { key: 'myTickets', label: 'Mis tickets', show: isLoggedIn, onClick: onGoMyTickets, active: view === 'myTickets' },
+    { key: 'checkin', label: 'Check-in', show: isStaff, onClick: onGoCheckin, active: view === 'checkin' },
+  ];
 
   return (
     <header
       style={{
-        backgroundColor: PRIMARY_RED,
+        background: '#7f1d1d',
         color: '#ffffff',
-        padding: '10px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-        gap: 12,
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <img
-          src="/logo-ticketchile.png"
-          alt="TicketChile"
-          style={{ height: 48, width: 'auto', display: 'block' }}
-        />
+      <div
+        style={{
+          padding: '14px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          maxWidth: 1200,
+          margin: '0 auto',
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <img src="/logo-ticketchile.png" alt="TicketChile" style={{ height: 34, objectFit: 'contain' }} />
+          <span style={{ fontSize: 12, opacity: 0.85 }}>Tu entrada mas rapida al evento.</span>
+        </div>
+
+        {/* Desktop: botones normales */}
+        {!isMobile && (
+          <nav style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button onClick={onGoEvents} style={pill(view === 'events')}>Eventos</button>
+
+            {isStaff && (
+              <button onClick={onGoOrganizer} style={pill(view === 'organizer')}>Organizador</button>
+            )}
+
+            {isLoggedIn && (
+              <button onClick={onGoMyTickets} style={pill(view === 'myTickets')}>Mis tickets</button>
+            )}
+
+            {isStaff && (
+              <button onClick={onGoCheckin} style={pill(view === 'checkin')}>Check-in</button>
+            )}
+
+            {isLoggedIn ? (
+              <button onClick={onLogout} style={{ ...pill(false), border: '1px solid rgba(255,255,255,0.55)' }}>
+                Cerrar sesión
+              </button>
+            ) : (
+              <button onClick={onGoLogin} style={{ ...pill(false), border: '1px solid rgba(255,255,255,0.55)' }}>
+                Iniciar sesión
+              </button>
+            )}
+          </nav>
+        )}
+
+        {/* Mobile: botón ⋮ */}
+        {isMobile && (
+          <button
+            type="button"
+            aria-label="Abrir menú"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+            style={{
+              height: 44,
+              width: 44,
+              borderRadius: 12,
+              border: '1px solid rgba(255,255,255,0.55)',
+              background: 'transparent',
+              color: '#ffffff',
+              cursor: 'pointer',
+              fontSize: 22,
+              fontWeight: 900,
+              lineHeight: '40px',
+            }}
+          >
+            ⋮
+          </button>
+        )}
       </div>
 
-      <nav style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <button type="button" onClick={onGoEvents} style={pill(view === 'events')}>
-          Eventos
-        </button>
+      {/* Drawer mobile */}
+      {isMobile && menuOpen && (
+        <div
+          onClick={() => setMenuOpen(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.35)' }}
+        >
+          <aside
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              height: '100%',
+              width: 'min(320px, 86vw)',
+              background: '#ffffff',
+              boxShadow: '-12px 0 40px rgba(0,0,0,0.35)',
+              padding: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div style={{ fontWeight: 900, color: '#111827' }}>Menú</div>
+              <button
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  height: 36,
+                  width: 36,
+                  borderRadius: 10,
+                  border: '1px solid #e5e7eb',
+                  background: '#ffffff',
+                  cursor: 'pointer',
+                  fontWeight: 900,
+                }}
+              >
+                ✕
+              </button>
+            </div>
 
-        {role && role !== 'CUSTOMER' && (
-          <button type="button" onClick={onGoOrganizer} style={pill(view === 'organizer')}>
-            Organizador
-          </button>
-        )}
+            {items
+              .filter((x) => x.show)
+              .map((x) => (
+                <button
+                  key={x.key}
+                  style={menuItem(x.active)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    x.onClick();
+                  }}
+                >
+                  {x.label}
+                </button>
+              ))}
 
-        {isLoggedIn && (
-          <button type="button" onClick={onGoMyTickets} style={pill(view === 'myTickets')}>
-            Mis tickets
-          </button>
-        )}
-
-        {role && role !== 'CUSTOMER' && (
-          <button type="button" onClick={onGoCheckin} style={pill(view === 'checkin')}>
-            Check-in
-          </button>
-        )}
-
-        {isLoggedIn ? (
-          <button type="button" onClick={onLogout} style={pill(false)}>
-            Cerrar sesión
-          </button>
-        ) : (
-          <button type="button" onClick={onGoLogin} style={pill(view === 'login')}>
-            Iniciar sesión
-          </button>
-        )}
-      </nav>
+            <div style={{ marginTop: 'auto' }}>
+              {isLoggedIn ? (
+                <button
+                  style={menuDanger}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onLogout();
+                  }}
+                >
+                  Cerrar sesión
+                </button>
+              ) : (
+                <button
+                  style={menuItem(view === 'login')}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onGoLogin();
+                  }}
+                >
+                  Iniciar sesión
+                </button>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
     </header>
   );
 }
+
+
 
 function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
   const { event, onOpen } = props;
