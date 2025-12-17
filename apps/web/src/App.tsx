@@ -19,29 +19,48 @@ import CompraExitosaPage from './CompraExitosaPage';
 const EVENTS_CACHE_KEY = 'tiketera_events_cache_v1';
 const EVENTS_CACHE_TTL_MS = 1000 * 60 * 3; // 3 min
 
-function readEventsCache(): Event[] | null {
+type EventsCachePayload = { ts: number; data: Event[] };
+
+function readEventsCache(): { data: Event[]; stale: boolean } | null {
   try {
     const raw = localStorage.getItem(EVENTS_CACHE_KEY);
     if (!raw) return null;
 
-    const parsed = JSON.parse(raw) as { ts: number; data: Event[] };
+    const parsed = JSON.parse(raw) as EventsCachePayload;
     if (!parsed?.ts || !Array.isArray(parsed.data)) return null;
 
-    const fresh = Date.now() - parsed.ts <= EVENTS_CACHE_TTL_MS;
-    return fresh ? parsed.data : null;
+    const stale = Date.now() - parsed.ts > EVENTS_CACHE_TTL_MS;
+    return { data: parsed.data, stale };
   } catch {
     return null;
   }
 }
 
+
 function writeEventsCache(data: Event[]) {
   try {
+    // Guarda sólo campos útiles para el listado (ajusta a tu modelo real)
+    const compact = data.slice(0, 150).map((e) => ({
+      id: e.id,
+      title: e.title,
+      status: e.status,
+      startDateTime: e.startDateTime,
+      venueName: e.venueName,
+      venueAddress: e.venueAddress,
+      ticketTypes: e.ticketTypes, // si esto pesa mucho, lo sacamos o guardamos solo lo mínimo
+      // imageUrl/covers si existen en tu Event real:
+      ...(e as any).imageUrl ? { imageUrl: (e as any).imageUrl } : {},
+      ...(e as any).coverImageUrl ? { coverImageUrl: (e as any).coverImageUrl } : {},
+      ...(e as any).bannerUrl ? { bannerUrl: (e as any).bannerUrl } : {},
+    })) as unknown as Event[];
+
     localStorage.setItem(
       EVENTS_CACHE_KEY,
-      JSON.stringify({ ts: Date.now(), data }),
+      JSON.stringify({ ts: Date.now(), data: compact }),
     );
-  } catch {
-    // storage bloqueado / lleno: no nos morimos
+  } catch (e) {
+    // Si se llenó, borra y listo (así no queda basura acumulada)
+    try { localStorage.removeItem(EVENTS_CACHE_KEY); } catch {}
   }
 }
 
@@ -2229,10 +2248,9 @@ function PaymentSuccessView(props: {
 /* ==================== APP ROOT ==================== */
 
 function App() {
-  const [events, setEvents] = useState<Event[]>(() => {
-    if (typeof window === 'undefined') return [];
-    return readEventsCache() ?? [];
-  });
+  const cached = typeof window === 'undefined' ? null : readEventsCache();
+
+  const [events, setEvents] = useState<Event[]>(cached?.data ?? []);
 
   const handleEventDeleted = (eventId: string) => {
     setEvents((prev) => prev.filter((e) => e.id !== eventId));
@@ -2240,8 +2258,9 @@ function App() {
 
   const [eventsLoading, setEventsLoading] = useState(() => {
     if (typeof window === 'undefined') return true;
-    return readEventsCache() ? false : true;
+    return !cached; // si hay cache (aunque sea stale), no bloquees la UI
   });
+
   const [eventsRefreshing, setEventsRefreshing] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
 
@@ -2318,10 +2337,9 @@ function App() {
 
       if (typeof window !== 'undefined') {
         try {
-          writeEventsCache(data);
+          writeEventsCache(data); // o mejor: guarda versión “compacta”
         } catch (e) {
-          console.warn('No se pudo escribir cache de eventos (cuota llena).', e);
-          // Importante: NO lanzar error, NO caer al catch principal
+          console.warn('Cache lleno, salto cache write', e);
         }
       }
     } catch (err) {
@@ -2341,8 +2359,7 @@ function App() {
 
   // Cargar eventos al inicio
   useEffect(() => {
-    const hasCache = typeof window !== 'undefined' && !!readEventsCache();
-    void refreshEvents({ silent: hasCache });
+    void refreshEvents({ silent: !!cached });
   }, []);
 
   // ✅ Cuando tenemos eventos, resolvemos ?evento=... (esto te faltaba)
