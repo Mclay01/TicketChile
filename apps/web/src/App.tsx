@@ -16,7 +16,6 @@ import {
 import { NativeQrScanner } from './NativeQrScanner';
 import CompraExitosaPage from './CompraExitosaPage';
 import AppHeader from './components/AppHeader';
-
 const EVENTS_CACHE_KEY = 'tiketera_events_cache_v1';
 const EVENTS_CACHE_TTL_MS = 1000 * 60 * 3; // 3 min
 
