@@ -131,6 +131,41 @@ function getEventImageUrl(event: Event) {
   );
 }
 
+function getPriceRangeLabel(event: Event) {
+  const tts = event.ticketTypes ?? [];
+  if (tts.length === 0) return 'Sin tickets';
+
+  const currency = tts[0]?.currency || 'CLP';
+
+  const finals = tts.map((tt) => {
+    const base = tt.priceCents ?? 0;
+    const final = base + Math.round(base * COMMISSION_RATE); // misma comisión que ya usas
+    return final;
+  });
+
+  const min = Math.min(...finals);
+  const max = Math.max(...finals);
+
+  const a = formatPrice(min, currency);
+  const b = formatPrice(max, currency);
+
+  return min === max ? a : `${a} – ${b}`;
+}
+
+function formatDateRowLabel(iso: string) {
+  try {
+    const d = new Date(iso);
+    const weekday = d.toLocaleDateString('es-CL', { weekday: 'short' }).replace('.', '').toUpperCase();
+    const day = d.toLocaleDateString('es-CL', { day: '2-digit' });
+    const month = d.toLocaleDateString('es-CL', { month: 'short' }).replace('.', '').toUpperCase();
+    const time = d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    return `${weekday} | ${day} ${month} | ${time}`;
+  } catch {
+    return iso;
+  }
+}
+
+
 function getMinFinalPriceLabel(event: Event) {
   const tts = event.ticketTypes ?? [];
   if (tts.length === 0) return '—';
@@ -3162,24 +3197,21 @@ function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
-  const dateLabel = useMemo(
-    () => formatDateLabel(event.startDateTime),
-    [event.startDateTime],
-  );
-  const minPrice = useMemo(() => getMinFinalPriceLabel(event), [event]);
+  const dateRow = useMemo(() => formatDateRowLabel(event.startDateTime), [event.startDateTime]);
+  const priceRow = useMemo(() => getPriceRangeLabel(event), [event]);
 
-  // ✅ usa proxy si aplica (y si /api/img funciona)
+  // ✅ proxy + fallback (igual que lo venías usando)
   const img = useMemo(() => getEventCardImage(event), [event]);
-
   const fallbackUrl = '/event-fallback.jpg';
 
   const finalSrc = imgError ? fallbackUrl : img.src;
   const finalSrcSet = imgError ? undefined : img.srcSet;
   const finalSizes = imgError ? undefined : img.sizes;
 
+  // skeleton oscuro (para que calce con tu fondo)
   const shimmer: React.CSSProperties = {
     backgroundImage:
-      'linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%)',
+      'linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 100%)',
     backgroundSize: '200% 100%',
     animation: 'tc-shimmer 1.2s infinite',
   };
@@ -3190,22 +3222,16 @@ function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        backgroundColor: '#ffffff',
-        borderRadius: 18,
-        overflow: 'hidden',
-        boxShadow: hovered
-          ? '0 18px 40px rgba(15,23,42,0.25)'
-          : '0 14px 30px rgba(15,23,42,0.18)',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
-        transition: 'transform 0.18s ease, box-shadow 0.18s ease',
-        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
-        willChange: 'transform',
-        border: '1px solid #eef2f7',
+        gap: 10,
+        userSelect: 'none',
+        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+        transition: 'transform 0.15s ease',
       }}
     >
-      {/* keyframes del shimmer */}
+      {/* keyframes una vez por tarjeta (si quieres lo movemos al index) */}
       <style>{`
         @keyframes tc-shimmer {
           0% { background-position: 0% 0; }
@@ -3213,12 +3239,15 @@ function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
         }
       `}</style>
 
+      {/* Imagen */}
       <div
         style={{
           position: 'relative',
-          aspectRatio: '16 / 9',
+          borderRadius: 18,
           overflow: 'hidden',
-          background: '#f3f4f6',
+          aspectRatio: '16 / 10',
+          background: '#0b1220',
+          boxShadow: '0 14px 30px rgba(0,0,0,0.35)',
         }}
       >
         {!imgLoaded && <div style={{ position: 'absolute', inset: 0, ...shimmer }} />}
@@ -3236,7 +3265,7 @@ function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
             setImgLoaded(true);
           }}
           width={1200}
-          height={675}
+          height={750}
           style={{
             width: '100%',
             height: '100%',
@@ -3246,78 +3275,53 @@ function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
             transition: 'opacity 0.25s ease',
           }}
         />
-
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '8px 12px',
-            background:
-              'linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0.1))',
-            color: '#f9fafb',
-            fontSize: 12,
-            fontWeight: 600,
-          }}
-        >
-          {dateLabel}
-        </div>
       </div>
 
-      <div style={{ padding: '14px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#111827' }}>
+      {/* Texto debajo (sin tarjeta blanca) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 2px' }}>
+        <h3
+          style={{
+            margin: 0,
+            fontSize: 20,
+            fontWeight: 900,
+            color: '#f8fafc',
+            lineHeight: 1.15,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
           {event.title}
         </h3>
 
-        <div style={{ fontSize: 13, color: '#4b5563', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div>{event.venueName}</div>
-          <div>{event.venueAddress}</div>
-          <div>{(event.ticketTypes?.length ?? 0) > 0 ? 'Entradas disponibles' : 'Sin tickets'}</div>
+        {/* fila fecha con ícono */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#cbd5e1', fontSize: 13, fontWeight: 700 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M7 2v2M17 2v2M3.5 9h17M6 5h12a2.5 2.5 0 0 1 2.5 2.5v12A2.5 2.5 0 0 1 18 22H6A2.5 2.5 0 0 1 3.5 19.5v-12A2.5 2.5 0 0 1 6 5Z"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span>{dateRow}</span>
         </div>
 
-        <div
-          style={{
-            marginTop: 'auto',
-            paddingTop: 10,
-            borderTop: '1px solid #f3f4f6',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Desde</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#b91c1c' }}>{minPrice}</div>
-          </div>
+        {/* precio en ROJO (reemplaza verde) */}
+        <div style={{ color: '#ef4444', fontWeight: 900, fontSize: 14 }}>
+          {priceRow}
+        </div>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen(event);
-            }}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 999,
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontWeight: 700,
-              backgroundImage: 'linear-gradient(90deg,#f97316,#fb923c,#b91c1c)',
-              color: '#ffffff',
-              boxShadow: '0 10px 24px rgba(185,28,28,0.45)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Ver más
-          </button>
+        {/* lugar */}
+        <div style={{ color: '#94a3b8', fontSize: 13 }}>
+          {event.venueName} · {event.venueAddress}
         </div>
       </div>
     </div>
   );
 }
+
 
 
 function PublicEventsIndex(props: {
@@ -3465,8 +3469,9 @@ function PublicEventsIndex(props: {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: 18,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+            gap: 26,
+            alignItems: 'start',
           }}
         >
           {showSkeleton ? (
