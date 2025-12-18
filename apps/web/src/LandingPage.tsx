@@ -161,97 +161,140 @@ const LandingPage: React.FC = () => {
           boxSizing: 'border-box',
         }}
       >
-        {/* Hero */}
-        <section
-          style={{
-            textAlign: 'center',
-            marginBottom: 32,
-            padding: '0 8px',
-          }}
-        >
-          <h1
+        {/* Keyframes para shimmer */}
+        <style>{`
+          @keyframes tc-shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+        `}</style>
+
+        {/* Banner promo (reemplaza el Hero + botones) */}
+        <section style={{ marginBottom: 28 }}>
+          <div
             style={{
-              fontSize: 'clamp(2.4rem, 4vw, 3.2rem)',
-              fontWeight: 800,
-              lineHeight: 1.15,
-              marginBottom: 12,
-              color: '#111827',
+              position: 'relative',
+              borderRadius: 26,
+              overflow: 'hidden',
+              boxShadow: '0 24px 70px rgba(15,23,42,0.18)',
+              border: '1px solid #eef2f7',
+              background: 'linear-gradient(135deg, #7c1515, #b91c1c, #f97316)',
             }}
           >
-            Vive experiencias{' '}
-            <span
+            {/* Si quieres imagen real: ponla en apps/web/public/banner-home.jpg */}
+            <div style={{ aspectRatio: '21 / 9', minHeight: 180 }}>
+              <img
+                src="/banner-home.jpg"
+                alt="TicketChile"
+                onError={(e) => {
+                  // si no existe la imagen, no mostramos el icono roto
+                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                  opacity: 0.55,
+                  filter: 'saturate(1.05) contrast(1.05)',
+                }}
+              />
+            </div>
+
+            <div
               style={{
-                backgroundImage:
-                  'linear-gradient(90deg,#f97316,#fb923c,#dc2626)',
-                WebkitBackgroundClip: 'text',
-                color: 'transparent',
+                position: 'absolute',
+                inset: 0,
+                background:
+                  'linear-gradient(90deg, rgba(124,21,21,0.95) 0%, rgba(124,21,21,0.65) 45%, rgba(0,0,0,0.05) 75%), linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0.10))',
+              }}
+            />
+
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                padding: 22,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-end',
+                color: '#fff',
               }}
             >
-              inolvidables
-            </span>
-          </h1>
-          <p
-            style={{
-              maxWidth: 720,
-              margin: '0 auto',
-              fontSize: 16,
-              color: '#4b5563',
-            }}
-          >
-            Encuentra y compra tickets para los mejores eventos en Chile. Vende
-            tus entradas y controla el acceso con códigos QR en tiempo real.
-          </p>
+              <div style={{ maxWidth: 760 }}>
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 12px',
+                    borderRadius: 999,
+                    background: 'rgba(255,255,255,0.14)',
+                    border: '1px solid rgba(255,255,255,0.22)',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    marginBottom: 10,
+                  }}
+                >
+                  ⚡ TicketChile
+                </div>
+
+                <h1
+                  style={{
+                    margin: 0,
+                    fontSize: 'clamp(1.9rem, 3.4vw, 3rem)',
+                    fontWeight: 950,
+                    lineHeight: 1.05,
+                  }}
+                >
+                  Tu entrada más rápida al evento.
+                </h1>
+
+                <p style={{ margin: '10px 0 0', maxWidth: 720, fontSize: 15, opacity: 0.92 }}>
+                  Compra en segundos, entra con QR y que nadie te cuente el show. (Excepto el del guardia en la entrada).
+                </p>
+
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 14 }}>
+                  <button
+                    type="button"
+                    onClick={goToEvents}
+                    style={{
+                      padding: '12px 20px',
+                      borderRadius: 999,
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: 800,
+                      fontSize: 14,
+                      backgroundImage: 'linear-gradient(90deg,#f97316,#fb923c,#b91c1c)',
+                      color: '#ffffff',
+                      boxShadow: '0 16px 36px rgba(0,0,0,0.35)',
+                    }}
+                  >
+                    Ver eventos
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={goToOrganizer}
+                    style={{
+                      padding: '12px 20px',
+                      borderRadius: 999,
+                      border: '1px solid rgba(255,255,255,0.5)',
+                      background: 'rgba(255,255,255,0.10)',
+                      cursor: 'pointer',
+                      fontWeight: 800,
+                      fontSize: 14,
+                      color: '#ffffff',
+                    }}
+                  >
+                    Publicar mi evento
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
-        {/* Botones principales */}
-        <section
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: 16,
-            marginBottom: 28,
-            flexWrap: 'wrap',
-          }}
-        >
-          <button
-            type="button"
-            onClick={goToEvents}
-            style={{
-              padding: '14px 28px',
-              borderRadius: 999,
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: 15,
-              backgroundImage:
-                'radial-gradient(circle at 0 0,#fed7aa,#f97316 45%,#b91c1c)',
-              color: '#ffffff',
-              boxShadow: '0 18px 40px rgba(185,28,28,0.5)',
-              minWidth: 220,
-            }}
-          >
-            Ver eventos disponibles
-          </button>
-
-          <button
-            type="button"
-            onClick={goToOrganizer}
-            style={{
-              padding: '14px 28px',
-              borderRadius: 999,
-              border: '1px solid #fecaca',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: 15,
-              backgroundColor: '#ffffff',
-              color: '#b91c1c',
-              boxShadow: '0 10px 25px rgba(248,113,113,0.35)',
-              minWidth: 200,
-            }}
-          >
-            Publicar mi evento
-          </button>
-        </section>
 
         {/* Beneficios */}
         <section style={{ marginBottom: 32 }}>
@@ -749,104 +792,152 @@ type CardProps = {
 };
 
 const LandingEventCard: React.FC<CardProps> = ({ event, onClick }) => {
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  const shimmer: React.CSSProperties = {
+    backgroundImage: 'linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%)',
+    backgroundSize: '200% 100%',
+    animation: 'tc-shimmer 1.2s infinite',
+  };
+
+  const imgSrc = !imgError ? event.imageUrl : '/logo-ticketchile.png';
+
   return (
-    <div
+    <button
+      type="button"
       onClick={() => onClick(event)}
       style={{
+        textAlign: 'left',
+        width: '100%',
         backgroundColor: '#ffffff',
         borderRadius: 18,
         overflow: 'hidden',
-        boxShadow: '0 14px 30px rgba(15,23,42,0.18)',
+        border: '1px solid #eef2f7',
+        boxShadow: '0 14px 30px rgba(15,23,42,0.12)',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+        padding: 0,
       }}
       onMouseEnter={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
+        const el = e.currentTarget as HTMLButtonElement;
         el.style.transform = 'translateY(-4px)';
-        el.style.boxShadow = '0 18px 40px rgba(15,23,42,0.25)';
+        el.style.boxShadow = '0 18px 40px rgba(15,23,42,0.18)';
       }}
       onMouseLeave={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
+        const el = e.currentTarget as HTMLButtonElement;
         el.style.transform = 'translateY(0)';
-        el.style.boxShadow = '0 14px 30px rgba(15,23,42,0.18)';
+        el.style.boxShadow = '0 14px 30px rgba(15,23,42,0.12)';
       }}
     >
-      <div
-        style={{
-          position: 'relative',
-          height: 190,
-          overflow: 'hidden',
-        }}
-      >
+      {/* Imagen 16:9 */}
+      <div style={{ position: 'relative', aspectRatio: '16 / 9', overflow: 'hidden' }}>
+        {!imgLoaded && <div style={{ position: 'absolute', inset: 0, ...shimmer }} />}
+
         <img
-          src={event.imageUrl}
+          src={imgSrc}
           alt={event.title}
+          onLoad={() => setImgLoaded(true)}
+          onError={() => setImgError(true)}
           style={{
             width: '100%',
             height: '100%',
             objectFit: 'cover',
             display: 'block',
+            opacity: imgLoaded ? 1 : 0,
+            transition: 'opacity 0.25s ease',
           }}
         />
 
+        {/* Chip categoría */}
         <div
           style={{
             position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '8px 12px',
-            background:
-              'linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0.1))',
+            top: 12,
+            left: 12,
+            padding: '6px 10px',
+            borderRadius: 999,
+            background: 'rgba(15,23,42,0.85)',
             color: '#f9fafb',
             fontSize: 12,
-            fontWeight: 600,
+            fontWeight: 800,
           }}
         >
           {event.category}
         </div>
-      </div>
 
-      <div
-        style={{
-          padding: '14px 16px 12px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          flex: 1,
-        }}
-      >
-        <h3
+        {/* Banda fecha (como tarjeta de evento) */}
+        <div
           style={{
-            margin: 0,
-            fontSize: 18,
-            fontWeight: 700,
-            color: '#111827',
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            padding: '10px 12px',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.08))',
+            color: '#f9fafb',
+            fontSize: 12,
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
           }}
         >
+          <span aria-hidden="true">📅</span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {event.dateLabel}
+          </span>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: '14px 16px 14px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#111827', lineHeight: 1.15 }}>
           {event.title}
         </h3>
 
-        <div
-          style={{
-            fontSize: 13,
-            color: '#4b5563',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-          }}
-        >
-          <div>{event.dateLabel}</div>
-          <div>{event.location}</div>
-          <div>{event.ticketsLabel}</div>
+        <div style={{ display: 'grid', gap: 6, color: '#4b5563', fontSize: 13 }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: 8,
+              alignItems: 'flex-start',
+            }}
+          >
+            <span aria-hidden="true">📍</span>
+            <span
+              style={{
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}
+            >
+              {event.location}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 999,
+                background: '#16a34a',
+                display: 'inline-block',
+              }}
+            />
+            <span style={{ color: '#15803d', fontWeight: 800 }}>{event.ticketsLabel}</span>
+          </div>
         </div>
 
+        {/* Footer precio + CTA */}
         <div
           style={{
             marginTop: 'auto',
-            paddingTop: 10,
+            paddingTop: 12,
             borderTop: '1px solid #f3f4f6',
             display: 'flex',
             alignItems: 'center',
@@ -855,52 +946,29 @@ const LandingEventCard: React.FC<CardProps> = ({ event, onClick }) => {
           }}
         >
           <div>
-            <div
-              style={{
-                fontSize: 11,
-                color: '#9ca3af',
-                marginBottom: 2,
-              }}
-            >
-              Desde
-            </div>
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 700,
-                color: '#b91c1c',
-              }}
-            >
-              {event.minPriceLabel}
-            </div>
+            <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2, fontWeight: 800 }}>Desde</div>
+            <div style={{ fontSize: 20, fontWeight: 950, color: '#b91c1c' }}>{event.minPriceLabel}</div>
           </div>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick(event);
-            }}
+          <span
             style={{
-              padding: '8px 16px',
+              padding: '9px 14px',
               borderRadius: 999,
-              border: 'none',
-              cursor: 'pointer',
               fontSize: 13,
-              fontWeight: 600,
-              backgroundImage:
-                'linear-gradient(90deg,#f97316,#fb923c,#b91c1c)',
+              fontWeight: 900,
+              backgroundImage: 'linear-gradient(90deg,#f97316,#fb923c,#b91c1c)',
               color: '#ffffff',
-              boxShadow: '0 10px 24px rgba(185,28,28,0.45)',
+              boxShadow: '0 10px 24px rgba(185,28,28,0.25)',
               whiteSpace: 'nowrap',
             }}
           >
             Ver más
-          </button>
+          </span>
         </div>
       </div>
-    </div>
+    </button>
   );
 };
+
 
 export default LandingPage;
