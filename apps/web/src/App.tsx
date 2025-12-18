@@ -15,6 +15,7 @@ import {
 } from './api';
 import { NativeQrScanner } from './NativeQrScanner';
 import CompraExitosaPage from './CompraExitosaPage';
+import AppHeader from './components/AppHeader';
 
 const EVENTS_CACHE_KEY = 'tiketera_events_cache_v1';
 const EVENTS_CACHE_TTL_MS = 1000 * 60 * 3; // 3 min
@@ -287,8 +288,9 @@ function LoginForm(props: { onSuccess: (token: string) => void }) {
             padding: '8px 12px',
             borderRadius: '6px',
             border: 'none',
-            background: loading ? '#4b5563' : '#22c55e',
-            color: '#020617',
+            background: loading ? '#4b5563' : 'linear-gradient(90deg,#f97316,#fb923c,#b91c1c)',
+            color: '#ffffff',
+            boxShadow: loading ? 'none' : '0 10px 24px rgba(185,28,28,0.35)',
             fontWeight: 600,
             cursor: loading ? 'default' : 'pointer',
           }}
@@ -2578,9 +2580,10 @@ function App() {
         onGoLogin={() => setView('login')}
         onGoMyTickets={goToMyTickets}
         onGoOrganizer={goToOrganizer}
-        onGoCheckin={() => setView('checkin')}
+        onGoCheckin={() => setView(isLoggedIn ? 'checkin' : 'login')}
         onLogout={handleLogout}
       />
+
 
       <div style={{ padding: '28px 16px', maxWidth: 1200, margin: '0 auto' }}>
         {view === 'events' && (
