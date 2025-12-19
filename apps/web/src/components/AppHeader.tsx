@@ -170,15 +170,16 @@ export default function AppHeader(props: Props) {
           margin: '0 auto',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ height: 56, overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
           <img
             src="/LogoFondeBlanco.svg"
             alt="TicketChile"
-            style={{ height: 34, objectFit: 'contain' }}
+            style={{
+              height: 72,         // más grande
+              transform: 'translateY(-6px)', // ajusta si el SVG tiene padding arriba
+              display: 'block',
+            }}
           />
-          <span style={{ fontSize: 12, opacity: 0.8 }}>
-            Tu entrada más rápida al evento.
-          </span>
         </div>
 
         {/* Desktop */}
