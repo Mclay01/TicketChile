@@ -11,7 +11,7 @@ export type View =
 type Props = {
   view: View;
   isLoggedIn: boolean;
-  role: string | null; // si tu UserRole es string union, esto calza perfecto
+  role: string | null;
   onGoEvents: () => void;
   onGoLogin: () => void;
   onGoMyTickets: () => void;
@@ -63,7 +63,6 @@ export default function AppHeader(props: Props) {
 
   const isStaff = !!role && role !== 'CUSTOMER';
 
-  // ✅ marca al hacer scroll
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -73,12 +72,10 @@ export default function AppHeader(props: Props) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // si pasa a desktop, cerramos menú
   useEffect(() => {
     if (!isMobile) setMenuOpen(false);
   }, [isMobile]);
 
-  // bloquear scroll al abrir drawer
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!menuOpen) return;
@@ -98,6 +95,7 @@ export default function AppHeader(props: Props) {
   }, [menuOpen]);
 
   const textColor = '#111827';
+  const logoH = scrolled ? 44 : 56; // 👈 grande arriba, compacto al bajar
 
   const headerStyle: CSSProperties = {
     position: 'sticky',
@@ -161,7 +159,7 @@ export default function AppHeader(props: Props) {
     <header style={headerStyle}>
       <div
         style={{
-          padding: '14px 16px',
+          padding: scrolled ? '10px 16px' : '14px 16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -170,14 +168,28 @@ export default function AppHeader(props: Props) {
           margin: '0 auto',
         }}
       >
-        <div style={{ height: 56, overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
+        {/* Logo (click = ir a eventos) */}
+        <div
+          onClick={onGoEvents}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            cursor: 'pointer',
+            flexShrink: 0,          // 👈 no lo aplastes
+            minWidth: 220,          // 👈 evita que quede mini por wrap
+          }}
+        >
           <img
             src="/LogoFondeBlanco.svg"
             alt="TicketChile"
             style={{
-              height: 72,         // más grande
-              transform: 'translateY(-6px)', // ajusta si el SVG tiene padding arriba
+              height: logoH,
+              width: 'auto',
               display: 'block',
+              objectFit: 'contain',
+              objectPosition: 'left center',
+              // si arriba el fondo es blanco, esto ayuda a que destaque un poquito
+              filter: scrolled ? 'none' : 'drop-shadow(0 6px 16px rgba(0,0,0,0.10))',
             }}
           />
         </div>
