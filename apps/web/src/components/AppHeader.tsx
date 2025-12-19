@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, type CSSProperties } from 'react';
 
 export type View =
   | 'events'
@@ -7,11 +7,11 @@ export type View =
   | 'checkin'
   | 'organizer'
   | 'paymentSuccess';
-type UserRole = 'ADMIN' | 'ORGANIZER' | 'CUSTOMER';
+
 type Props = {
   view: View;
   isLoggedIn: boolean;
-  role: UserRole | null;
+  role: string | null; // si tu UserRole es string union, esto calza perfecto
   onGoEvents: () => void;
   onGoLogin: () => void;
   onGoMyTickets: () => void;
@@ -31,13 +31,11 @@ function useIsMobile(maxWidth = 768) {
 
     update();
 
-    // Moderno
     if (typeof mq.addEventListener === 'function') {
       mq.addEventListener('change', update);
       return () => mq.removeEventListener('change', update);
     }
 
-    // Fallback viejo
     // eslint-disable-next-line deprecation/deprecation
     mq.addListener(update);
     // eslint-disable-next-line deprecation/deprecation
@@ -59,9 +57,21 @@ export default function AppHeader(props: Props) {
     onGoCheckin,
     onLogout,
   } = props;
-  const isStaff = !!role && role !== 'CUSTOMER';
+
   const isMobile = useIsMobile(768);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const isStaff = !!role && role !== 'CUSTOMER';
+
+  // ✅ marca al hacer scroll
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // si pasa a desktop, cerramos menú
   useEffect(() => {
@@ -87,18 +97,34 @@ export default function AppHeader(props: Props) {
     };
   }, [menuOpen]);
 
-  const pill = (active: boolean): React.CSSProperties => ({
-    padding: '10px 14px',
+  const textColor = '#111827';
+
+  const headerStyle: CSSProperties = {
+    position: 'sticky',
+    top: 0,
+    zIndex: 50,
+    color: textColor,
+    background: scrolled ? 'rgba(255,255,255,0.78)' : 'transparent',
+    backdropFilter: scrolled ? 'saturate(180%) blur(12px)' : undefined,
+    borderBottom: scrolled ? '1px solid rgba(15,23,42,0.08)' : '1px solid rgba(15,23,42,0)',
+    boxShadow: scrolled ? '0 10px 30px rgba(15,23,42,0.10)' : 'none',
+    transition: 'background 180ms ease, box-shadow 180ms ease, border-color 180ms ease, backdrop-filter 180ms ease',
+  };
+
+  const pill = (active: boolean): CSSProperties => ({
+    padding: '10px 16px',
     borderRadius: 999,
-    border: active ? 'none' : '1px solid rgba(255,255,255,0.35)',
-    background: active ? 'linear-gradient(90deg,#fb923c,#f97316,#b91c1c)' : 'transparent',
-    color: '#fff',
-    fontWeight: 800,
+    border: active ? 'none' : scrolled ? '1px solid rgba(15,23,42,0.14)' : '1px solid rgba(15,23,42,0.16)',
+    background: active ? 'linear-gradient(90deg,#f97316,#fb923c,#b91c1c)' : 'transparent',
+    color: active ? '#ffffff' : textColor,
     cursor: 'pointer',
-    fontSize: 13,
+    fontWeight: 900,
+    fontSize: 14,
+    boxShadow: active ? '0 10px 24px rgba(185,28,28,0.25)' : 'none',
+    whiteSpace: 'nowrap',
   });
 
-  const menuItem = (active: boolean): React.CSSProperties => ({
+  const menuItem = (active: boolean): CSSProperties => ({
     width: '100%',
     textAlign: 'left',
     padding: '12px 12px',
@@ -107,65 +133,32 @@ export default function AppHeader(props: Props) {
     background: active ? '#111827' : '#ffffff',
     color: active ? '#ffffff' : '#111827',
     cursor: 'pointer',
-    fontWeight: 800,
+    fontWeight: 900,
   });
 
-  const menuDanger: React.CSSProperties = {
-    padding: '10px 12px',
+  const menuDanger: CSSProperties = {
+    width: '100%',
+    padding: '12px 12px',
     borderRadius: 12,
-    border: '1px solid #fecdd3',
-    background: '#fff1f2',
-    color: '#9f1239',
-    fontWeight: 800,
+    border: '1px solid #fecaca',
+    background: '#b91c1c',
+    color: '#ffffff',
     cursor: 'pointer',
-    textAlign: 'left',
+    fontWeight: 900,
   };
 
   const items = useMemo(
     () => [
-      {
-        key: 'events',
-        label: 'Eventos',
-        show: true,
-        active: view === 'events',
-        onClick: onGoEvents,
-      },
-      {
-        key: 'organizer',
-        label: 'Organizador',
-        show: isStaff,
-        active: view === 'organizer',
-        onClick: onGoOrganizer,
-      },
-      {
-        key: 'myTickets',
-        label: 'Mis tickets',
-        show: isLoggedIn,
-        active: view === 'myTickets',
-        onClick: onGoMyTickets,
-      },
-      {
-        key: 'checkin',
-        label: 'Check-in',
-        show: isStaff,
-        active: view === 'checkin',
-        onClick: onGoCheckin,
-      },
+      { key: 'events', label: 'Eventos', show: true, active: view === 'events', onClick: onGoEvents },
+      { key: 'organizer', label: 'Organizador', show: isStaff, active: view === 'organizer', onClick: onGoOrganizer },
+      { key: 'myTickets', label: 'Mis tickets', show: isLoggedIn, active: view === 'myTickets', onClick: onGoMyTickets },
+      { key: 'checkin', label: 'Check-in', show: isStaff, active: view === 'checkin', onClick: onGoCheckin },
     ],
     [view, isLoggedIn, isStaff, onGoEvents, onGoOrganizer, onGoMyTickets, onGoCheckin],
   );
 
   return (
-    <header
-      style={{
-        background: '#7f1d1d',
-        color: '#ffffff',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
-      }}
-    >
+    <header style={headerStyle}>
       <div
         style={{
           padding: '14px 16px',
@@ -177,69 +170,39 @@ export default function AppHeader(props: Props) {
           margin: '0 auto',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <img
-            src="/logo-ticketchile.png"
+            src="/LogoFondeBlanco.svg"
             alt="TicketChile"
             style={{ height: 34, objectFit: 'contain' }}
           />
-          <span style={{ fontSize: 12, opacity: 0.85 }}>
-            Tu entrada mas rapida al evento.
+          <span style={{ fontSize: 12, opacity: 0.8 }}>
+            Tu entrada más rápida al evento.
           </span>
         </div>
 
         {/* Desktop */}
         {!isMobile && (
-          <nav
-            style={{
-              display: 'flex',
-              gap: 10,
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              justifyContent: 'flex-end',
-            }}
-          >
-            <button onClick={onGoEvents} style={pill(view === 'events')}>
-              Eventos
-            </button>
-
-            {isStaff && (
-              <button onClick={onGoOrganizer} style={pill(view === 'organizer')}>
-                Organizador
+          <nav style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {items.filter((x) => x.show).map((x) => (
+              <button key={x.key} onClick={x.onClick} style={pill(x.active)}>
+                {x.label}
               </button>
-            )}
-
-            {isLoggedIn && (
-              <button onClick={onGoMyTickets} style={pill(view === 'myTickets')}>
-                Mis tickets
-              </button>
-            )}
-
-            {isStaff && (
-              <button onClick={onGoCheckin} style={pill(view === 'checkin')}>
-                Check-in
-              </button>
-            )}
+            ))}
 
             {isLoggedIn ? (
-              <button
-                onClick={onLogout}
-                style={{ ...pill(false), border: '1px solid rgba(255,255,255,0.55)' }}
-              >
+              <button onClick={onLogout} style={pill(false)}>
                 Cerrar sesión
               </button>
             ) : (
-              <button
-                onClick={onGoLogin}
-                style={{ ...pill(false), border: '1px solid rgba(255,255,255,0.55)' }}
-              >
+              <button onClick={onGoLogin} style={pill(view === 'login')}>
                 Iniciar sesión
               </button>
             )}
           </nav>
         )}
 
-        {/* Mobile kebab */}
+        {/* Mobile */}
         {isMobile && (
           <button
             type="button"
@@ -250,53 +213,28 @@ export default function AppHeader(props: Props) {
               height: 44,
               padding: 0,
               borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.35)',
+              border: scrolled ? '1px solid rgba(15,23,42,0.14)' : '1px solid rgba(15,23,42,0.16)',
               background: 'transparent',
-              color: '#fff',
+              color: textColor,
               cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               flexShrink: 0,
-              position: 'relative',
-              lineHeight: 0, // 🔧 evita “corridos” por baseline
             }}
           >
-            {/* 🔧 centrado garantizado */}
-            <span
-              style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                style={{ display: 'block' }}
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="5" r="1.8" />
-                <circle cx="12" cy="12" r="1.8" />
-                <circle cx="12" cy="19" r="1.8" />
-              </svg>
-            </span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }} aria-hidden="true">
+              <circle cx="12" cy="5" r="1.8" />
+              <circle cx="12" cy="12" r="1.8" />
+              <circle cx="12" cy="19" r="1.8" />
+            </svg>
           </button>
         )}
       </div>
 
       {/* Drawer mobile */}
       {isMobile && menuOpen && (
-        <div
-          onClick={() => setMenuOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1000,
-            background: 'rgba(0,0,0,0.35)',
-          }}
-        >
+        <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.35)' }}>
           <aside
             onClick={(e) => e.stopPropagation()}
             style={{
@@ -313,14 +251,7 @@ export default function AppHeader(props: Props) {
               gap: 10,
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 4,
-              }}
-            >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <div style={{ fontWeight: 900, color: '#111827' }}>Menú</div>
               <button
                 onClick={() => setMenuOpen(false)}

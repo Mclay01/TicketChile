@@ -3021,7 +3021,7 @@ function PublicHeader(props: {
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <img src="/logo-ticketchile.png" alt="TicketChile" style={{ height: 34, objectFit: 'contain' }} />
+          <img src="/LogoFondeBlanco.svg" alt="TicketChile" style={{ height: 34, objectFit: 'contain' }} />
           <span style={{ fontSize: 12, opacity: 0.85 }}>Tu entrada mas rapida al evento.</span>
         </div>
 
