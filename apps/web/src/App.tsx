@@ -16,6 +16,7 @@ import {
 import { NativeQrScanner } from './NativeQrScanner';
 import CompraExitosaPage from './CompraExitosaPage';
 import AppHeader from './components/AppHeader';
+import PublicEvents from "./views/PublicEvents";
 const EVENTS_CACHE_KEY = 'tiketera_events_cache_v1';
 const EVENTS_CACHE_TTL_MS = 1000 * 60 * 3; // 3 min
 
@@ -47,11 +48,11 @@ function writeEventsCache(data: Event[]) {
       startDateTime: e.startDateTime,
       venueName: e.venueName,
       venueAddress: e.venueAddress,
-      ticketTypes: e.ticketTypes, // si esto pesa mucho, lo sacamos o guardamos solo lo mínimo
-      // imageUrl/covers si existen en tu Event real:
-      ...(e as any).imageUrl ? { imageUrl: (e as any).imageUrl } : {},
-      ...(e as any).coverImageUrl ? { coverImageUrl: (e as any).coverImageUrl } : {},
-      ...(e as any).bannerUrl ? { bannerUrl: (e as any).bannerUrl } : {},
+      ticketTypes: e.ticketTypes,
+
+      ...((e as any).imageUrl ? { imageUrl: (e as any).imageUrl } : {}),
+      ...((e as any).coverImageUrl ? { coverImageUrl: (e as any).coverImageUrl } : {}),
+      ...((e as any).bannerUrl ? { bannerUrl: (e as any).bannerUrl } : {}),
     })) as unknown as Event[];
 
     localStorage.setItem(
@@ -2598,30 +2599,23 @@ function App() {
     void refreshEvents();
   };
 
-  const publicChrome = view === 'events' || view === 'login';
-  const isEventsActive = view === 'events';
-
   return (
     <div style={{ minHeight: '100vh', background: '#fff', color: '#111827' }}>
-      <PublicHeader
+      <AppHeader
         view={view}
         isLoggedIn={isLoggedIn}
         role={role}
-        onGoEvents={() => {
-          clearHighlightedEvent();
-          setView('events');
-        }}
+        onGoEvents={() => setView('events')}
+        onGoOrganizer={() => setView('organizer')}
+        onGoMyTickets={() => setView('myTickets')}
+        onGoCheckin={() => setView('checkin')}
         onGoLogin={() => setView('login')}
-        onGoMyTickets={goToMyTickets}
-        onGoOrganizer={goToOrganizer}
-        onGoCheckin={() => setView(isLoggedIn ? 'checkin' : 'login')}
         onLogout={handleLogout}
       />
 
-
       <div style={{ padding: '28px 16px', maxWidth: 1200, margin: '0 auto' }}>
-        {view === 'events' && (
-          highlightedEvent ? (
+        {view === 'events' &&
+          (highlightedEvent ? (
             <EventDetailView
               event={highlightedEvent}
               isLoggedIn={isLoggedIn}
@@ -2629,14 +2623,13 @@ function App() {
               onBack={clearHighlightedEvent}
             />
           ) : (
-            <PublicEventsIndex
+            <PublicEvents
               events={events}
               loading={eventsLoading}
               error={eventsError}
               onOpen={openEvent}
             />
-          )
-        )}
+          ))}
 
         {view === 'login' && <LoginForm onSuccess={handleLoginSuccess} />}
 
@@ -2651,11 +2644,7 @@ function App() {
         )}
 
         {view === 'checkin' && (
-          <CheckInPanel
-            token={token}
-            role={role}
-            onRequireLogin={() => setView('login')}
-          />
+          <CheckInPanel token={token} role={role} onRequireLogin={() => setView('login')} />
         )}
 
         {view === 'organizer' && (
@@ -2675,6 +2664,8 @@ function App() {
     </div>
   );
 }
+
+
 
 /* ==================== EVENT DETAIL VIEW ==================== */
 
@@ -3188,347 +3179,4 @@ function PublicHeader(props: {
 }
 
 
-
-function PublicEventCard(props: { event: Event; onOpen: (e: Event) => void }) {
-  const { event, onOpen } = props;
-
-  const [hovered, setHovered] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError] = useState(false);
-
-  const dateRow = useMemo(() => formatDateRowLabel(event.startDateTime), [event.startDateTime]);
-  const priceRow = useMemo(() => getPriceRangeLabel(event), [event]);
-
-  // ✅ proxy + fallback (igual que lo venías usando)
-  const img = useMemo(() => getEventCardImage(event), [event]);
-  const fallbackUrl = '/event-fallback.jpg';
-
-  const finalSrc = imgError ? fallbackUrl : img.src;
-  const finalSrcSet = imgError ? undefined : img.srcSet;
-  const finalSizes = imgError ? undefined : img.sizes;
-
-  // skeleton oscuro (para que calce con tu fondo)
-  const shimmer: React.CSSProperties = {
-    backgroundImage:
-      'linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 100%)',
-    backgroundSize: '200% 100%',
-    animation: 'tc-shimmer 1.2s infinite',
-  };
-
-  return (
-    <div
-      onClick={() => onOpen(event)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        cursor: 'pointer',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-        userSelect: 'none',
-        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
-        transition: 'transform 0.15s ease',
-      }}
-    >
-      {/* keyframes una vez por tarjeta (si quieres lo movemos al index) */}
-      <style>{`
-        @keyframes tc-shimmer {
-          0% { background-position: 0% 0; }
-          100% { background-position: 200% 0; }
-        }
-      `}</style>
-
-      {/* Imagen */}
-      <div
-        style={{
-          position: 'relative',
-          borderRadius: 18,
-          overflow: 'hidden',
-          aspectRatio: '16 / 10',
-          background: '#0b1220',
-          boxShadow: '0 14px 30px rgba(0,0,0,0.35)',
-        }}
-      >
-        {!imgLoaded && <div style={{ position: 'absolute', inset: 0, ...shimmer }} />}
-
-        <img
-          src={finalSrc}
-          srcSet={finalSrcSet}
-          sizes={finalSizes}
-          alt={event.title}
-          loading="lazy"
-          decoding="async"
-          onLoad={() => setImgLoaded(true)}
-          onError={() => {
-            setImgError(true);
-            setImgLoaded(true);
-          }}
-          width={1200}
-          height={750}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-            opacity: imgLoaded ? 1 : 0,
-            transition: 'opacity 0.25s ease',
-          }}
-        />
-      </div>
-
-      {/* Texto debajo (sin tarjeta blanca) */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 2px' }}>
-        <h3
-          style={{
-            margin: 0,
-            fontSize: 20,
-            fontWeight: 900,
-            color: '#f8fafc',
-            lineHeight: 1.15,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {event.title}
-        </h3>
-
-        {/* fila fecha con ícono */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#cbd5e1', fontSize: 13, fontWeight: 700 }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M7 2v2M17 2v2M3.5 9h17M6 5h12a2.5 2.5 0 0 1 2.5 2.5v12A2.5 2.5 0 0 1 18 22H6A2.5 2.5 0 0 1 3.5 19.5v-12A2.5 2.5 0 0 1 6 5Z"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-          <span>{dateRow}</span>
-        </div>
-
-        {/* precio en ROJO (reemplaza verde) */}
-        <div style={{ color: '#ef4444', fontWeight: 900, fontSize: 14 }}>
-          {priceRow}
-        </div>
-
-        {/* lugar */}
-        <div style={{ color: '#94a3b8', fontSize: 13 }}>
-          {event.venueName} · {event.venueAddress}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-
-function PublicEventsIndex(props: {
-  events: Event[];
-  loading: boolean;
-  error: string | null;
-  onOpen: (e: Event) => void;
-}) {
-  const { events, loading, error, onOpen } = props;
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const hasEvents = (events?.length ?? 0) > 0;
-
-  const filtered = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return (events ?? [])
-      .filter((e) => e.status !== 'CANCELLED')
-      .filter((e) => {
-        if (!q) return true;
-        return (
-          e.title.toLowerCase().includes(q) ||
-          e.venueName.toLowerCase().includes(q) ||
-          e.venueAddress.toLowerCase().includes(q)
-        );
-      });
-  }, [events, searchQuery]);
-
-  // ✅ Skeleton solo cuando NO hay nada para mostrar todavía
-  const showSkeleton = loading && !hasEvents;
-
-  // ✅ “Actualizando…” solo cuando ya estamos mostrando algo (cache) y llega el refresh
-  const showRefreshing = loading && hasEvents;
-
-  const showEmptySearch =
-    !loading && !error && filtered.length === 0 && searchQuery.trim() && hasEvents;
-
-  const showEmptyNoEvents =
-    !loading && !error && filtered.length === 0 && !searchQuery.trim() && !hasEvents;
-
-  return (
-    <main
-      style={{
-        padding: '32px 16px 56px',
-        maxWidth: 1200,
-        margin: '0 auto',
-        boxSizing: 'border-box',
-      }}
-    >
-      {/* Keyframes para shimmer (sin tocar tu CSS global) */}
-      <style>{`
-        @keyframes tc-shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-      `}</style>
-
-      <section style={{ textAlign: 'center', marginBottom: 28, padding: '0 8px' }}>
-        <h1
-          style={{
-            fontSize: 'clamp(2.1rem, 4vw, 3rem)',
-            fontWeight: 900,
-            lineHeight: 1.1,
-            marginBottom: 10,
-            color: '#111827',
-          }}
-        >
-          Eventos{' '}
-          <span
-            style={{
-              backgroundImage: 'linear-gradient(90deg,#f97316,#fb923c,#dc2626)',
-              WebkitBackgroundClip: 'text',
-              color: 'transparent',
-            }}
-          >
-            disponibles
-          </span>
-        </h1>
-        <p style={{ maxWidth: 720, margin: '0 auto', fontSize: 16, color: '#4b5563' }}>
-          Compra en segundos, entra con QR y que nadie te cuente el show.
-        </p>
-      </section>
-
-      <section style={{ marginBottom: 26 }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', gap: 12, alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="Buscar eventos, lugares..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '12px 18px',
-              borderRadius: 999,
-              border: '2px solid #e5e7eb',
-              fontSize: 15,
-              outline: 'none',
-              backgroundColor: '#f9fafb',
-            }}
-          />
-          <button
-            type="button"
-            style={{
-              padding: '11px 24px',
-              borderRadius: 999,
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: 14,
-              backgroundImage: 'linear-gradient(90deg,#f97316,#fb923c,#b91c1c)',
-              color: '#ffffff',
-              boxShadow: '0 10px 24px rgba(185,28,28,0.45)',
-            }}
-          >
-            Buscar
-          </button>
-        </div>
-      </section>
-
-      {/* Error: si hay cache, no lo trates como “pantalla de muerte” */}
-      {error && (
-        <p style={{ textAlign: 'center', color: '#b91c1c', fontWeight: 600, marginBottom: 12 }}>
-          {hasEvents ? 'No se pudo actualizar (mostrando datos guardados).' : error}
-        </p>
-      )}
-
-      {showRefreshing && (
-        <p style={{ textAlign: 'center', color: '#6b7280', fontSize: 12, marginBottom: 12 }}>
-          Actualizando eventos…
-        </p>
-      )}
-
-      {showEmptySearch && (
-        <p style={{ textAlign: 'center', color: '#6b7280' }}>
-          No se encontraron eventos para “{searchQuery.trim()}”.
-        </p>
-      )}
-
-      {showEmptyNoEvents && (
-        <p style={{ textAlign: 'center', color: '#6b7280' }}>
-          No hay eventos publicados todavía.
-        </p>
-      )}
-
-      <section>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-            gap: 26,
-            alignItems: 'start',
-          }}
-        >
-          {showSkeleton ? (
-            <SkeletonGrid count={6} />
-          ) : (
-            filtered.map((event) => (
-              <PublicEventCard key={event.id} event={event} onOpen={onOpen} />
-            ))
-          )}
-        </div>
-      </section>
-    </main>
-  );
-}
-
-function SkeletonGrid({ count }: { count: number }) {
-  return (
-    <>
-      {Array.from({ length: count }).map((_, i) => (
-        <SkeletonCard key={i} />
-      ))}
-    </>
-  );
-}
-
-function SkeletonCard() {
-  const shimmer: React.CSSProperties = {
-    backgroundImage: 'linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%)',
-    backgroundSize: '200% 100%',
-    animation: 'tc-shimmer 1.2s infinite',
-  };
-
-  return (
-    <div
-      style={{
-        borderRadius: 18,
-        overflow: 'hidden',
-        background: '#ffffff',
-        boxShadow: '0 14px 30px rgba(15,23,42,0.10)',
-        border: '1px solid #eef2f7',
-      }}
-    >
-      <div style={{ height: 190, ...shimmer }} />
-      <div style={{ padding: '14px 16px 12px' }}>
-        <div style={{ height: 18, width: '70%', borderRadius: 8, marginBottom: 10, ...shimmer }} />
-        <div style={{ height: 12, width: '90%', borderRadius: 8, marginBottom: 8, ...shimmer }} />
-        <div style={{ height: 12, width: '80%', borderRadius: 8, marginBottom: 8, ...shimmer }} />
-        <div style={{ height: 12, width: '60%', borderRadius: 8, marginBottom: 14, ...shimmer }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-          <div style={{ height: 18, width: 90, borderRadius: 999, ...shimmer }} />
-          <div style={{ height: 34, width: 110, borderRadius: 999, ...shimmer }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default App;
-
-
-

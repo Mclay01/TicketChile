@@ -149,6 +149,10 @@ export function PublicEventCard(props: { event: Event; onOpen: (e: Event) => voi
       >
         {!imgLoaded && <div style={{ position: 'absolute', inset: 0, ...shimmer }} />}
 
+        <div style={{ height: 190, ...shimmer }} />
+        <div style={{ height: 18, width: '70%', borderRadius: 8, marginBottom: 10, ...shimmer }} />
+
+
         <img
           src={finalSrc}
           srcSet={finalSrcSet}

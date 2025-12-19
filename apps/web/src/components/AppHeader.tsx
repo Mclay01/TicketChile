@@ -7,11 +7,11 @@ export type View =
   | 'checkin'
   | 'organizer'
   | 'paymentSuccess';
-
+type UserRole = 'ADMIN' | 'ORGANIZER' | 'CUSTOMER';
 type Props = {
   view: View;
   isLoggedIn: boolean;
-  isStaff: boolean;
+  role: UserRole | null;
   onGoEvents: () => void;
   onGoLogin: () => void;
   onGoMyTickets: () => void;
@@ -51,7 +51,7 @@ export default function AppHeader(props: Props) {
   const {
     view,
     isLoggedIn,
-    isStaff,
+    role,
     onGoEvents,
     onGoLogin,
     onGoMyTickets,
@@ -59,7 +59,7 @@ export default function AppHeader(props: Props) {
     onGoCheckin,
     onLogout,
   } = props;
-
+  const isStaff = !!role && role !== 'CUSTOMER';
   const isMobile = useIsMobile(768);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -88,18 +88,14 @@ export default function AppHeader(props: Props) {
   }, [menuOpen]);
 
   const pill = (active: boolean): React.CSSProperties => ({
-    padding: '10px 16px',
+    padding: '10px 14px',
     borderRadius: 999,
-    border: '1px solid rgba(255,255,255,0.55)',
-    background: active
-      ? 'linear-gradient(90deg,#f97316,#fb923c,#b91c1c)'
-      : 'transparent',
-    color: '#ffffff',
-    cursor: 'pointer',
+    border: active ? 'none' : '1px solid rgba(255,255,255,0.35)',
+    background: active ? 'linear-gradient(90deg,#fb923c,#f97316,#b91c1c)' : 'transparent',
+    color: '#fff',
     fontWeight: 800,
-    fontSize: 14,
-    boxShadow: active ? '0 10px 24px rgba(185,28,28,0.35)' : 'none',
-    whiteSpace: 'nowrap',
+    cursor: 'pointer',
+    fontSize: 13,
   });
 
   const menuItem = (active: boolean): React.CSSProperties => ({
@@ -115,14 +111,14 @@ export default function AppHeader(props: Props) {
   });
 
   const menuDanger: React.CSSProperties = {
-    width: '100%',
-    padding: '12px 12px',
+    padding: '10px 12px',
     borderRadius: 12,
-    border: '1px solid #fecaca',
-    background: '#b91c1c',
-    color: '#ffffff',
+    border: '1px solid #fecdd3',
+    background: '#fff1f2',
+    color: '#9f1239',
+    fontWeight: 800,
     cursor: 'pointer',
-    fontWeight: 900,
+    textAlign: 'left',
   };
 
   const items = useMemo(
