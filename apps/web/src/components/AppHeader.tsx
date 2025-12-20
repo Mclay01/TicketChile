@@ -95,7 +95,7 @@ export default function AppHeader(props: Props) {
   }, [menuOpen]);
 
   const textColor = '#111827';
-  const logoH = scrolled ? 44 : 56; // 👈 grande arriba, compacto al bajar
+  
 
   const headerStyle: CSSProperties = {
     position: 'sticky',
@@ -154,7 +154,9 @@ export default function AppHeader(props: Props) {
     ],
     [view, isLoggedIn, isStaff, onGoEvents, onGoOrganizer, onGoMyTickets, onGoCheckin],
   );
-
+  
+  const logoH = scrolled ? (isMobile ? 40 : 44) : (isMobile ? 52 : 62);
+  
   return (
     <header style={headerStyle}>
       <div
