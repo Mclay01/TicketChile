@@ -1,14 +1,30 @@
-﻿node_modules/
+﻿# deps
+node_modules/
 **/node_modules/
+
+# pnpm
 .pnpm-store/
 **/.pnpm-store/
+
+# next
 .next/
 out/
+
+# vercel
 .vercel/
+
+# turbo
 .turbo/
+
+# logs
 *.log
+
+# env
 .env
 .env.*
+.env.local
 !.env.example
+
+# OS/editor
 .DS_Store
 Thumbs.db
