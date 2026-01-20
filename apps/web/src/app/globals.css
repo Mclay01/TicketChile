@@ -1,0 +1,76 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+/* ====== Design tokens (Ticketchile: negro + rojo) ====== */
+:root {
+  /* Base */
+  --background: #07070b;   /* negro profundo */
+  --foreground: #f2f2f5;   /* blanco suave */
+
+  /* Card / surfaces */
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-2: rgba(255, 255, 255, 0.10);
+  --border: rgba(255, 255, 255, 0.12);
+
+  /* Accent (antes rosado, ahora rojo) */
+  --accent: #ef4444;       /* red-500 */
+  --accent-2: #b91c1c;     /* red-700 */
+  --accent-soft: rgba(239, 68, 68, 0.18);
+  --accent-soft-2: rgba(239, 68, 68, 0.28);
+
+  /* Shadows */
+  --shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+}
+
+@theme inline {
+  /* Mantén tus mappings para Tailwind v4 */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Extras útiles (opcionales) */
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+}
+
+/* Modo oscuro: tu app ya es dark-first, pero dejamos el hook */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #07070b;
+    --foreground: #f2f2f5;
+  }
+}
+
+/* ====== Base ====== */
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  color: #f2f2f5;
+  font-family: "Outfit", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+
+  /* ✅ Fondo rojo oscuro + negro (premium) */
+  background:
+    radial-gradient(1200px 700px at 12% 0%, rgba(239,68,68,0.26), transparent 62%),
+    radial-gradient(900px 650px at 88% 8%, rgba(120,15,25,0.35), transparent 55%),
+    radial-gradient(900px 650px at 50% 110%, rgba(239,68,68,0.12), transparent 65%),
+    linear-gradient(180deg, #09060b 0%, #07070b 35%, #05050a 100%);
+
+  background-attachment: fixed;
+}
+
+
+
+/* Selección de texto con rojo */
+::selection {
+  background: rgba(239, 68, 68, 0.35);
+}
+
+/* Scrollbar (opcional, pero se ve más “pro”) */
+* {
+  scrollbar-color: rgba(239, 68, 68, 0.45) rgba(255, 255, 255, 0.08);
+}

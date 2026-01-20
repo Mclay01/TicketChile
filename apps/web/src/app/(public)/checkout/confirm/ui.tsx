@@ -1,0 +1,356 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+
+type Ticket = {
+  id: string;
+  orderId: string;
+  eventId: string;
+  ticketTypeName: string;
+  buyerEmail: string;
+  status: string;
+};
+
+type StatusPayload = {
+  ok: true;
+  payment: {
+    id: string;
+    holdId: string;
+    orderId: string;
+    status: string;
+    buyerName: string;
+    buyerEmail: string;
+    eventTitle: string;
+    amountClp: number;
+  };
+  tickets: Ticket[];
+};
+
+function formatCLP(n: number) {
+  return new Intl.NumberFormat("es-CL").format(n);
+}
+
+const POLL_MS = 5000; // ⬅️ más tiempo entre banners... digo, polls 😄
+const TIMEOUT_MS = 45_000;
+
+export default function CheckoutConfirmClient() {
+  const sp = useSearchParams();
+  const router = useRouter();
+
+  const sessionId = (sp.get("session_id") ?? "").trim();
+
+  const endpoint = useMemo(() => {
+    return `/api/payments/stripe/status?session_id=${encodeURIComponent(sessionId)}`;
+  }, [sessionId]);
+
+  const [data, setData] = useState<StatusPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  const [polling, setPolling] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  const [sending, setSending] = useState(false);
+  const [sendMsg, setSendMsg] = useState<string | null>(null);
+
+  // --- Refs anti-spam / anti-duplicado ---
+  const timerRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const inFlightRef = useRef(false);
+  const startedAtRef = useRef<number>(0);
+  const aliveRef = useRef(true);
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const stopAll = useCallback(() => {
+    clearTimer();
+    abortRef.current?.abort();
+    abortRef.current = null;
+    inFlightRef.current = false;
+    setPolling(false);
+  }, [clearTimer]);
+
+  const loadOnce = useCallback(
+    async (opts?: { silent?: boolean; signal?: AbortSignal }) => {
+      const silent = Boolean(opts?.silent);
+
+      if (!silent) setLoading(true);
+      if (!silent) setErr(null);
+
+      try {
+        const r = await fetch(endpoint, { cache: "no-store", signal: opts?.signal });
+        const j = await r.json().catch(() => null);
+        if (!r.ok) throw new Error(j?.error || `Error ${r.status}`);
+
+        setData(j);
+        return j as StatusPayload;
+      } catch (e: any) {
+        if (e?.name === "AbortError") return null;
+        setErr(String(e?.message || e));
+        setData(null);
+        return null;
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [endpoint]
+  );
+
+  // ✅ Poll “single-threaded” (sin overlap, sin multiplicarse)
+  const poll = useCallback(async () => {
+    if (!aliveRef.current) return;
+    if (!sessionId) return;
+
+    if (inFlightRef.current) {
+      clearTimer();
+      timerRef.current = window.setTimeout(poll, POLL_MS);
+      return;
+    }
+
+    inFlightRef.current = true;
+
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
+    const j = await loadOnce({ silent: true, signal: ac.signal });
+
+    inFlightRef.current = false;
+    if (!aliveRef.current) return;
+
+    const now = Date.now();
+    const elapsedMs = startedAtRef.current ? now - startedAtRef.current : 0;
+    setElapsed(Math.floor(elapsedMs / 1000));
+
+    const ticketsReady = Boolean(j?.tickets?.length);
+    const status = String(j?.payment?.status || "").toUpperCase();
+
+    if (ticketsReady) {
+      stopAll();
+      setLoading(false);
+      return;
+    }
+
+    if (status === "FAILED" || status === "CANCELLED") {
+      stopAll();
+      setLoading(false);
+      return;
+    }
+
+    if (elapsedMs >= TIMEOUT_MS) {
+      stopAll();
+      setLoading(false);
+      return;
+    }
+
+    clearTimer();
+    timerRef.current = window.setTimeout(poll, POLL_MS);
+  }, [clearTimer, loadOnce, sessionId, stopAll]); // ✅ NO incluir "poll" acá
+
+  // Start / Reset cuando cambia sessionId
+  useEffect(() => {
+    aliveRef.current = true;
+
+    setData(null);
+    setErr(null);
+    setSendMsg(null);
+    setElapsed(0);
+
+    if (!sessionId) {
+      setErr("Falta session_id en la URL.");
+      setLoading(false);
+      setPolling(false);
+      return () => {
+        aliveRef.current = false;
+        stopAll();
+      };
+    }
+
+    startedAtRef.current = Date.now();
+    setPolling(true);
+
+    (async () => {
+      await loadOnce({ silent: false });
+      clearTimer();
+      timerRef.current = window.setTimeout(poll, POLL_MS);
+    })();
+
+    return () => {
+      aliveRef.current = false;
+      stopAll();
+    };
+  }, [sessionId, loadOnce, clearTimer, poll, stopAll]);
+
+  async function resendEmail() {
+    if (!data?.payment?.orderId || !data?.payment?.buyerEmail) return;
+
+    setSending(true);
+    setSendMsg(null);
+
+    try {
+      const r = await fetch("/api/tickets/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          orderId: data.payment.orderId,
+          email: data.payment.buyerEmail,
+        }),
+      });
+
+      const j = await r.json().catch(() => null);
+      if (!r.ok) throw new Error(j?.error || `Error ${r.status}`);
+
+      setSendMsg("Listo. Te reenviamos el ticket al correo.");
+    } catch (e: any) {
+      setSendMsg(`No se pudo reenviar: ${String(e?.message || e)}`);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function addGoogleWallet() {
+    const first = data?.tickets?.[0];
+    if (!first) return;
+
+    const r = await fetch(
+      `/api/wallet/google/save-url?ticket_id=${encodeURIComponent(first.id)}`,
+      { cache: "no-store" }
+    );
+
+    const j = await r.json().catch(() => null);
+    if (!r.ok) {
+      alert(j?.error || "No se pudo generar Google Wallet.");
+      return;
+    }
+
+    const url = String(j?.saveUrl || "");
+    if (!url) {
+      alert("No se pudo generar Google Wallet.");
+      return;
+    }
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  const ready = Boolean(data?.tickets?.length);
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-3xl font-bold tracking-tight text-white">
+          {ready ? "Compra confirmada" : "Confirmando tu compra…"}
+        </h1>
+        <p className="text-sm text-white/60">
+          {ready
+            ? "Tus tickets ya fueron emitidos."
+            : "Stripe ya cobró; estamos esperando el webhook para emitir tickets."}
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <p className="text-white/80">Cargando…</p>
+        </div>
+      ) : err ? (
+        <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-6">
+          <p className="font-semibold text-white">Error</p>
+          <p className="mt-1 text-sm text-white/70">{err}</p>
+        </div>
+      ) : data ? (
+        <>
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-white/50">Evento</p>
+                <p className="text-lg font-semibold text-white">{data.payment.eventTitle}</p>
+                <p className="mt-1 text-sm text-white/60">
+                  Comprador: <span className="text-white/80">{data.payment.buyerEmail}</span>
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-xs text-white/50">Total</p>
+                <p className="text-lg font-bold text-white">
+                  ${formatCLP(data.payment.amountClp)}
+                </p>
+                <p className="mt-1 text-xs text-white/50">
+                  Estado: <span className="text-white/80">{data.payment.status}</span>
+                </p>
+              </div>
+            </div>
+
+            {!ready ? (
+              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="font-semibold text-white/90">Emitiendo tickets…</p>
+                <p className="mt-1 text-sm text-white/70">
+                  {polling ? (
+                    <>
+                      Reintentando cada {Math.round(POLL_MS / 1000)}s…{" "}
+                      <span className="text-white/50">(van {elapsed}s)</span>
+                    </>
+                  ) : (
+                    "Si no aparecen, refresca en unos segundos."
+                  )}
+                </p>
+              </div>
+            ) : null}
+
+            {ready ? (
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                <button
+                  onClick={() =>
+                    router.push(`/mis-tickets?email=${encodeURIComponent(data.payment.buyerEmail)}`)
+                  }
+                  className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90"
+                >
+                  Ver mis tickets
+                </button>
+
+                <button
+                  onClick={resendEmail}
+                  disabled={sending}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/90 hover:bg-white/10 disabled:opacity-50"
+                >
+                  {sending ? "Enviando…" : "Reenviar al correo"}
+                </button>
+
+                <button
+                  onClick={addGoogleWallet}
+                  className="md:col-span-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/90 hover:bg-white/10"
+                >
+                  Agregar a Google Wallet
+                </button>
+
+                {sendMsg ? <p className="md:col-span-2 text-xs text-white/60">{sendMsg}</p> : null}
+              </div>
+            ) : null}
+          </div>
+
+          {ready ? (
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+              <p className="text-sm font-semibold text-white">Tus tickets</p>
+              <ul className="mt-3 space-y-2 text-sm text-white/75">
+                {data.tickets.map((t) => (
+                  <li
+                    key={t.id}
+                    className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3"
+                  >
+                    <span>{t.ticketTypeName}</span>
+                    <span className="text-xs text-white/50">{t.status}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}

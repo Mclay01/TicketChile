@@ -1,12 +1,14 @@
-# dependencias
-node_modules/
+﻿node_modules/
+**/node_modules/
 .pnpm-store/
-
-# builds
-dist/
-apps/api/dist/
-apps/web/dist/
-
-# envs
+**/.pnpm-store/
+.next/
+out/
+.vercel/
+.turbo/
+*.log
 .env
 .env.*
+!.env.example
+.DS_Store
+Thumbs.db

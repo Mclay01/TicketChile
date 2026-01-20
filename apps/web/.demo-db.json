@@ -1,0 +1,90 @@
+{
+  "orders": [
+    {
+      "id": "ord_mjq7chm2_yc7zii",
+      "createdAtISO": "2025-12-28T20:48:55.082Z",
+      "eventId": "evt_003",
+      "eventTitle": "Festival Summer Chile",
+      "buyerName": "sadASDA",
+      "buyerEmail": "@",
+      "subtotalCLP": 117000,
+      "status": "PAID",
+      "items": [
+        {
+          "ticketTypeId": "tt_preventa",
+          "ticketTypeName": "Preventa",
+          "unitPriceCLP": 25000,
+          "qty": 1
+        },
+        {
+          "ticketTypeId": "tt_general",
+          "ticketTypeName": "General",
+          "unitPriceCLP": 32000,
+          "qty": 1
+        },
+        {
+          "ticketTypeId": "tt_vip",
+          "ticketTypeName": "VIP",
+          "unitPriceCLP": 60000,
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "id": "ord_mjq6vdxx_z7bal1",
+      "createdAtISO": "2025-12-28T20:35:37.173Z",
+      "eventId": "evt_002",
+      "eventTitle": "Urbano Vibes",
+      "buyerName": "fghfds",
+      "buyerEmail": "@",
+      "subtotalCLP": 16000,
+      "status": "PAID",
+      "items": [
+        {
+          "ticketTypeId": "tt_general",
+          "ticketTypeName": "General",
+          "unitPriceCLP": 16000,
+          "qty": 1
+        }
+      ]
+    }
+  ],
+  "tickets": [
+    {
+      "id": "tix_mjq7chm3_e0ly3i",
+      "orderId": "ord_mjq7chm2_yc7zii",
+      "eventId": "evt_003",
+      "eventTitle": "Festival Summer Chile",
+      "ticketTypeName": "Preventa",
+      "buyerEmail": "@",
+      "status": "VALID"
+    },
+    {
+      "id": "tix_mjq7chm3_4158o7",
+      "orderId": "ord_mjq7chm2_yc7zii",
+      "eventId": "evt_003",
+      "eventTitle": "Festival Summer Chile",
+      "ticketTypeName": "General",
+      "buyerEmail": "@",
+      "status": "VALID"
+    },
+    {
+      "id": "tix_mjq7chm3_vaxy0d",
+      "orderId": "ord_mjq7chm2_yc7zii",
+      "eventId": "evt_003",
+      "eventTitle": "Festival Summer Chile",
+      "ticketTypeName": "VIP",
+      "buyerEmail": "@",
+      "status": "VALID"
+    },
+    {
+      "id": "tix_mjq6vdxx_9rddsd",
+      "orderId": "ord_mjq6vdxx_z7bal1",
+      "eventId": "evt_002",
+      "eventTitle": "Urbano Vibes",
+      "ticketTypeName": "General",
+      "buyerEmail": "@",
+      "status": "VALID"
+    }
+  ]
+}
