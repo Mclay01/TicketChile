@@ -75,6 +75,7 @@ export default async function CheckoutSuccessPage(props: {
     buyerEmail =
       String((session as any)?.customer_details?.email || "") ||
       String((session as any)?.customer_email || "") ||
+      String((session as any)?.customer_email || "") ||
       buyerEmail;
 
     buyerName = String((session as any)?.customer_details?.name || "") || buyerName;
@@ -93,7 +94,8 @@ export default async function CheckoutSuccessPage(props: {
     await client.query("BEGIN");
 
     // Busca payment por id (si vino en metadata) o por provider_ref=sessionId o por holdId
-    let pRes;
+    let pRes: any | undefined;
+
     if (paymentId) {
       pRes = await client.query(
         `
@@ -116,7 +118,7 @@ export default async function CheckoutSuccessPage(props: {
       );
     }
 
-    if ((!pRes || pRes.rowCount === 0) && holdId) {
+    if ((pRes?.rowCount ?? 0) === 0 && holdId) {
       pRes = await client.query(
         `
         SELECT *
@@ -128,7 +130,7 @@ export default async function CheckoutSuccessPage(props: {
       );
     }
 
-    if (pRes && pRes.rowCount > 0) {
+    if ((pRes?.rowCount ?? 0) > 0) {
       const p = pRes.rows[0];
 
       paymentId = paymentId || String(p.id || "");
@@ -166,18 +168,28 @@ export default async function CheckoutSuccessPage(props: {
         const finalBuyerName = buyerName || String(p.buyer_name || "");
         const finalEventTitle = eventTitle || String(p.event_title || "");
 
-        if (holdId && finalBuyerEmail.includes("@") && finalBuyerName.length >= 2 && finalEventTitle) {
-          await finalizePaidHoldToOrderPgTx(client, {
-            holdId,
-            eventTitle: finalEventTitle,
-            buyerName: finalBuyerName,
-            buyerEmail: finalBuyerEmail,
-          });
+        if (
+          holdId &&
+          finalBuyerEmail.includes("@") &&
+          finalBuyerName.length >= 2 &&
+          finalEventTitle
+        ) {
+          // ✅ Si webhook ya consumió el hold, esto puede fallar: NO rompemos la success page.
+          try {
+            await finalizePaidHoldToOrderPgTx(client, {
+              holdId,
+              eventTitle: finalEventTitle,
+              buyerName: finalBuyerName,
+              buyerEmail: finalBuyerEmail,
+            });
+          } catch {
+            // silent: webhook / idempotencia puede ganar la carrera
+          }
         }
 
         // Vincula order_id en payments si ya existe
         const oRes = await client.query(`SELECT id FROM orders WHERE hold_id=$1 LIMIT 1`, [holdId]);
-        if (oRes.rowCount > 0) {
+        if ((oRes?.rowCount ?? 0) > 0) {
           orderId = String(oRes.rows[0].id || "");
           await client.query(
             `UPDATE payments SET order_id=$2, updated_at=NOW() WHERE id=$1`,
