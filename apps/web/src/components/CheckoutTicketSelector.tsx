@@ -1,3 +1,4 @@
+// apps/web/src/components/CheckoutTicketSelector.tsx
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -62,21 +63,6 @@ export default function CheckoutTicketSelector({ event, cartString }: Props) {
   const cartParam = sp.get("cart") || "";
   const didApplyCartRef = useRef(false);
 
-  function parseCartParam(s: string) {
-    const out: Record<string, number> = {};
-    const v = (s || "").trim();
-    if (!v) return out;
-
-    for (const part of v.split(",")) {
-      const [idRaw, qtyRaw] = part.split(":");
-      const id = (idRaw || "").trim();
-      const q = parseInt((qtyRaw || "").trim(), 10);
-      if (!id || !Number.isFinite(q) || q <= 0) continue;
-      out[id] = q;
-    }
-    return out;
-  }
-
   useEffect(() => {
     if (didApplyCartRef.current) return;
     if (!cartParam) return;
@@ -95,7 +81,6 @@ export default function CheckoutTicketSelector({ event, cartString }: Props) {
 
     didApplyCartRef.current = true;
   }, [cartParam, event.ticketTypes]);
-
 
   const [qty, setQty] = useState<QtyMap>(() => {
     const init: QtyMap = {};
@@ -118,7 +103,7 @@ export default function CheckoutTicketSelector({ event, cartString }: Props) {
   // ---- 1) Precarga desde cart (prop o querystring) ----
   const cartFromQuery = sp.get("cart");
   const initialCart = useMemo(() => {
-    const fromProp = parseCartParam(cartString);
+    const fromProp = parseCartParam(cartString ?? "");
     const fromQuery = parseCartParam(cartFromQuery);
     // prioridad: prop > query (pero normalmente serán iguales)
     return Object.keys(fromProp).length ? fromProp : fromQuery;
@@ -210,7 +195,10 @@ export default function CheckoutTicketSelector({ event, cartString }: Props) {
       let changed = false;
       const next = { ...prev };
       for (const tt of event.ticketTypes) {
-        const avail = typeof remaining[tt.id] === "number" ? remaining[tt.id] : Number.POSITIVE_INFINITY;
+        const avail =
+          typeof remaining[tt.id] === "number"
+            ? remaining[tt.id]
+            : Number.POSITIVE_INFINITY;
         if (Number.isFinite(avail)) {
           const clamped = clamp(next[tt.id] ?? 0, 0, Math.max(0, avail));
           if (clamped !== (next[tt.id] ?? 0)) {
@@ -240,7 +228,10 @@ export default function CheckoutTicketSelector({ event, cartString }: Props) {
   }, [event.ticketTypes, qty, remaining]);
 
   const totalQty = useMemo(() => lines.reduce((acc, l) => acc + l.q, 0), [lines]);
-  const subtotal = useMemo(() => lines.reduce((acc, l) => acc + l.lineTotal, 0), [lines]);
+  const subtotal = useMemo(
+    () => lines.reduce((acc, l) => acc + l.lineTotal, 0),
+    [lines]
+  );
 
   function setTicketQty(tt: TicketType, next: number) {
     const avail = typeof remaining[tt.id] === "number" ? remaining[tt.id] : 999999; // server valida
@@ -279,7 +270,8 @@ export default function CheckoutTicketSelector({ event, cartString }: Props) {
       });
 
       const holdData = await holdRes.json().catch(() => null);
-      if (!holdRes.ok) throw new Error(holdData?.error || `Error ${holdRes.status}`);
+      if (!holdRes.ok)
+        throw new Error(holdData?.error || `Error ${holdRes.status}`);
 
       const hold: Hold | null = holdData?.hold ?? null;
       if (!hold?.id) throw new Error("No se pudo crear hold.");
@@ -298,14 +290,18 @@ export default function CheckoutTicketSelector({ event, cartString }: Props) {
       });
 
       const stripeData = await stripeRes.json().catch(() => null);
-      if (!stripeRes.ok) throw new Error(stripeData?.error || `Error ${stripeRes.status}`);
+      if (!stripeRes.ok)
+        throw new Error(stripeData?.error || `Error ${stripeRes.status}`);
 
       if (String(stripeData?.status || "") === "PAID") {
-        router.push(`/mis-tickets?email=${encodeURIComponent(buyerEmail.trim())}&paid=1`);
+        router.push(
+          `/mis-tickets?email=${encodeURIComponent(buyerEmail.trim())}&paid=1`
+        );
         return;
       }
 
-      const checkoutUrl = typeof stripeData?.checkoutUrl === "string" ? stripeData.checkoutUrl : "";
+      const checkoutUrl =
+        typeof stripeData?.checkoutUrl === "string" ? stripeData.checkoutUrl : "";
       if (!checkoutUrl) throw new Error("Stripe no devolvió checkoutUrl.");
 
       window.location.href = checkoutUrl;
