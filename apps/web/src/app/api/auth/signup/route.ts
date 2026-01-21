@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       await client.query("BEGIN");
 
       const exists = await client.query(`SELECT 1 FROM users WHERE email=$1 LIMIT 1`, [email]);
-      if (exists.rowCount > 0) {
+      if ((exists?.rowCount ?? 0) > 0) {
         await client.query("ROLLBACK");
         return json(409, { ok: false, error: "Ese email ya está registrado." });
       }
