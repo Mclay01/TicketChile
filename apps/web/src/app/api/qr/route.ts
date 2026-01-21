@@ -1,5 +1,6 @@
+// apps/web/src/app/api/qr/route.ts
 import { NextResponse } from "next/server";
-import QRCode from "qrcode";
+import * as QRCode from "qrcode";
 import { signTicketToken } from "@/lib/qr-token.server";
 
 export const runtime = "nodejs";
@@ -46,7 +47,10 @@ export async function GET(req: Request) {
       errorCorrectionLevel: "M",
     });
 
-    return new NextResponse(png, {
+    // ✅ Next/TS: Buffer no calza con BodyInit -> convertir
+    const body = new Uint8Array(png);
+
+    return new NextResponse(body, {
       status: 200,
       headers: {
         "Content-Type": "image/png",
