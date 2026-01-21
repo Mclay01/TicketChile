@@ -1,6 +1,6 @@
 // apps/web/src/app/api/demo/qr/route.ts
 import { NextResponse } from "next/server";
-import QRCode from "qrcode";
+import * as QRCode from "qrcode";
 import { signTicketToken } from "@/lib/qr-token.server";
 
 export const runtime = "nodejs";
@@ -19,11 +19,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: "Falta ticketId o eventId." }, { status: 400 });
   }
 
-  // QR contiene SOLO el token (no URL). Esto es lo más compatible con scanners.
+  // QR contiene SOLO el token (no URL). Más compatible con scanners.
   const token = signTicketToken({ ticketId, eventId });
 
   try {
-    const png = await QRCode.toBuffer(token, {
+    // Si TS se pone quisquilloso con typings, lo tipamos de forma segura.
+    const toBuffer = (QRCode as any).toBuffer as (
+      text: string,
+      opts?: any
+    ) => Promise<Buffer>;
+
+    const png = await toBuffer(token, {
       type: "png",
       width: 260,
       margin: 1,
