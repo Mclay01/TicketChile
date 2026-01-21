@@ -1,10 +1,7 @@
 // apps/web/src/app/api/demo/paid-order/route.ts
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe.server";
-import {
-  preparePaymentForHoldPgServer,
-  consumeHoldToPaidOrderPg, // fallback demo (si Stripe no está config)
-} from "@/lib/checkout.pg.server";
+import { preparePaymentForHoldPg, consumeHoldToPaidOrderPg } from "@/lib/checkout.pg.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,7 +53,7 @@ export async function POST(req: Request) {
 
   try {
     // 1) “1 pago por hold”: crea/reusa payments (UNIQUE hold_id)
-    const prep = await preparePaymentForHoldPgServer({
+    const prep = await preparePaymentForHoldPg({
       holdId,
       provider: "stripe",
     });

@@ -1,6 +1,6 @@
 // apps/web/src/app/api/demo/reset-checkins/route.ts
 import { NextResponse } from "next/server";
-import { resetCheckinsPgServer } from "@/lib/organizer.pg.server";
+import { resetCheckinsPg } from "@/lib/organizer.pg.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +11,6 @@ export async function POST(req: Request) {
   const eventId = String(body?.eventId ?? "").trim();
   if (!eventId) return NextResponse.json({ ok: false, error: "Falta eventId." }, { status: 400 });
 
-  const data = await resetCheckinsPgServer(eventId);
+  const data = await resetCheckinsPg(eventId);
   return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } });
 }

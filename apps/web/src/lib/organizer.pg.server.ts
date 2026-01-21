@@ -763,3 +763,30 @@ export async function getPaymentsDashboardPgServer(
 
   return { total, totals, rows };
 }
+
+/* =========================
+   ✅ RESET CHECKINS (DEMO)
+   - vuelve tickets USED -> VALID
+   - limpia used_at
+   ========================= */
+
+export async function resetCheckinsPg(eventId: string): Promise<{ ok: true; eventId: string; updated: number }> {
+  const ev = String(eventId ?? "").trim();
+  if (!ev) throw new Error("Falta eventId.");
+
+  const r = await pool.query(
+    `
+    UPDATE tickets
+    SET status = 'VALID',
+        used_at = NULL
+    WHERE event_id = $1
+      AND status = 'USED'
+    `,
+    [ev]
+  );
+
+  return { ok: true, eventId: ev, updated: r.rowCount ?? 0 };
+}
+
+// ✅ alias compatible con tus routes anteriores
+export const resetCheckinsPgServer = resetCheckinsPg;

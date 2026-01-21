@@ -9,6 +9,17 @@ type ConsumeArgs = {
   buyerEmail: string;
 };
 
+type PreparePaymentArgs = {
+  holdId: string;
+  provider: string; // "stripe" | "flow" | ...
+};
+
+type PreparePaymentResult = {
+  payment: any | null;
+  amountCLP: number;
+  eventId: string;
+};
+
 function makeId(prefix: string) {
   return `${prefix}_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
 }
@@ -49,6 +60,155 @@ async function releaseExpiredHoldsTx(client: any) {
 
   await client.query(`UPDATE holds SET status='EXPIRED' WHERE id = ANY($1::text[])`, [ids]);
 }
+
+/* =========================
+   ✅ PREPARE PAYMENT (PG)
+   - 1 pago por hold (UNIQUE hold_id)
+   - calcula amount_clp desde hold_items
+   - idempotente
+   ========================= */
+
+export async function preparePaymentForHoldPg(args: PreparePaymentArgs): Promise<PreparePaymentResult> {
+  const holdId = String(args.holdId ?? "").trim();
+  const provider = String(args.provider ?? "").trim();
+  if (!holdId) throw new Error("Falta holdId.");
+  if (!provider) throw new Error("Falta provider.");
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // limpia expirados “globales” primero (barato y evita estados raros)
+    await releaseExpiredHoldsTx(client);
+
+    // Lock del hold
+    const holdRes = await client.query(
+      `
+      SELECT id, event_id, status, expires_at
+      FROM holds
+      WHERE id = $1
+      FOR UPDATE
+      `,
+      [holdId]
+    );
+
+    if (holdRes.rowCount === 0) throw new Error("Hold no existe.");
+
+    const hold = holdRes.rows[0];
+    const status = String(hold.status || "").toUpperCase();
+
+    if (status !== "ACTIVE") {
+      throw new Error(`Hold no está activo (${status}).`);
+    }
+
+    // expiró justo ahora
+    if (hold.expires_at && new Date(hold.expires_at).getTime() <= Date.now()) {
+      // marcar expirado y liberar held
+      await client.query(`UPDATE holds SET status='EXPIRED' WHERE id=$1`, [holdId]);
+
+      await client.query(
+        `
+        UPDATE ticket_types tt
+        SET held = GREATEST(0, tt.held - x.qty)
+        FROM (
+          SELECT h.event_id, hi.ticket_type_id, SUM(hi.qty)::int AS qty
+          FROM holds h
+          JOIN hold_items hi ON hi.hold_id = h.id
+          WHERE h.id = $1
+          GROUP BY h.event_id, hi.ticket_type_id
+        ) x
+        WHERE tt.event_id = x.event_id AND tt.id = x.ticket_type_id
+        `,
+        [holdId]
+      );
+
+      throw new Error("Hold expiró.");
+    }
+
+    const eventId = String(hold.event_id ?? "").trim();
+    if (!eventId) throw new Error("Hold sin event_id.");
+
+    // total CLP desde hold_items
+    const amountRes = await client.query<{ amount: number }>(
+      `
+      SELECT COALESCE(SUM((unit_price_clp::int) * (qty::int)), 0)::int AS amount
+      FROM hold_items
+      WHERE hold_id = $1
+      `,
+      [holdId]
+    );
+
+    const amountCLP = Number(amountRes.rows?.[0]?.amount ?? 0) || 0;
+    if (amountCLP <= 0) throw new Error("Hold sin monto (hold_items vacío o precios inválidos).");
+
+    // (opcional) eventTitle para payments dashboard (si hold_items/event no lo traen, queda vacío)
+    // No asumimos tabla events aquí para no romper si no existe.
+    const eventTitle = "";
+
+    // Upsert payment por hold (UNIQUE hold_id)
+    const newPaymentId = makeId("pay");
+
+    const payRes = await client.query(
+      `
+      INSERT INTO payments (
+        id, provider, provider_ref,
+        buyer_email, buyer_name,
+        amount_clp, currency,
+        status,
+        created_at, updated_at,
+        paid_at,
+        hold_id, order_id,
+        event_id, event_title
+      )
+      VALUES (
+        $1, $2, NULL,
+        NULL, NULL,
+        $3, 'CLP',
+        'CREATED',
+        NOW(), NOW(),
+        NULL,
+        $4, NULL,
+        $5, $6
+      )
+      ON CONFLICT (hold_id) DO UPDATE
+      SET
+        -- no pisamos un PAID con otra cosa
+        provider = CASE
+          WHEN UPPER(payments.status) IN ('CREATED','PENDING') THEN EXCLUDED.provider
+          ELSE payments.provider
+        END,
+        amount_clp = CASE
+          WHEN UPPER(payments.status) IN ('CREATED','PENDING') THEN EXCLUDED.amount_clp
+          ELSE payments.amount_clp
+        END,
+        currency = CASE
+          WHEN UPPER(payments.status) IN ('CREATED','PENDING') THEN EXCLUDED.currency
+          ELSE payments.currency
+        END,
+        event_id = COALESCE(NULLIF(payments.event_id,''), EXCLUDED.event_id),
+        event_title = COALESCE(NULLIF(payments.event_title,''), EXCLUDED.event_title),
+        updated_at = NOW()
+      RETURNING *
+      `,
+      [newPaymentId, provider, amountCLP, holdId, eventId, eventTitle]
+    );
+
+    const payment = payRes.rows?.[0] ?? null;
+
+    await client.query("COMMIT");
+    return { payment, amountCLP, eventId };
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {}
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+// ✅ alias compatible con tus routes anteriores
+export const preparePaymentForHoldPgServer = preparePaymentForHoldPg;
 
 /**
  * DEMO (sin pago real): consume hold -> order+tickets.
