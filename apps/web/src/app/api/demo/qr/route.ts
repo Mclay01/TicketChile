@@ -23,20 +23,17 @@ export async function GET(req: Request) {
   const token = signTicketToken({ ticketId, eventId });
 
   try {
-    // Si TS se pone quisquilloso con typings, lo tipamos de forma segura.
-    const toBuffer = (QRCode as any).toBuffer as (
-      text: string,
-      opts?: any
-    ) => Promise<Buffer>;
-
-    const png = await toBuffer(token, {
+    const png = await QRCode.toBuffer(token, {
       type: "png",
       width: 260,
       margin: 1,
       errorCorrectionLevel: "M",
     });
 
-    return new NextResponse(png, {
+    // ✅ TS/Next: Buffer -> BodyInit compatible
+    const body = new Uint8Array(png);
+
+    return new NextResponse(body, {
       status: 200,
       headers: {
         "Content-Type": "image/png",
