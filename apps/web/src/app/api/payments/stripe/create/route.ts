@@ -1,3 +1,4 @@
+// apps/web/src/app/api/payments/stripe/create/route.ts
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { pool } from "@/lib/db";
@@ -6,7 +7,7 @@ import { stripe, appBaseUrl } from "@/lib/stripe.server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const HOLD_TTL_MINUTES = 8; // si quieres “sin timer”, sube esto (ej: 30). Yo no lo dejaría infinito.
+const HOLD_TTL_MINUTES = 8;
 
 function json(status: number, payload: any) {
   return NextResponse.json(payload, {
@@ -24,7 +25,6 @@ function makeId(prefix: string) {
 }
 
 function parseItems(raw: any) {
-  // Espera: [{ ticketTypeId: string, qty: number }]
   if (!Array.isArray(raw)) return [];
   const out: { ticketTypeId: string; qty: number }[] = [];
   for (const x of raw) {
@@ -40,13 +40,12 @@ function parseItems(raw: any) {
 function isOpenSession(s: any) {
   const statusOk = s?.status === "open";
   const urlOk = typeof s?.url === "string" && s.url.length > 0;
-  // expires_at viene en segundos (Stripe)
-  const notExpired = typeof s?.expires_at === "number" ? s.expires_at * 1000 > Date.now() : true;
+  const notExpired =
+    typeof s?.expires_at === "number" ? s.expires_at * 1000 > Date.now() : true;
   return statusOk && urlOk && notExpired;
 }
 
 async function releaseExpiredHoldsTx(client: any) {
-  // Expira holds activos vencidos y libera "held" en ticket_types
   const expired = await client.query(`
     WITH expired AS (
       UPDATE holds
@@ -76,6 +75,10 @@ async function releaseExpiredHoldsTx(client: any) {
   );
 }
 
+function normalizeBaseUrl(u: string) {
+  return String(u || "").replace(/\/+$/, "");
+}
+
 export async function POST(req: Request) {
   let body: any;
   try {
@@ -84,7 +87,6 @@ export async function POST(req: Request) {
     return json(400, { ok: false, error: "Body inválido (JSON)." });
   }
 
-  // ✅ Soporta 2 modos:
   // A) pago directo: eventId + items[]
   // B) legado/reintento: holdId
   const holdIdFromBody = pickString(body?.holdId);
@@ -98,7 +100,6 @@ export async function POST(req: Request) {
   if (!buyerEmail.includes("@")) return json(400, { ok: false, error: "buyerEmail inválido." });
 
   if (!holdIdFromBody) {
-    // modo pago directo requiere eventId + items
     if (!eventIdFromBody) return json(400, { ok: false, error: "Falta eventId." });
     if (itemsFromBody.length === 0) return json(400, { ok: false, error: "Faltan items (cart vacío)." });
   }
@@ -107,15 +108,13 @@ export async function POST(req: Request) {
   try {
     await client.query("BEGIN");
 
-    // Limpia expirados (para que held no se pegue)
     await releaseExpiredHoldsTx(client);
 
     let holdId = holdIdFromBody;
     let eventId = eventIdFromBody;
 
-    // 1) Si NO viene holdId => crear hold + hold_items + subir held (invisible)
+    // 1) Si NO viene holdId => crear hold y “reservar” stock (held)
     if (!holdId) {
-      // Lock ticket_types seleccionados para cálculo consistente
       const ids = itemsFromBody.map((x) => x.ticketTypeId);
 
       const ttRes = await client.query(
@@ -132,11 +131,9 @@ export async function POST(req: Request) {
         return json(409, { ok: false, error: "Algún ticket_type_id no existe para este evento." });
       }
 
-      // Mapa por id
       const byId = new Map<string, any>();
       for (const r of ttRes.rows) byId.set(String(r.id), r);
 
-      // Validar disponibilidad
       for (const it of itemsFromBody) {
         const r = byId.get(it.ticketTypeId);
         const capacity = Number(r.capacity) || 0;
@@ -152,7 +149,6 @@ export async function POST(req: Request) {
         }
       }
 
-      // Crear hold
       holdId = makeId("hold");
 
       await client.query(
@@ -163,9 +159,9 @@ export async function POST(req: Request) {
         [holdId, eventId, String(HOLD_TTL_MINUTES)]
       );
 
-      // Insert hold_items + update held
       for (const it of itemsFromBody) {
         const r = byId.get(it.ticketTypeId);
+
         await client.query(
           `
           INSERT INTO hold_items (hold_id, event_id, ticket_type_id, ticket_type_name, unit_price_clp, qty)
@@ -185,7 +181,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2) Lock hold (ya sea existente o recién creado)
+    // 2) Lock hold
     const hRes = await client.query(
       `
       SELECT id, event_id, status, expires_at
@@ -196,9 +192,7 @@ export async function POST(req: Request) {
       [holdId]
     );
 
-    if (hRes.rowCount === 0) {
-      return json(404, { ok: false, error: "Hold no existe." });
-    }
+    if (hRes.rowCount === 0) return json(404, { ok: false, error: "Hold no existe." });
 
     const hold = hRes.rows[0];
     eventId = String(hold.event_id);
@@ -208,12 +202,11 @@ export async function POST(req: Request) {
     }
 
     if (new Date(hold.expires_at).getTime() <= Date.now()) {
-      // expira y corta
       await client.query(`UPDATE holds SET status='EXPIRED' WHERE id=$1`, [holdId]);
       return json(409, { ok: false, error: "Hold expiró." });
     }
 
-    // 3) Items del hold (fuente canónica para Stripe)
+    // 3) Items del hold (canónico)
     const itemsRes = await client.query(
       `
       SELECT ticket_type_name, unit_price_clp, qty
@@ -224,26 +217,22 @@ export async function POST(req: Request) {
       [holdId]
     );
 
-    if (itemsRes.rowCount === 0) {
-      return json(409, { ok: false, error: "Hold no tiene items." });
-    }
+    if (itemsRes.rowCount === 0) return json(409, { ok: false, error: "Hold no tiene items." });
 
-    // 4) Event title canónico
+    // 4) Event title
     const evRes = await client.query(`SELECT title FROM events WHERE id=$1`, [eventId]);
     const eventTitle = pickString(evRes.rows?.[0]?.title) || `Evento ${eventId}`;
 
-    // 5) Total CLP + line_items
+    // 5) line_items + total
     const lineItems = itemsRes.rows.map((r: any) => {
       const name = String(r.ticket_type_name);
-      const unit = Number(r.unit_price_clp) || 0;
-      const qty = Number(r.qty) || 0;
+      const unit = Math.round(Number(r.unit_price_clp) || 0); // CLP entero
+      const qty = Math.floor(Number(r.qty) || 0);
       return { name, unit, qty };
     });
 
     const amountClp = lineItems.reduce((acc, x) => acc + x.unit * x.qty, 0);
-    if (!Number.isFinite(amountClp) || amountClp <= 0) {
-      return json(409, { ok: false, error: "Monto inválido." });
-    }
+    if (!Number.isFinite(amountClp) || amountClp <= 0) return json(409, { ok: false, error: "Monto inválido." });
 
     // 6) UPSERT payment (1 pago por hold)
     const newPaymentId = makeId("pay");
@@ -269,13 +258,7 @@ export async function POST(req: Request) {
 
     if (String(payment.status) === "PAID") {
       await client.query("COMMIT");
-      return json(200, {
-        ok: true,
-        status: "PAID",
-        holdId,
-        paymentId: String(payment.id),
-        checkoutUrl: "",
-      });
+      return json(200, { ok: true, status: "PAID", holdId, paymentId: String(payment.id), checkoutUrl: "" });
     }
 
     // 7) Reusar session si existe y está OPEN
@@ -284,9 +267,7 @@ export async function POST(req: Request) {
       try {
         const s = await stripe.checkout.sessions.retrieve(existingSessionId);
         if (isOpenSession(s)) {
-          await client.query(`UPDATE payments SET status='PENDING', updated_at=NOW() WHERE id=$1`, [
-            payment.id,
-          ]);
+          await client.query(`UPDATE payments SET status='PENDING', updated_at=NOW() WHERE id=$1`, [payment.id]);
           await client.query("COMMIT");
           return json(200, {
             ok: true,
@@ -298,12 +279,12 @@ export async function POST(req: Request) {
           });
         }
       } catch {
-        // si Stripe retrieve falla, creamos sesión nueva
+        // si falla retrieve, creamos sesión nueva
       }
     }
 
-    // 8) Crear nueva Checkout Session (success a /checkout/success)
-    const base = appBaseUrl();
+    // 8) Crear Checkout Session
+    const base = normalizeBaseUrl(appBaseUrl());
     const successUrl = `${base}/checkout/confirm?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${base}/checkout/${encodeURIComponent(eventId)}?canceled=1`;
 
@@ -328,14 +309,12 @@ export async function POST(req: Request) {
           quantity: x.qty,
           price_data: {
             currency: "clp",
-            unit_amount: x.unit, // CLP (0-decimal)
+            unit_amount: x.unit, // CLP 0-decimal
             product_data: { name: `${eventTitle} — ${x.name}` },
           },
         })),
       },
-      {
-        idempotencyKey: `hold:${holdId}:payment:${payment.id}`,
-      }
+      { idempotencyKey: `hold:${holdId}:payment:${payment.id}` }
     );
 
     // 9) Guardar session.id + status
