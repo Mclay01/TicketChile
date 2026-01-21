@@ -22,6 +22,6 @@ export async function POST(req: Request) {
   const holdId = String(body?.holdId ?? "").trim();
   if (!holdId) return json(400, { ok: false, error: "Falta holdId." });
 
-  const res = releaseHoldServer(holdId);
-  return json(200, { ok: true, ...res });
+  const res = await releaseHoldServer(holdId);
+  return json(200, res);
 }
