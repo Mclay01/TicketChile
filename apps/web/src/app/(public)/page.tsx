@@ -1,5 +1,5 @@
 ﻿import HomeHeroCarousel from "@/components/HomeHeroCarousel";
-import EventosFilters from "@/components/EventosFilters";
+import EventosFilters from "@/components/EventosFiltersSuspense";
 import EventCard from "@/components/EventCard";
 import { EVENTS } from "@/lib/events";
 

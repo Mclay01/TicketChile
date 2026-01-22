@@ -1,5 +1,5 @@
 ﻿import Link from "next/link";
-import EventosFilters from "@/components/EventosFilters";
+import EventosFilters from "@/components/EventosFiltersSuspense";
 import EventCard from "@/components/EventCard";
 import { EVENTS, eventPriceFrom } from "@/lib/events";
 
@@ -79,11 +79,10 @@ export default async function EventosPage({ searchParams }: Props) {
           <p className="text-sm text-white/55">Descubre los mejores eventos en Chile</p>
         </div>
 
-        {/* Barra filtros (una sola pieza, sin “Volver”) */}
+        {/* Barra filtros */}
         <EventosFilters cities={cities} />
 
-
-        {/* Conteo chico (mock lo deja sutil) */}
+        {/* Conteo chico */}
         <div className="text-xs text-white/45">
           Mostrando <span className="text-white/75 font-semibold">{shown}</span> de{" "}
           <span className="text-white/75 font-semibold">{total}</span>
@@ -108,7 +107,7 @@ export default async function EventosPage({ searchParams }: Props) {
               ))}
             </section>
 
-            {/* Paginación estilo mock (súper discreta) */}
+            {/* Paginación */}
             <div className="flex items-center justify-between gap-3 pt-2">
               <Link
                 href={hrefForPage(page - 1)}
