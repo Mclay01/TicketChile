@@ -75,47 +75,53 @@ export default function HomeHeroCarousel({
   };
 
   return (
-    <section className="rounded-[32px] border border-white/10 bg-white/5 p-1">
-      <div className="relative overflow-hidden rounded-[28px] ring-1 ring-white/10">
+    // ✅ FULL BLEED: ocupa todo el ancho de la página sin borde/marco
+    <section className="-mx-6 md:-mx-10">
+      <div className="relative overflow-hidden">
         <div
           className="flex w-full"
           style={trackStyle}
           onTransitionEnd={onTransitionEnd}
         >
           {slides.map((e, i) => {
-            const src =
+            const desktopSrc =
+              (e as any)?.bannerDesktop ||
               (e as any)?.image ||
-              "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1800";
+              "/events/fiesta-verano.jpg";
+
+            const mobileSrc =
+              (e as any)?.bannerMobile ||
+              (e as any)?.bannerDesktop ||
+              desktopSrc;
 
             return (
               <div key={`${e.id}_${i}`} className="w-full shrink-0">
-                {/* ✅ banner clickeable al evento */}
                 <Link
                   href={`/eventos/${e.slug}`}
                   aria-label={`Ver evento: ${e.title}`}
                   className="block h-full w-full"
                 >
-                  <div className="relative h-[300px] md:h-[360px] lg:h-[420px]">
-                    <img
-                      src={src}
-                      alt={e.title}
-                      className="h-full w-full object-cover"
-                      loading={i === 0 ? "eager" : "lazy"}
-                      draggable={false}
-                    />
+                  {/* ✅ ratio tipo Passline */}
+                  <div className="relative aspect-[800/400] md:aspect-[1400/450]">
+                    <picture className="absolute inset-0">
+                      <source media="(max-width: 767px)" srcSet={mobileSrc} />
+                      <img
+                        src={desktopSrc}
+                        alt={e.title}
+                        className="h-full w-full object-cover"
+                        loading={i === 0 ? "eager" : "lazy"}
+                        draggable={false}
+                      />
+                    </picture>
 
-                    {/* leve “cinema” sin texto encima */}
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/15" />
+                    {/* leve overlay para contraste */}
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
                   </div>
                 </Link>
               </div>
             );
           })}
         </div>
-
-        {/* fade suave en bordes (no bloquea clicks) */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-black/30 to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-black/30 to-transparent" />
       </div>
     </section>
   );

@@ -20,9 +20,10 @@ export default function HomePage() {
     // ✅ Sin background acá: usamos SOLO el fondo global
     <div className="space-y-10">
       {/* ✅ Banner grande arriba (sube para ocupar el espacio donde antes iba el texto) */}
-      <div className="-mt-6 md:-mt-8">
+      <div className="-mt-10">
         <HomeHeroCarousel events={featured} />
       </div>
+
 
       {/* ✅ Buscador = mismo componente que /eventos */}
       <section className="glass-card rounded-3xl p-4 md:p-5">
