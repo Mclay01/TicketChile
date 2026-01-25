@@ -25,62 +25,62 @@ export type Event = {
 export const EVENTS: Event[] = [
   {
     id: "evt_001",
-    slug: "techno-noche-santiago",
-    title: "Techno Noche Santiago",
-    city: "Santiago",
-    venue: "Centro X",
-    dateISO: "2026-01-17T23:00:00-03:00",
-    image:
-      "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=900",
-    description: `Una noche de techno con visuales inmersivos y sonido de verdad (del que te vibra el pecho, no el del parlante Bluetooth).
+    slug: "fiesta-verano",
+    title: "Fiesta Verano",
+    city: "Viña del Mar",
+    venue: "Fiesta en la Playa (por confirmar)",
+    dateISO: "2026-01-15T01:00:00-03:00",
+    image: "/events/fiesta-verano.jpg",
+    description: `DJ • Tragos • Música
 
-Line-up: DJs invitados + warm-up local. Producción con luces, pantallas y barra completa.
-
+Entrada general: $5.500
 Acceso por QR. +18. Cupos limitados.`,
     ticketTypes: [
-      { id: "tt_preventa", name: "Preventa", priceCLP: 15000, maxPerOrder: 10 },
-      { id: "tt_general", name: "General", priceCLP: 20000, maxPerOrder: 10 },
-      { id: "tt_vip", name: "VIP", priceCLP: 35000, maxPerOrder: 6 },
+      { id: "tt_general", name: "Entrada General", priceCLP: 5500, maxPerOrder: 10 },
     ],
   },
   {
     id: "evt_002",
-    slug: "urbano-vibes-valpo",
-    title: "Urbano Vibes",
-    city: "Valparaíso",
-    venue: "Muelle Barón",
-    dateISO: "2026-02-02T20:00:00-03:00",
-    image:
-      "https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=900",
-    description: `Reggaetón, urbano y hits para cantar a grito pelado (con dignidad… o sin ella).
+    slug: "sunset-party-la-frida",
+    title: "La Frida — Sunset Party",
+    city: "Santiago",
+    venue: "Disco Bar La Frida",
+    dateISO: "2026-04-22T17:00:00-03:00",
+    image: "/events/sunset-party.jpg",
+    description: `Sunset + After Party
 
-Acceso por QR, control rápido en puerta y ambiente frente al mar.
+Banda: Ojo Dulce
+DJ: Chiaki Sato
+After Party: Disco Fauget
 
-+18. Producción full y barras activas toda la noche.`,
+Vestimenta: Vibras Tropicales
+Preventa: $10.000 (hasta el 21 de abril)`,
     ticketTypes: [
-      { id: "tt_preventa", name: "Preventa", priceCLP: 12000, maxPerOrder: 10 },
-      { id: "tt_general", name: "General", priceCLP: 16000, maxPerOrder: 10 },
-      { id: "tt_vip", name: "VIP", priceCLP: 30000, maxPerOrder: 6 },
+      { id: "tt_preventa", name: "Preventa", priceCLP: 10000, maxPerOrder: 10 },
+      { id: "tt_general", name: "General", priceCLP: 12000, maxPerOrder: 10 },
+      { id: "tt_vip", name: "VIP", priceCLP: 18000, maxPerOrder: 6 },
     ],
   },
   {
     id: "evt_003",
-    slug: "festival-summer-chile",
-    title: "Festival Summer Chile",
-    city: "Viña del Mar",
-    venue: "Quinta Vergara",
-    dateISO: "2026-02-15T18:00:00-03:00",
-    image:
-      "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg?auto=compress&cs=tinysrgb&w=900",
-    description: `Festival al aire libre con shows en vivo, foodtrucks y zonas de descanso.
+    slug: "noche-de-rock",
+    title: "Noche de Rock",
+    city: "Santiago",
+    venue: "Calle Cualquiera 123",
+    dateISO: "2026-06-20T21:00:00-03:00",
+    image: "/events/noche-rock.jpg",
+    description: `Rock en vivo, volumen legalmente cuestionable y energía real.
 
-Entrada por QR. Check-in en puerta. Producción pensada para que lo pases bien sin filas eternas.
+Bandas:
+• Borcelle
+• Elena Paula
+• La Frida
+• Ensigna
 
-Cupos limitados. Preventa disponible hasta agotar stock.`,
+Entrada general: $12.000
+Acceso por QR. +18.`,
     ticketTypes: [
-      { id: "tt_preventa", name: "Preventa", priceCLP: 25000, maxPerOrder: 10 },
-      { id: "tt_general", name: "General", priceCLP: 32000, maxPerOrder: 10 },
-      { id: "tt_vip", name: "VIP", priceCLP: 60000, maxPerOrder: 6 },
+      { id: "tt_general", name: "Entrada General", priceCLP: 12000, maxPerOrder: 10 },
     ],
   },
 ];
@@ -172,7 +172,10 @@ export function eventPriceFrom(event: any) {
   const available = tts.filter((t: any) => remainingFor(t) > 0);
   const list = available.length ? available : tts;
 
-  const prices = list.map((t: any) => Number(t?.priceCLP ?? t?.price ?? 0)).filter((n: number) => Number.isFinite(n));
+  const prices = list
+    .map((t: any) => Number(t?.priceCLP ?? t?.price ?? 0))
+    .filter((n: number) => Number.isFinite(n));
+
   return prices.length ? Math.min(...prices) : 0;
 }
 
