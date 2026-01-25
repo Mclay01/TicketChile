@@ -1,5 +1,5 @@
-﻿import HomeHeroCarousel from "@/components/HomeHeroCarousel";
-import EventosFilters from "@/components/EventosFiltersSuspense";
+﻿import HeroBanner from "@/components/HeroBanner";
+import EventosFilters from "@/components/EventosFilters";
 import EventCard from "@/components/EventCard";
 import { EVENTS } from "@/lib/events";
 
@@ -8,29 +8,26 @@ export default function HomePage() {
     a.localeCompare(b, "es")
   );
 
-  const featured = [...EVENTS]
-    .sort((a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime())
-    .slice(0, 6);
-
   const gridEvents = [...EVENTS]
     .sort((a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime())
     .slice(0, 9);
 
   return (
-    // ✅ Sin background acá: usamos SOLO el fondo global
     <div className="space-y-10">
-      {/* ✅ Banner grande arriba (sube para ocupar el espacio donde antes iba el texto) */}
-      <div className="-mt-10">
-        <HomeHeroCarousel events={featured} />
-      </div>
+      {/* ✅ HERO full-bleed + responsive (desktop/móvil) */}
+      <HeroBanner
+        href="/eventos" // o a un evento específico: `/eventos/${EVENTS[0].slug}`
+        desktopSrc="/events/hero-1400x450.jpg"
+        mobileSrc="/events/hero-800x400.jpg"
+        alt="Banner principal de eventos"
+      />
 
-
-      {/* ✅ Buscador = mismo componente que /eventos */}
+      {/* Buscador */}
       <section className="glass-card rounded-3xl p-4 md:p-5">
         <EventosFilters cities={cities} />
       </section>
 
-      {/* Grid con las MISMAS tarjetas que /eventos */}
+      {/* Grid */}
       <section className="space-y-4">
         <div className="flex items-end justify-between">
           <div>
