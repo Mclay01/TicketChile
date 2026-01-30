@@ -17,7 +17,16 @@ export type Event = {
   city: string;
   venue: string;
   dateISO: string;
+
+  // Poster vertical (cards + detalle)
   image: string;
+
+  // ✅ Banner horizontal (home hero): desktop + mobile
+  hero?: {
+    desktop: string;
+    mobile: string;
+  };
+
   description: string;
   ticketTypes: TicketType[];
 };
@@ -27,61 +36,55 @@ export const EVENTS: Event[] = [
     id: "evt_001",
     slug: "fiesta-verano",
     title: "Fiesta Verano",
-    city: "Viña del Mar",
-    venue: "Fiesta en la Playa (por confirmar)",
+    city: "Santiago",
+    venue: "Ubicación por confirmar",
     dateISO: "2026-01-15T01:00:00-03:00",
     image: "/events/fiesta-verano.jpg",
-    description: `DJ • Tragos • Música
+    hero: {
+      desktop: "/banners/1400x450/fiesta-verano.jpg",
+      mobile: "/banners/800x400/fiesta-verano.jpg",
+    },
+    description: `DJ – Tragos – Música.
 
-Entrada general: $5.500
 Acceso por QR. +18. Cupos limitados.`,
-    ticketTypes: [
-      { id: "tt_general", name: "Entrada General", priceCLP: 5500, maxPerOrder: 10 },
-    ],
+    ticketTypes: [{ id: "tt_general", name: "Entrada", priceCLP: 5500, maxPerOrder: 10 }],
   },
   {
     id: "evt_002",
-    slug: "sunset-party-la-frida",
+    slug: "sunset-party",
     title: "La Frida — Sunset Party",
     city: "Santiago",
     venue: "Disco Bar La Frida",
     dateISO: "2026-04-22T17:00:00-03:00",
     image: "/events/sunset-party.jpg",
-    description: `Sunset + After Party
+    hero: {
+      desktop: "/banners/1400x450/sunset-party.jpg",
+      mobile: "/banners/800x400/sunset-party.jpg",
+    },
+    description: `Sunset + after party.
 
-Banda: Ojo Dulce
-DJ: Chiaki Sato
-After Party: Disco Fauget
-
-Vestimenta: Vibras Tropicales
-Preventa: $10.000 (hasta el 21 de abril)`,
+Acceso por QR. +18. Producción completa.`,
     ticketTypes: [
       { id: "tt_preventa", name: "Preventa", priceCLP: 10000, maxPerOrder: 10 },
       { id: "tt_general", name: "General", priceCLP: 12000, maxPerOrder: 10 },
-      { id: "tt_vip", name: "VIP", priceCLP: 18000, maxPerOrder: 6 },
     ],
   },
   {
     id: "evt_003",
-    slug: "noche-de-rock",
+    slug: "noche-rock",
     title: "Noche de Rock",
     city: "Santiago",
     venue: "Calle Cualquiera 123",
     dateISO: "2026-06-20T21:00:00-03:00",
     image: "/events/noche-rock.jpg",
-    description: `Rock en vivo, volumen legalmente cuestionable y energía real.
+    hero: {
+      desktop: "/banners/1400x450/noche-rock.jpg",
+      mobile: "/banners/800x400/noche-rock.jpg",
+    },
+    description: `Bandas en vivo + energía de la buena.
 
-Bandas:
-• Borcelle
-• Elena Paula
-• La Frida
-• Ensigna
-
-Entrada general: $12.000
 Acceso por QR. +18.`,
-    ticketTypes: [
-      { id: "tt_general", name: "Entrada General", priceCLP: 12000, maxPerOrder: 10 },
-    ],
+    ticketTypes: [{ id: "tt_general", name: "Entrada General", priceCLP: 12000, maxPerOrder: 10 }],
   },
 ];
 

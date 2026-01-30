@@ -4,7 +4,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   const year = new Date().getFullYear();
 
   return (
-    <div className="min-h-screen text-white">
+    <div className="min-h-screen text-white overflow-x-hidden">
       <SiteHeader />
 
       <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>

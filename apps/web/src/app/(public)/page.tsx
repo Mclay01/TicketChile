@@ -13,14 +13,18 @@ export default function HomePage() {
     .slice(0, 9);
 
   return (
-    <div className="space-y-10">
-      {/* ✅ HERO full-bleed + responsive (desktop/móvil) */}
-      <HeroBanner
-        href="/eventos" // o a un evento específico: `/eventos/${EVENTS[0].slug}`
-        desktopSrc="/events/hero-1400x450.jpg"
-        mobileSrc="/events/hero-800x400.jpg"
-        alt="Banner principal de eventos"
-      />
+    <div className="space-y-8">
+      {/* ✅ HERO full-bleed pegado al header (tipo Passline) */}
+      <div className="-mt-10 md:-mt-12">
+        <HeroBanner
+          href="/eventos"
+          desktopSrc="/events/hero-1400x450.jpg"
+          mobileSrc="/events/hero-800x400.jpg"
+          alt="Banner principal de eventos"
+          fullBleed
+          priority
+        />
+      </div>
 
       {/* Buscador */}
       <section className="glass-card rounded-3xl p-4 md:p-5">
