@@ -16,23 +16,11 @@ function normalizeBaseUrl(u: string) {
   return String(u || "").replace(/\/+$/, "");
 }
 
-// Base URL robusta (prod/local) sin depender de Stripe
+// ✅ Base URL robusta (APP_BASE_URL manda; si no, host actual)
 function baseUrlFromRequest(req: Request) {
-  // 1) Si defines APP_BASE_URL en prod, esto manda.
   const envBase = normalizeBaseUrl(String(process.env.APP_BASE_URL || "").trim());
   if (envBase) return envBase;
 
-  // 2) Preferir headers proxy (Vercel / reverse proxy)
-  const xfProto = (req.headers.get("x-forwarded-proto") || "").split(",")[0].trim();
-  const xfHost = (req.headers.get("x-forwarded-host") || "").split(",")[0].trim();
-  const host = xfHost || req.headers.get("host") || "";
-
-  if (host) {
-    const proto = xfProto || "https";
-    return normalizeBaseUrl(`${proto}://${host}`);
-  }
-
-  // 3) Fallback: URL del request
   const u = new URL(req.url);
   return normalizeBaseUrl(`${u.protocol}//${u.host}`);
 }
@@ -50,7 +38,6 @@ function webpayOptions(): Options {
     return new Options(commerceCode, apiKey, env);
   }
 
-  // Integración: usa defaults oficiales del SDK si no defines env vars
   return new Options(
     process.env.WEBPAY_COMMERCE_CODE || IntegrationCommerceCodes.WEBPAY_PLUS,
     process.env.WEBPAY_API_KEY || IntegrationApiKeys.WEBPAY,
@@ -58,32 +45,12 @@ function webpayOptions(): Options {
   );
 }
 
-async function readWebpayParams(req: Request) {
-  const url = new URL(req.url);
-
-  // 1) Querystring (tu caso actual: ?token_ws=...)
-  let tokenWs = String(url.searchParams.get("token_ws") || "").trim();
-  let tbkToken = String(url.searchParams.get("TBK_TOKEN") || "").trim();
-  let tbkOrder = String(url.searchParams.get("TBK_ORDEN_COMPRA") || "").trim();
-
-  // 2) FormData (Transbank también puede postear)
-  if (req.method === "POST") {
-    try {
-      const fd = await req.formData();
-      tokenWs = tokenWs || String(fd.get("token_ws") || "").trim();
-      tbkToken = tbkToken || String(fd.get("TBK_TOKEN") || "").trim();
-      tbkOrder = tbkOrder || String(fd.get("TBK_ORDEN_COMPRA") || "").trim();
-    } catch {
-      // nada: si no hay form-data, seguimos con querystring
-    }
-  }
-
-  return { tokenWs, tbkToken, tbkOrder };
-}
-
-async function handler(req: Request) {
+async function handleReturn(req: Request, payload: { tokenWs: string; tbkToken: string; tbkOrder: string }) {
   const base = baseUrlFromRequest(req);
-  const { tokenWs, tbkToken, tbkOrder } = await readWebpayParams(req);
+
+  const tokenWs = (payload.tokenWs || "").trim();
+  const tbkToken = (payload.tbkToken || "").trim();
+  const tbkOrder = (payload.tbkOrder || "").trim();
 
   // Flujos de anulación / abandono (Transbank envía TBK_*)
   // Si no viene token_ws o viene TBK_TOKEN => cancelado
@@ -104,33 +71,20 @@ async function handler(req: Request) {
         client.release();
       }
 
-      const ev = await pool
-        .query(`SELECT event_id FROM payments WHERE id=$1`, [tbkOrder])
-        .catch(() => null);
-
+      const ev = await pool.query(`SELECT event_id FROM payments WHERE id=$1`, [tbkOrder]).catch(() => null);
       const eventId = ev?.rows?.[0]?.event_id ? String(ev.rows[0].event_id) : "";
-      return NextResponse.redirect(
-        `${base}/checkout/${encodeURIComponent(eventId || "")}?canceled=1`,
-        303
-      );
+      return NextResponse.redirect(`${base}/checkout/${encodeURIComponent(eventId || "")}?canceled=1`);
     }
 
-    return NextResponse.redirect(`${base}/checkout?canceled=1`, 303);
+    return NextResponse.redirect(`${base}/checkout?canceled=1`);
   }
 
   // Commit (servidor)
   const tx = new WebpayPlus.Transaction(webpayOptions());
+  const resp = await tx.commit(tokenWs);
 
-  let resp: any;
-  try {
-    resp = await tx.commit(tokenWs);
-  } catch (e: any) {
-    return new NextResponse(`webpay commit error: ${String(e?.message || e)}`, { status: 500 });
-  }
-
-  // resp.response_code === 0 => aprobado
-  const approved = Number(resp?.response_code) === 0;
-  const paymentId = String(resp?.buy_order || "").trim();
+  const approved = Number((resp as any)?.response_code) === 0;
+  const paymentId = String((resp as any)?.buy_order || "").trim();
 
   if (!paymentId) {
     return new NextResponse("missing buy_order from webpay commit", { status: 500 });
@@ -159,22 +113,16 @@ async function handler(req: Request) {
 
     if (!approved) {
       await client.query(
-        `UPDATE payments
-         SET status='CANCELLED', updated_at=NOW(), provider_ref=COALESCE(provider_ref,$2)
-         WHERE id=$1`,
+        `UPDATE payments SET status='CANCELLED', updated_at=NOW(), provider_ref=COALESCE(provider_ref,$2) WHERE id=$1`,
         [paymentId, tokenWs]
       );
       await client.query("COMMIT");
 
       const evId = await client.query(`SELECT event_id FROM payments WHERE id=$1`, [paymentId]);
       const eventId = evId.rows?.[0]?.event_id ? String(evId.rows[0].event_id) : "";
-      return NextResponse.redirect(
-        `${base}/checkout/${encodeURIComponent(eventId)}?canceled=1`,
-        303
-      );
+      return NextResponse.redirect(`${base}/checkout/${encodeURIComponent(eventId)}?canceled=1`);
     }
 
-    // aprobado
     await client.query(
       `
       UPDATE payments
@@ -187,7 +135,6 @@ async function handler(req: Request) {
       [paymentId, tokenWs]
     );
 
-    // Finalizar hold -> order + tickets (idempotente)
     await finalizePaidHoldToOrderPgTx(client, {
       holdId: String(p.hold_id),
       eventTitle: String(p.event_title || ""),
@@ -206,18 +153,25 @@ async function handler(req: Request) {
     client.release();
   }
 
-  // Confirm en UI canónica por payment_id
-  return NextResponse.redirect(
-    `${base}/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}`,
-    303
-  );
+  // ✅ confirm canónico por payment_id
+  return NextResponse.redirect(`${base}/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}`);
 }
 
-// ✅ CLAVE: Transbank te está llamando por GET con token_ws en query
-export async function GET(req: Request) {
-  return handler(req);
-}
-
+// ✅ Webpay puede llegar por POST (normal) o por GET (cuando te redirige con token_ws en query)
 export async function POST(req: Request) {
-  return handler(req);
+  const fd = await req.formData();
+  return handleReturn(req, {
+    tokenWs: String(fd.get("token_ws") || ""),
+    tbkToken: String(fd.get("TBK_TOKEN") || ""),
+    tbkOrder: String(fd.get("TBK_ORDEN_COMPRA") || ""),
+  });
+}
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  return handleReturn(req, {
+    tokenWs: String(searchParams.get("token_ws") || ""),
+    tbkToken: String(searchParams.get("TBK_TOKEN") || ""),
+    tbkOrder: String(searchParams.get("TBK_ORDEN_COMPRA") || ""),
+  });
 }

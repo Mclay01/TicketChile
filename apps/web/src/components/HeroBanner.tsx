@@ -2,10 +2,18 @@
 import Link from "next/link";
 
 type Props = {
-  href?: string;              // opcional: link a /eventos/...
-  desktopSrc: string;         // /events/banner-1400x450.jpg
-  mobileSrc: string;          // /events/banner-800x400.jpg
+  href?: string;
+  desktopSrc: string;
+  mobileSrc: string;
   alt: string;
+
+  fullBleed?: boolean; // edge-to-edge real
+  priority?: boolean; // carga rápida
+  height?: {
+    base?: number; // px
+    md?: number;
+    lg?: number;
+  };
 };
 
 export default function HeroBanner({
@@ -13,26 +21,52 @@ export default function HeroBanner({
   desktopSrc,
   mobileSrc,
   alt,
+  fullBleed = true,
+  priority = true,
+  height = { base: 220, md: 320, lg: 380 },
 }: Props) {
   const Wrapper: any = href ? Link : "div";
   const wrapperProps = href ? { href, "aria-label": alt } : {};
 
+  // ✅ Full-bleed estable (evita el “scroll horizontal fantasma”)
+  const sectionClass = fullBleed
+    ? "relative left-1/2 -translate-x-1/2 w-[100vw] overflow-hidden"
+    : "relative w-full overflow-hidden";
+
+  const hBase = height.base ?? 220;
+  const hMd = height.md ?? 320;
+  const hLg = height.lg ?? 380;
+
   return (
-    <section className="relative w-screen left-1/2 right-1/2 -mx-[50vw]">
-      {/* full-bleed real: se sale del max-w */}
+    <section
+      className={sectionClass}
+      style={
+        {
+          // CSS vars para alturas responsivas (sin styled-jsx)
+          ["--hb-h-base" as any]: `${hBase}px`,
+          ["--hb-h-md" as any]: `${hMd}px`,
+          ["--hb-h-lg" as any]: `${hLg}px`,
+        } as React.CSSProperties
+      }
+    >
       <Wrapper {...wrapperProps} className="block w-full">
         <picture>
-          {/* Mobile primero */}
-          <source media="(max-width: 768px)" srcSet={mobileSrc} />
-          {/* Desktop por defecto */}
+          {/* ✅ Mobile <= 767px (Tailwind md arranca en 768) */}
+          <source media="(max-width: 767px)" srcSet={mobileSrc} />
+
           <img
             src={desktopSrc}
             alt={alt}
-            className="block w-full h-[220px] md:h-[320px] lg:h-[380px] object-cover select-none"
+            className={[
+              "block w-full select-none object-cover",
+              "h-[var(--hb-h-base)] md:h-[var(--hb-h-md)] lg:h-[var(--hb-h-lg)]",
+            ].join(" ")}
             draggable={false}
-            loading="eager"
+            loading={priority ? "eager" : "lazy"}
+            // Si TS se pone exquisito con fetchPriority, lo dejamos tipado seguro
+            fetchPriority={priority ? ("high" as const) : ("auto" as const)}
+            decoding="async"
           />
-
         </picture>
       </Wrapper>
     </section>

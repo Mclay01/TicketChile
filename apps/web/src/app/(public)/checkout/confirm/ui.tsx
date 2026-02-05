@@ -18,6 +18,7 @@ type StatusPayload = {
     id: string;
     holdId: string;
     orderId: string;
+    provider?: string;
     status: string;
     buyerName: string;
     buyerEmail: string;
@@ -31,18 +32,25 @@ function formatCLP(n: number) {
   return new Intl.NumberFormat("es-CL").format(n);
 }
 
-const POLL_MS = 5000; // ⬅️ más tiempo entre banners... digo, polls 😄
+const POLL_MS = 5000;
 const TIMEOUT_MS = 45_000;
 
 export default function CheckoutConfirmClient() {
   const sp = useSearchParams();
   const router = useRouter();
 
+  // ✅ Nuevo: payment_id (Webpay/Fintoc)
+  const paymentId = (sp.get("payment_id") ?? "").trim();
+
+  // Legacy: por si quedó un link viejo de Stripe
   const sessionId = (sp.get("session_id") ?? "").trim();
 
   const endpoint = useMemo(() => {
-    return `/api/payments/stripe/status?session_id=${encodeURIComponent(sessionId)}`;
-  }, [sessionId]);
+    if (paymentId) return `/api/payments/status?payment_id=${encodeURIComponent(paymentId)}`;
+    // legacy (si todavía exists tu stripe/status)
+    if (sessionId) return `/api/payments/stripe/status?session_id=${encodeURIComponent(sessionId)}`;
+    return "";
+  }, [paymentId, sessionId]);
 
   const [data, setData] = useState<StatusPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,6 +91,13 @@ export default function CheckoutConfirmClient() {
       if (!silent) setLoading(true);
       if (!silent) setErr(null);
 
+      if (!endpoint) {
+        setErr("Falta payment_id o session_id en la URL.");
+        setData(null);
+        setLoading(false);
+        return null;
+      }
+
       try {
         const r = await fetch(endpoint, { cache: "no-store", signal: opts?.signal });
         const j = await r.json().catch(() => null);
@@ -102,10 +117,10 @@ export default function CheckoutConfirmClient() {
     [endpoint]
   );
 
-  // ✅ Poll “single-threaded” (sin overlap, sin multiplicarse)
+  // ✅ Poll “single-threaded”
   const poll = useCallback(async () => {
     if (!aliveRef.current) return;
-    if (!sessionId) return;
+    if (!endpoint) return;
 
     if (inFlightRef.current) {
       clearTimer();
@@ -151,9 +166,9 @@ export default function CheckoutConfirmClient() {
 
     clearTimer();
     timerRef.current = window.setTimeout(poll, POLL_MS);
-  }, [clearTimer, loadOnce, sessionId, stopAll]); // ✅ NO incluir "poll" acá
+  }, [clearTimer, loadOnce, endpoint, stopAll]);
 
-  // Start / Reset cuando cambia sessionId
+  // Start / Reset cuando cambia paymentId/sessionId
   useEffect(() => {
     aliveRef.current = true;
 
@@ -162,8 +177,8 @@ export default function CheckoutConfirmClient() {
     setSendMsg(null);
     setElapsed(0);
 
-    if (!sessionId) {
-      setErr("Falta session_id en la URL.");
+    if (!paymentId && !sessionId) {
+      setErr("Falta payment_id o session_id en la URL.");
       setLoading(false);
       setPolling(false);
       return () => {
@@ -185,7 +200,7 @@ export default function CheckoutConfirmClient() {
       aliveRef.current = false;
       stopAll();
     };
-  }, [sessionId, loadOnce, clearTimer, poll, stopAll]);
+  }, [paymentId, sessionId, loadOnce, clearTimer, poll, stopAll]);
 
   async function resendEmail() {
     if (!data?.payment?.orderId || !data?.payment?.buyerEmail) return;
@@ -240,6 +255,16 @@ export default function CheckoutConfirmClient() {
   }
 
   const ready = Boolean(data?.tickets?.length);
+  const provider = String(data?.payment?.provider || "").toLowerCase();
+  const statusUpper = String(data?.payment?.status || "").toUpperCase();
+
+  const waitingText = (() => {
+    if (!data?.payment) return "Estamos esperando confirmación para emitir tus tickets.";
+    if (provider === "webpay") return "Webpay confirmó el pago; estamos emitiendo tus tickets.";
+    if (provider === "fintoc") return "Estamos esperando confirmación de la transferencia para emitir tus tickets.";
+    if (provider === "transfer") return "Estamos procesando la transferencia para emitir tus tickets.";
+    return "Estamos procesando tu pago y emitiendo tickets.";
+  })();
 
   return (
     <div className="space-y-6">
@@ -248,9 +273,7 @@ export default function CheckoutConfirmClient() {
           {ready ? "Compra confirmada" : "Confirmando tu compra…"}
         </h1>
         <p className="text-sm text-white/60">
-          {ready
-            ? "Tus tickets ya fueron emitidos."
-            : "Stripe ya cobró; estamos esperando el webhook para emitir tickets."}
+          {ready ? "Tus tickets ya fueron emitidos." : waitingText}
         </p>
       </div>
 
@@ -277,9 +300,7 @@ export default function CheckoutConfirmClient() {
 
               <div className="text-right">
                 <p className="text-xs text-white/50">Total</p>
-                <p className="text-lg font-bold text-white">
-                  ${formatCLP(data.payment.amountClp)}
-                </p>
+                <p className="text-lg font-bold text-white">${formatCLP(data.payment.amountClp)}</p>
                 <p className="mt-1 text-xs text-white/50">
                   Estado: <span className="text-white/80">{data.payment.status}</span>
                 </p>
@@ -299,6 +320,14 @@ export default function CheckoutConfirmClient() {
                     "Si no aparecen, refresca en unos segundos."
                   )}
                 </p>
+
+                {statusUpper === "CANCELLED" || statusUpper === "FAILED" ? (
+                  <p className="mt-2 text-sm text-white/70">
+                    Parece que el pago quedó{" "}
+                    <span className="text-white/90 font-semibold">{statusUpper}</span>. Si fue un
+                    error, vuelve al evento e intenta nuevamente.
+                  </p>
+                ) : null}
               </div>
             ) : null}
 

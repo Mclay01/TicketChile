@@ -21,7 +21,7 @@ export type Event = {
   // Poster vertical (cards + detalle)
   image: string;
 
-  // ✅ Banner horizontal (home hero): desktop + mobile
+  // ✅ Banner horizontal (desktop + mobile)
   hero?: {
     desktop: string;
     mobile: string;
