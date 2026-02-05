@@ -1,9 +1,7 @@
-// apps/web/src/app/mis-tickets/ui.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import TicketCard from "@/components/TicketCard";
-import { apiUrl } from "@/lib/api";
 
 type Ticket = {
   id: string;
@@ -20,9 +18,7 @@ export default function MisTicketsClient({ email }: { email: string }) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  const endpoint = useMemo(() => {
-    return apiUrl(`/tickets?email=${encodeURIComponent(email)}`);
-  }, [email]);
+  const endpoint = useMemo(() => "/api/tickets", []);
 
   async function loadTickets() {
     setLoading(true);
@@ -33,12 +29,7 @@ export default function MisTicketsClient({ email }: { email: string }) {
 
       if (!r.ok) throw new Error(data?.error || `Error ${r.status}`);
 
-      const list = Array.isArray(data?.tickets)
-        ? data.tickets
-        : Array.isArray(data)
-        ? data
-        : [];
-
+      const list = Array.isArray(data?.tickets) ? data.tickets : [];
       setTickets(list);
     } catch (e: any) {
       setErr(String(e?.message || e));

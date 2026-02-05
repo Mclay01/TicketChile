@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import type { Event } from "@/lib/events";
 import { formatCLP } from "@/lib/events";
 
@@ -40,12 +41,29 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
   const sp = useSearchParams();
   const canceled = sp.get("canceled") === "1";
 
+  const { data: session } = useSession();
+  const sessionEmail = (session?.user?.email || "").toLowerCase().trim();
+
   // buyer
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerPhone, setBuyerPhone] = useState("");
   const [buyerRut, setBuyerRut] = useState("");
   const [buyerComuna, setBuyerComuna] = useState("");
+
+  // ✅ Nuevo: por defecto usamos el correo de sesión (si existe)
+  const [useOtherEmail, setUseOtherEmail] = useState(false);
+
+  useEffect(() => {
+    if (!sessionEmail) return;
+
+    // Si NO está comprando para otro correo: forzamos email = sesión
+    if (!useOtherEmail) {
+      setBuyerEmail(sessionEmail);
+    }
+  }, [sessionEmail, useOtherEmail]);
+
+  const emailLocked = !!sessionEmail && !useOtherEmail;
 
   const [payMethod, setPayMethod] = useState<PayMethod>("webpay");
 
@@ -263,13 +281,35 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
             className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40"
             disabled={paying}
           />
+
           <input
             value={buyerEmail}
             onChange={(e) => setBuyerEmail(e.target.value)}
             placeholder="Email"
             className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40"
-            disabled={paying}
+            disabled={paying || emailLocked}
           />
+
+          {/* ✅ Nuevo: comprar para otro correo */}
+          {sessionEmail ? (
+            <div className="md:col-span-2 -mt-1 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <label className="flex cursor-pointer items-center gap-2 text-white/70">
+                <input
+                  type="checkbox"
+                  checked={useOtherEmail}
+                  onChange={(e) => setUseOtherEmail(e.target.checked)}
+                  disabled={paying}
+                />
+                Comprar para otro correo
+              </label>
+
+              <span className="text-white/50">
+                {!useOtherEmail
+                  ? `Usando correo de sesión: ${sessionEmail}`
+                  : "Ojo: si compras para otro correo, ese usuario verá los tickets en su cuenta."}
+              </span>
+            </div>
+          ) : null}
 
           <input
             value={buyerPhone}

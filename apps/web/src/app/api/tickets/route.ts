@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/auth";
 import { pool } from "@/lib/db";
+import { EVENTS } from "@/lib/events";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,39 +14,39 @@ function json(status: number, payload: any) {
   });
 }
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const email = String(searchParams.get("email") ?? "").trim().toLowerCase();
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  const email = (session?.user?.email || "").toLowerCase().trim();
 
-  if (!email) return json(400, { ok: false, error: "email requerido." });
+  if (!email) {
+    return json(401, { ok: false, error: "No autenticado." });
+  }
 
-  const client = await pool.connect();
-  try {
-    const tRes = await client.query(
-      `
-      SELECT
-        id, order_id, event_id, ticket_type_name, buyer_email, status, created_at
-      FROM tickets
-      WHERE lower(buyer_email) = $1
-      ORDER BY created_at DESC
-      `,
-      [email]
-    );
+  const titleByEventId = new Map(EVENTS.map((e) => [String(e.id), String(e.title)]));
 
-    const tickets = tRes.rows.map((t: any) => ({
+  const r = await pool.query(
+    `
+    SELECT
+      id, order_id, event_id, ticket_type_name, buyer_email, status
+    FROM tickets
+    WHERE LOWER(buyer_email) = $1
+    ORDER BY created_at DESC
+    `,
+    [email]
+  );
+
+  const tickets = r.rows.map((t: any) => {
+    const eventId = String(t.event_id);
+    return {
       id: String(t.id),
       orderId: String(t.order_id),
-      eventId: String(t.event_id),
-      ticketTypeName: String(t.ticket_type_name),
-      buyerEmail: String(t.buyer_email),
-      status: String(t.status),
-      createdAtISO: t.created_at,
-    }));
+      eventId,
+      eventTitle: titleByEventId.get(eventId) || "",
+      ticketTypeName: String(t.ticket_type_name || ""),
+      buyerEmail: String(t.buyer_email || ""),
+      status: String(t.status || "VALID"),
+    };
+  });
 
-    return json(200, { ok: true, tickets });
-  } catch (e: any) {
-    return json(500, { ok: false, error: String(e?.message || e) });
-  } finally {
-    client.release();
-  }
+  return json(200, { ok: true, tickets });
 }
