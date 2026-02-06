@@ -1,4 +1,5 @@
-// /lib/storage.ts:
+// apps/web/src/lib/storage.ts
+
 export type OrderItem = {
   ticketTypeId: string;
   ticketTypeName: string;
@@ -18,8 +19,6 @@ export type Order = {
   items: OrderItem[];
 };
 
-export type TicketStatus = "VALID" | "USED" | "CANCELLED";
-
 export type Ticket = {
   id: string;
   orderId: string;
@@ -27,7 +26,7 @@ export type Ticket = {
   eventTitle: string;
   ticketTypeName: string;
   buyerEmail: string;
-  status: TicketStatus;
+  status: "VALID" | "USED" | "CANCELLED";
 };
 
 // =====================================================
@@ -64,10 +63,7 @@ function saveLocal(db: LocalDB) {
 }
 
 export function createId(prefix: string) {
-  // suficientemente único para demo
-  return `${prefix}_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function createPaidOrderLocal(input: {
@@ -118,9 +114,7 @@ function createPaidOrderLocal(input: {
 function getMyTicketsLocal(email?: string) {
   const db = loadLocal();
   if (!email) return db.tickets;
-  return db.tickets.filter(
-    (t) => t.buyerEmail.toLowerCase() === email.toLowerCase()
-  );
+  return db.tickets.filter((t) => t.buyerEmail.toLowerCase() === email.toLowerCase());
 }
 
 // =====================================================
@@ -142,10 +136,6 @@ async function apiJSON<T>(url: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-/**
- * Crea una orden pagada en el "backend demo" (JSON local).
- * Si falla, cae a localStorage.
- */
 export async function createPaidOrder(input: {
   eventId: string;
   eventTitle: string;
@@ -154,21 +144,16 @@ export async function createPaidOrder(input: {
   items: OrderItem[];
   subtotalCLP: number;
 }) {
-  // En SSR no tiene sentido, esto se usa desde client actions
   try {
-    return await apiJSON<{ order: Order; tickets: Ticket[] }>(
-      "/api/demo/paid-order",
-      { method: "POST", body: JSON.stringify(input) }
-    );
+    return await apiJSON<{ order: Order; tickets: Ticket[] }>("/api/demo/paid-order", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
   } catch {
     return createPaidOrderLocal(input);
   }
 }
 
-/**
- * Trae tickets desde el backend demo (compartido).
- * Si falla, cae a localStorage.
- */
 export async function getMyTickets(email?: string) {
   try {
     const qs = email ? `?email=${encodeURIComponent(email)}` : "";
@@ -178,18 +163,13 @@ export async function getMyTickets(email?: string) {
   }
 }
 
-/**
- * Borra demo en backend (y también local fallback).
- */
 export async function clearDemoData() {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(KEY);
   }
   try {
     await apiJSON<{ ok: true }>("/api/demo/reset", { method: "POST" });
-  } catch {
-    // si falla, al menos se borró local
-  }
+  } catch {}
 }
 
 // =====================================================
@@ -233,9 +213,7 @@ export function setCheckedIn(ticketId: string, eventId: string, usedAtISO: strin
 
 export function getEventCheckins(eventId: string): TicketCheckin[] {
   const all = Object.values(readCheckins());
-  return all
-    .filter((c) => c.eventId === eventId)
-    .sort((a, b) => (a.usedAt < b.usedAt ? 1 : -1));
+  return all.filter((c) => c.eventId === eventId).sort((a, b) => (a.usedAt < b.usedAt ? 1 : -1));
 }
 
 export function clearEventCheckins(eventId: string) {
