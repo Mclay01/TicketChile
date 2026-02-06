@@ -2,7 +2,7 @@
 import { Resend } from "resend";
 
 type SendTicketEmailArgs = {
-  to: string[]; // ✅ ahora soporta múltiples
+  to: string[]; // puede ser 1 o varios
   ticket: {
     id: string;
     status: string;
@@ -46,15 +46,30 @@ function esc(s: any) {
   });
 }
 
+function normalizeEmail(v: any) {
+  return String(v || "").trim().toLowerCase();
+}
+
 export async function sendTicketEmail(args: SendTicketEmailArgs) {
   const apiKey = mustEnv("RESEND_API_KEY");
-  const from = process.env.FROM_EMAIL || "Ticket Chile <tickets@ticketchile.com>";
+
+  // ✅ si no tienes dominio verificado, esto FUNCIONA siempre en Resend (modo dev)
+  // Si ya tienes un sender verificado, setea FROM_EMAIL en Vercel y listo.
+  const fromEnv = String(process.env.FROM_EMAIL || "").trim();
+  const from = fromEnv || "TicketChile <onboarding@resend.dev>";
 
   const resend = new Resend(apiKey);
 
+  const to = (Array.isArray(args.to) ? args.to : [])
+    .map(normalizeEmail)
+    .filter((x) => x.includes("@"));
+
+  if (to.length === 0) {
+    throw new Error("sendTicketEmail: no hay destinatarios válidos en args.to");
+  }
+
   const subject = `Tus entradas — ${args.event.title || "TicketChile"}`;
 
-  // HTML simple (tu template actual puede ser más bonito, esto funciona)
   const html = `
   <div style="font-family: Arial, sans-serif; line-height: 1.4">
     <h2 style="margin:0 0 12px">Tus entradas</h2>
@@ -76,13 +91,25 @@ export async function sendTicketEmail(args: SendTicketEmailArgs) {
   </div>
   `;
 
-  // ✅ Resend acepta array en `to`
-  const out = await resend.emails.send({
+  // ✅ Resend devuelve { data, error } (a veces NO lanza excepción).
+  const out: any = await resend.emails.send({
     from,
-    to: args.to,
+    to,
     subject,
     html,
   });
+
+  // ✅ CLAVE: si hay error, lo levantamos para que /api/tickets/resend lo muestre en failedTo
+  if (out?.error) {
+    const msg =
+      typeof out.error === "string"
+        ? out.error
+        : out.error?.message
+        ? String(out.error.message)
+        : JSON.stringify(out.error);
+
+    throw new Error(`Resend error: ${msg}`);
+  }
 
   return out;
 }
