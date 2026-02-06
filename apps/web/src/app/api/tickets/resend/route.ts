@@ -1,8 +1,9 @@
 // apps/web/src/app/api/tickets/resend/route.ts
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
-import { Resend } from "resend";
-import { signTicketToken } from "@/lib/qr-token.server";
+import { sendTicketEmail } from "@/lib/tickets.email";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,152 +15,124 @@ function json(status: number, payload: any) {
   });
 }
 
-function isEmail(s: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+function normalizeEmail(v: any) {
+  return String(v || "").trim().toLowerCase();
 }
 
-function esc(s: string) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-/**
- * Base URL “real” para links en emails.
- * - En prod: pon APP_BASE_URL=https://www.ticketchile.com en Vercel.
- * - En local: APP_BASE_URL puede ser http://localhost:3001 (pero OJO: en emails no sirve).
- */
-function getBaseUrl(req: Request) {
-  const envBase = (process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "").trim();
-  if (envBase) return envBase.replace(/\/+$/g, "");
-
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "localhost:3001";
-  const proto = req.headers.get("x-forwarded-proto") || "http";
-  return `${proto}://${host}`;
+function uniqEmails(emails: Array<string | null | undefined>) {
+  const set = new Set<string>();
+  for (const e of emails) {
+    const n = normalizeEmail(e);
+    if (n.includes("@")) set.add(n);
+  }
+  return Array.from(set);
 }
 
 export async function POST(req: Request) {
+  let body: any;
   try {
-    const RESEND_API_KEY = process.env.RESEND_API_KEY?.trim();
-    if (!RESEND_API_KEY) return json(500, { ok: false, error: "Falta RESEND_API_KEY." });
+    body = await req.json();
+  } catch {
+    return json(400, { ok: false, error: "Body inválido (JSON)." });
+  }
 
-    const from = (process.env.EMAIL_FROM || "").trim();
-    if (!from) return json(500, { ok: false, error: "Falta EMAIL_FROM (ej: 'Ticket Chile <tickets@ticketchile.com>')." });
+  const ticketId = String(body?.ticketId || "").trim();
+  if (!ticketId) return json(400, { ok: false, error: "Falta ticketId." });
 
-    const body = await req.json().catch(() => null);
-    const orderId = String(body?.orderId ?? "").trim();
-    const email = String(body?.email ?? "").trim().toLowerCase();
+  // ✅ email de la cuenta logueada (fallback)
+  const session = await getServerSession(authOptions);
+  const sessionEmail = normalizeEmail(session?.user?.email);
 
-    if (!orderId) return json(400, { ok: false, error: "Falta orderId." });
-    if (!email || !isEmail(email)) return json(400, { ok: false, error: "Email inválido." });
-
-    // 1) Order + Event info
-    const oRes = await pool.query(
+  const client = await pool.connect();
+  try {
+    // 1) Ticket + Order + Event
+    const tRes = await client.query(
       `
       SELECT
-        o.id, o.event_id, o.event_title, o.buyer_name, o.buyer_email,
-        e.slug, e.city, e.venue, e.date_iso
-      FROM orders o
-      JOIN events e ON e.id = o.event_id
-      WHERE o.id = $1
+        t.id as ticket_id,
+        t.status as ticket_status,
+        t.ticket_type_name,
+        t.owner_email as ticket_owner_email,
+        o.id as order_id,
+        o.buyer_name,
+        o.buyer_email,
+        o.owner_email as order_owner_email,
+        o.event_id,
+        o.event_title,
+        e.city,
+        e.venue,
+        e.date_iso
+      FROM tickets t
+      JOIN orders o ON o.id = t.order_id
+      LEFT JOIN events e ON e.id = o.event_id
+      WHERE t.id = $1
       LIMIT 1
       `,
-      [orderId]
+      [ticketId]
     );
 
-    if (oRes.rowCount === 0) return json(404, { ok: false, error: "Order no encontrada." });
+    if (tRes.rowCount === 0) return json(404, { ok: false, error: "Ticket no encontrado." });
 
-    const order = oRes.rows[0];
-    const buyerEmail = String(order.buyer_email || "").toLowerCase();
+    const row = tRes.rows[0];
 
-    // Seguridad mínima: no reenviar a correos random
-    if (buyerEmail && buyerEmail !== email) {
-      return json(403, { ok: false, error: "Ese pedido pertenece a otro correo." });
+    const buyerEmail = normalizeEmail(row.buyer_email);
+    const ownerEmailFromTicket = normalizeEmail(row.ticket_owner_email);
+    const ownerEmailFromOrder = normalizeEmail(row.order_owner_email);
+
+    // ✅ destinatarios: checkout + owner (ticket/order) + sesión (fallback)
+    const to = uniqEmails([buyerEmail, ownerEmailFromTicket, ownerEmailFromOrder, sessionEmail]);
+
+    if (to.length === 0) {
+      return json(409, { ok: false, error: "No hay destinatarios válidos para reenviar." });
     }
 
-    // 2) Tickets
-    const tRes = await pool.query(
-      `
-      SELECT id, ticket_type_name, status, created_at
-      FROM tickets
-      WHERE order_id = $1
-      ORDER BY created_at ASC
-      `,
-      [orderId]
-    );
+    // 2) Enviar 1 por 1 (más robusto que array gigante)
+    const sentTo: string[] = [];
+    const failedTo: Array<{ email: string; error: string }> = [];
 
-    if (tRes.rowCount === 0) return json(404, { ok: false, error: "No hay tickets para esa order todavía." });
+    for (const email of to) {
+      try {
+        await sendTicketEmail({
+          to: [email],
+          ticket: {
+            id: String(row.ticket_id),
+            status: String(row.ticket_status),
+            ticketTypeName: String(row.ticket_type_name || ""),
+          },
+          order: {
+            id: String(row.order_id),
+            buyerName: String(row.buyer_name || ""),
+            buyerEmail,
+            ownerEmail: ownerEmailFromTicket || ownerEmailFromOrder || sessionEmail || "",
+          },
+          event: {
+            id: String(row.event_id || ""),
+            title: String(row.event_title || ""),
+            city: String(row.city || ""),
+            venue: String(row.venue || ""),
+            dateISO: row.date_iso ? new Date(row.date_iso).toISOString() : "",
+          },
+        });
 
-    const base = getBaseUrl(req);
-    const manageUrl = `${base}/mis-tickets?email=${encodeURIComponent(email)}`;
+        sentTo.push(email);
+      } catch (e: any) {
+        failedTo.push({ email, error: String(e?.message || e) });
+      }
+    }
 
-    const ticketsHtml = tRes.rows
-      .map((t: any) => {
-        const ticketId = String(t.id);
-        const typeName = String(t.ticket_type_name || "");
-        const token = signTicketToken({ ticketId, eventId: String(order.event_id) });
+    // si al menos uno salió, ok true
+    if (sentTo.length > 0) {
+      return json(200, { ok: true, sentTo, failedTo });
+    }
 
-        // QR público (cuando despliegues, esto será accesible)
-        const qrUrl = `${base}/api/qr?t=${encodeURIComponent(token)}`;
-
-        // Link para Google Wallet (opcional; si no está configurado, tu endpoint puede responder 501)
-        const walletUrl = `${base}/wallet/google/save-url?t=${encodeURIComponent(token)}`;
-
-        return `
-          <div style="border:1px solid #eee;border-radius:12px;padding:14px;margin:12px 0">
-            <div style="font-size:14px;color:#111"><b>${esc(typeName)}</b></div>
-            <div style="font-size:12px;color:#555">TicketId: ${esc(ticketId)}</div>
-
-            <div style="margin-top:10px">
-              <img src="${qrUrl}" alt="Código QR" width="220" height="220"
-                   style="display:block;border-radius:12px;border:1px solid #eee"/>
-            </div>
-
-            <div style="margin-top:12px">
-              <a href="${walletUrl}"
-                 style="display:inline-block;padding:10px 12px;border-radius:10px;
-                        border:1px solid #111;text-decoration:none;color:#111;font-size:14px">
-                 Agregar a Google Wallet
-              </a>
-            </div>
-          </div>
-        `;
-      })
-      .join("");
-
-    const subject = `Tus entradas — ${String(order.event_title || "Evento")}`;
-
-    const html = `
-      <div style="font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.45;color:#111">
-        <h2 style="margin:0 0 6px 0">Tus entradas</h2>
-        <div style="color:#555;font-size:14px;margin-bottom:14px">
-          Evento: <b>${esc(String(order.event_title || ""))}</b><br/>
-          Comprador: ${esc(email)}<br/>
-          Lugar: ${esc(String(order.venue || ""))} — ${esc(String(order.city || ""))}
-        </div>
-
-        ${ticketsHtml}
-
-        <div style="margin-top:16px;font-size:14px">
-          Si tu correo no muestra imágenes (sí, Gmail a veces se pone creativo), abre tu página de tickets:
-          <a href="${manageUrl}">${manageUrl}</a>
-        </div>
-      </div>
-    `;
-
-    const resend = new Resend(RESEND_API_KEY);
-    await resend.emails.send({
-      from,
-      to: email,
-      subject,
-      html,
+    return json(500, {
+      ok: false,
+      error: "Falló el envío a todos los destinatarios.",
+      failedTo,
     });
-
-    return json(200, { ok: true });
   } catch (e: any) {
     return json(500, { ok: false, error: String(e?.message || e) });
+  } finally {
+    client.release();
   }
 }
