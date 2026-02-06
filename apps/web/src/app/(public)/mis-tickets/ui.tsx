@@ -1,7 +1,9 @@
+// apps/web/src/app/(public)/mis-tickets/ui.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TicketCard from "@/components/TicketCard";
+import { apiUrl } from "@/lib/api";
 
 type Ticket = {
   id: string;
@@ -18,7 +20,9 @@ export default function MisTicketsClient({ email }: { email: string }) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  const endpoint = "/api/tickets";
+  const endpoint = useMemo(() => {
+    return apiUrl(`/tickets?email=${encodeURIComponent(email)}`);
+  }, [email]);
 
   async function loadTickets() {
     setLoading(true);
@@ -47,7 +51,7 @@ export default function MisTicketsClient({ email }: { email: string }) {
   useEffect(() => {
     loadTickets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [endpoint]);
 
   return (
     <div className="space-y-6">

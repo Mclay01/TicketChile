@@ -8,6 +8,7 @@ import {
   IntegrationCommerceCodes,
 } from "transbank-sdk";
 import { finalizePaidHoldToOrderPgTx } from "@/lib/checkout.pg.server";
+import { sendTicketsEmailsForPayment } from "@/lib/tickets.email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +46,10 @@ function webpayOptions(): Options {
   );
 }
 
-async function handleReturn(req: Request, payload: { tokenWs: string; tbkToken: string; tbkOrder: string }) {
+async function handleReturn(
+  req: Request,
+  payload: { tokenWs: string; tbkToken: string; tbkOrder: string }
+) {
   const base = baseUrlFromRequest(req);
 
   const tokenWs = (payload.tokenWs || "").trim();
@@ -53,7 +57,6 @@ async function handleReturn(req: Request, payload: { tokenWs: string; tbkToken: 
   const tbkOrder = (payload.tbkOrder || "").trim();
 
   // Flujos de anulación / abandono (Transbank envía TBK_*)
-  // Si no viene token_ws o viene TBK_TOKEN => cancelado
   if (!tokenWs || tbkToken) {
     if (tbkOrder) {
       const client = await pool.connect();
@@ -71,9 +74,13 @@ async function handleReturn(req: Request, payload: { tokenWs: string; tbkToken: 
         client.release();
       }
 
-      const ev = await pool.query(`SELECT event_id FROM payments WHERE id=$1`, [tbkOrder]).catch(() => null);
+      const ev = await pool
+        .query(`SELECT event_id FROM payments WHERE id=$1`, [tbkOrder])
+        .catch(() => null);
       const eventId = ev?.rows?.[0]?.event_id ? String(ev.rows[0].event_id) : "";
-      return NextResponse.redirect(`${base}/checkout/${encodeURIComponent(eventId || "")}?canceled=1`);
+      return NextResponse.redirect(
+        `${base}/checkout/${encodeURIComponent(eventId || "")}?canceled=1`
+      );
     }
 
     return NextResponse.redirect(`${base}/checkout?canceled=1`);
@@ -153,8 +160,17 @@ async function handleReturn(req: Request, payload: { tokenWs: string; tbkToken: 
     client.release();
   }
 
+  // ✅ Enviar correo al buyer y al owner (sin romper checkout si falla el mail)
+  try {
+    await sendTicketsEmailsForPayment(paymentId, base);
+  } catch (e) {
+    console.error("ticket email failed:", e);
+  }
+
   // ✅ confirm canónico por payment_id
-  return NextResponse.redirect(`${base}/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}`);
+  return NextResponse.redirect(
+    `${base}/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}`
+  );
 }
 
 // ✅ Webpay puede llegar por POST (normal) o por GET (cuando te redirige con token_ws en query)
