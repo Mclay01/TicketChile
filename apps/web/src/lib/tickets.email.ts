@@ -2,7 +2,7 @@
 import { Resend } from "resend";
 
 type SendTicketEmailArgs = {
-  to: string[]; // puede ser 1 o varios
+  to: string[]; // soporta múltiples, pero tú lo usas 1 a 1 también
   ticket: {
     id: string;
     status: string;
@@ -46,27 +46,11 @@ function esc(s: any) {
   });
 }
 
-function normalizeEmail(v: any) {
-  return String(v || "").trim().toLowerCase();
-}
-
 export async function sendTicketEmail(args: SendTicketEmailArgs) {
   const apiKey = mustEnv("RESEND_API_KEY");
-
-  // ✅ si no tienes dominio verificado, esto FUNCIONA siempre en Resend (modo dev)
-  // Si ya tienes un sender verificado, setea FROM_EMAIL en Vercel y listo.
-  const fromEnv = String(process.env.FROM_EMAIL || "").trim();
-  const from = fromEnv || "TicketChile <onboarding@resend.dev>";
+  const from = process.env.FROM_EMAIL || "Ticket Chile <tickets@ticketchile.com>";
 
   const resend = new Resend(apiKey);
-
-  const to = (Array.isArray(args.to) ? args.to : [])
-    .map(normalizeEmail)
-    .filter((x) => x.includes("@"));
-
-  if (to.length === 0) {
-    throw new Error("sendTicketEmail: no hay destinatarios válidos en args.to");
-  }
 
   const subject = `Tus entradas — ${args.event.title || "TicketChile"}`;
 
@@ -91,25 +75,18 @@ export async function sendTicketEmail(args: SendTicketEmailArgs) {
   </div>
   `;
 
-  // ✅ Resend devuelve { data, error } (a veces NO lanza excepción).
-  const out: any = await resend.emails.send({
+  // ✅ IMPORTANTE: la SDK retorna { data, error }. Si no lo chequeas, quedas ciego.
+  const { data, error } = await resend.emails.send({
     from,
-    to,
+    to: args.to,
     subject,
     html,
   });
 
-  // ✅ CLAVE: si hay error, lo levantamos para que /api/tickets/resend lo muestre en failedTo
-  if (out?.error) {
-    const msg =
-      typeof out.error === "string"
-        ? out.error
-        : out.error?.message
-        ? String(out.error.message)
-        : JSON.stringify(out.error);
-
-    throw new Error(`Resend error: ${msg}`);
+  if (error) {
+    // esto te va a aparecer en failedTo/error del endpoint
+    throw new Error(`Resend error: ${error.message || JSON.stringify(error)}`);
   }
 
-  return out;
+  return data;
 }

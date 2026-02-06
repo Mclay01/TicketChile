@@ -47,7 +47,6 @@ export default function CheckoutConfirmClient() {
 
   const endpoint = useMemo(() => {
     if (paymentId) return `/api/payments/status?payment_id=${encodeURIComponent(paymentId)}`;
-    // legacy (si todavía exists tu stripe/status)
     if (sessionId) return `/api/payments/stripe/status?session_id=${encodeURIComponent(sessionId)}`;
     return "";
   }, [paymentId, sessionId]);
@@ -202,27 +201,48 @@ export default function CheckoutConfirmClient() {
     };
   }, [paymentId, sessionId, loadOnce, clearTimer, poll, stopAll]);
 
+  // ✅ Reenvía por ticketId (no por orderId/email). Reenvía todos los tickets de la compra.
   async function resendEmail() {
-    if (!data?.payment?.orderId || !data?.payment?.buyerEmail) return;
+    const tickets = Array.isArray(data?.tickets) ? data!.tickets : [];
+    if (tickets.length === 0) return;
 
     setSending(true);
     setSendMsg(null);
 
+    const sent = new Set<string>();
+    const failed: Array<{ ticketId: string; error: string }> = [];
+
     try {
-      const r = await fetch("/api/tickets/resend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify({
-          orderId: data.payment.orderId,
-          email: data.payment.buyerEmail,
-        }),
-      });
+      for (const tk of tickets) {
+        const r = await fetch("/api/tickets/resend", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: JSON.stringify({ ticketId: tk.id }),
+        });
 
-      const j = await r.json().catch(() => null);
-      if (!r.ok) throw new Error(j?.error || `Error ${r.status}`);
+        const j = await r.json().catch(() => null);
 
-      setSendMsg("Listo. Te reenviamos el ticket al correo.");
+        if (!r.ok) {
+          failed.push({ ticketId: tk.id, error: j?.error || `Error ${r.status}` });
+          continue;
+        }
+
+        const sentTo = Array.isArray(j?.sentTo) ? j.sentTo : [];
+        for (const e of sentTo) sent.add(String(e));
+      }
+
+      if (sent.size > 0) {
+        const list = Array.from(sent);
+        setSendMsg(
+          `Listo ✅ Reenviado a: ${list.join(", ")}${
+            failed.length ? ` (fallaron ${failed.length} ticket(s))` : ""
+          }`
+        );
+      } else {
+        const detail = failed[0]?.error || "Falló el envío.";
+        setSendMsg(`No se pudo reenviar: ${detail}`);
+      }
     } catch (e: any) {
       setSendMsg(`No se pudo reenviar: ${String(e?.message || e)}`);
     } finally {
@@ -324,8 +344,8 @@ export default function CheckoutConfirmClient() {
                 {statusUpper === "CANCELLED" || statusUpper === "FAILED" ? (
                   <p className="mt-2 text-sm text-white/70">
                     Parece que el pago quedó{" "}
-                    <span className="text-white/90 font-semibold">{statusUpper}</span>. Si fue un
-                    error, vuelve al evento e intenta nuevamente.
+                    <span className="text-white/90 font-semibold">{statusUpper}</span>. Si fue un error, vuelve al
+                    evento e intenta nuevamente.
                   </p>
                 ) : null}
               </div>
@@ -334,9 +354,7 @@ export default function CheckoutConfirmClient() {
             {ready ? (
               <div className="mt-5 grid gap-3 md:grid-cols-2">
                 <button
-                  onClick={() =>
-                    router.push(`/mis-tickets?email=${encodeURIComponent(data.payment.buyerEmail)}`)
-                  }
+                  onClick={() => router.push(`/mis-tickets?email=${encodeURIComponent(data.payment.buyerEmail)}`)}
                   className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90"
                 >
                   Ver mis tickets
