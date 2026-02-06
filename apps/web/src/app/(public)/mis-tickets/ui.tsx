@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import TicketCard from "@/components/TicketCard";
 
 type Ticket = {
@@ -10,7 +10,7 @@ type Ticket = {
   eventTitle: string;
   ticketTypeName: string;
   buyerEmail: string;
-  status: "VALID" | "USED";
+  status: "VALID" | "USED" | "CANCELLED";
 };
 
 export default function MisTicketsClient({ email }: { email: string }) {
@@ -18,7 +18,7 @@ export default function MisTicketsClient({ email }: { email: string }) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  const endpoint = useMemo(() => "/api/tickets", []);
+  const endpoint = "/api/tickets";
 
   async function loadTickets() {
     setLoading(true);
@@ -29,7 +29,12 @@ export default function MisTicketsClient({ email }: { email: string }) {
 
       if (!r.ok) throw new Error(data?.error || `Error ${r.status}`);
 
-      const list = Array.isArray(data?.tickets) ? data.tickets : [];
+      const list = Array.isArray(data?.tickets)
+        ? data.tickets
+        : Array.isArray(data)
+        ? data
+        : [];
+
       setTickets(list);
     } catch (e: any) {
       setErr(String(e?.message || e));
@@ -42,7 +47,7 @@ export default function MisTicketsClient({ email }: { email: string }) {
   useEffect(() => {
     loadTickets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endpoint]);
+  }, []);
 
   return (
     <div className="space-y-6">

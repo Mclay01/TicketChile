@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { pool } from "@/lib/db";
 import { appBaseUrl } from "@/lib/stripe.server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/auth";
 import {
   WebpayPlus,
   Options,
@@ -78,7 +80,10 @@ function normalizeBaseUrl(u: string) {
 }
 
 function webpayOptions(): Options {
-  const env = process.env.WEBPAY_ENV === "production" ? Environment.Production : Environment.Integration;
+  const env =
+    process.env.WEBPAY_ENV === "production"
+      ? Environment.Production
+      : Environment.Integration;
 
   if (env === Environment.Production) {
     const commerceCode = process.env.WEBPAY_COMMERCE_CODE;
@@ -89,12 +94,15 @@ function webpayOptions(): Options {
     return new Options(commerceCode, apiKey, env);
   }
 
-  // integración (si no configuras env vars, funciona en modo test)
   return new Options(
     process.env.WEBPAY_COMMERCE_CODE || IntegrationCommerceCodes.WEBPAY_PLUS,
     process.env.WEBPAY_API_KEY || IntegrationApiKeys.WEBPAY,
     env
   );
+}
+
+function normalizeEmail(v: string) {
+  return String(v || "").trim().toLowerCase();
 }
 
 export async function POST(req: Request) {
@@ -109,13 +117,17 @@ export async function POST(req: Request) {
   const itemsFromBody = parseItems(body?.items);
 
   const buyerName = pickString(body?.buyerName);
-  const buyerEmail = pickString(body?.buyerEmail);
+  const buyerEmailRaw = pickString(body?.buyerEmail);
 
   if (buyerName.length < 2) return json(400, { ok: false, error: "buyerName inválido." });
-  if (!buyerEmail.includes("@")) return json(400, { ok: false, error: "buyerEmail inválido." });
+  if (!buyerEmailRaw.includes("@")) return json(400, { ok: false, error: "buyerEmail inválido." });
 
   if (!eventIdFromBody) return json(400, { ok: false, error: "Falta eventId." });
   if (itemsFromBody.length === 0) return json(400, { ok: false, error: "Faltan items (cart vacío)." });
+
+  const session = await getServerSession(authOptions);
+  const ownerEmail = normalizeEmail(session?.user?.email || buyerEmailRaw);
+  const buyerEmail = normalizeEmail(buyerEmailRaw); // recipient
 
   const client = await pool.connect();
   try {
@@ -125,7 +137,6 @@ export async function POST(req: Request) {
 
     const eventId = eventIdFromBody;
 
-    // 1) validar stock y crear hold
     const ids = itemsFromBody.map((x) => x.ticketTypeId);
 
     const ttRes = await client.query(
@@ -191,7 +202,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2) total
     const itemsRes = await client.query(
       `
       SELECT ticket_type_name, unit_price_clp, qty
@@ -211,29 +221,28 @@ export async function POST(req: Request) {
     const amountClp = lineItems.reduce((acc: number, x: any) => acc + x.unit * x.qty, 0);
     if (!Number.isFinite(amountClp) || amountClp <= 0) return json(409, { ok: false, error: "Monto inválido." });
 
-    // 3) event title
     const evRes = await client.query(`SELECT title FROM events WHERE id=$1`, [eventId]);
     const eventTitle = pickString(evRes.rows?.[0]?.title) || `Evento ${eventId}`;
 
-    // 4) crear payment (1 por hold)
     const newPaymentId = makeId("pay");
     const payRes = await client.query(
       `
       INSERT INTO payments
-        (id, hold_id, provider, provider_ref, event_id, event_title, buyer_name, buyer_email, amount_clp, currency, status, created_at, updated_at)
+        (id, hold_id, provider, provider_ref, event_id, event_title, buyer_name, buyer_email, owner_email, amount_clp, currency, status, created_at, updated_at)
       VALUES
-        ($1, $2, 'webpay', NULL, $3, $4, $5, $6, $7, 'CLP', 'CREATED', NOW(), NOW())
+        ($1, $2, 'webpay', NULL, $3, $4, $5, $6, $7, $8, 'CLP', 'CREATED', NOW(), NOW())
       ON CONFLICT (hold_id) DO UPDATE
         SET event_id     = EXCLUDED.event_id,
             event_title  = EXCLUDED.event_title,
             buyer_name   = EXCLUDED.buyer_name,
             buyer_email  = EXCLUDED.buyer_email,
+            owner_email  = EXCLUDED.owner_email,
             amount_clp   = EXCLUDED.amount_clp,
             provider     = 'webpay',
             updated_at   = NOW()
       RETURNING *
       `,
-      [newPaymentId, holdId, eventId, eventTitle, buyerName, buyerEmail, amountClp]
+      [newPaymentId, holdId, eventId, eventTitle, buyerName, buyerEmail, ownerEmail, amountClp]
     );
 
     const payment = payRes.rows[0];
@@ -242,13 +251,11 @@ export async function POST(req: Request) {
       return json(200, { ok: true, status: "PAID", holdId, paymentId: String(payment.id) });
     }
 
-    // 5) crear transacción Webpay
     const base = normalizeBaseUrl(appBaseUrl());
     const returnUrl = `${base}/api/payments/webpay/return`;
 
     const tx = new WebpayPlus.Transaction(webpayOptions());
 
-    // buyOrder: usamos paymentId (corto y único)
     const buyOrder = String(payment.id).slice(0, 26);
     const sessionId = holdId;
 

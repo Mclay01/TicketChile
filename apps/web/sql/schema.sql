@@ -34,7 +34,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS email_verification_tokens_user_uniq
 CREATE INDEX IF NOT EXISTS email_verification_tokens_expires_idx
   ON email_verification_tokens(expires_at);
 
-
 -- =========================
 -- CORE APP TABLES
 -- =========================
@@ -94,9 +93,12 @@ CREATE TABLE IF NOT EXISTS orders (
   event_id    text NOT NULL REFERENCES events(id) ON DELETE RESTRICT,
   event_title text NOT NULL,
   buyer_name  text NOT NULL,
-  buyer_email text NOT NULL,
+  buyer_email text NOT NULL,          -- recipient (correo escrito en checkout)
+  owner_email text NOT NULL,          -- session owner (correo de la cuenta logueada)
   created_at  timestamptz NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS orders_owner_email_idx ON orders(owner_email);
 
 CREATE TABLE IF NOT EXISTS tickets (
   id               text PRIMARY KEY,
@@ -104,12 +106,14 @@ CREATE TABLE IF NOT EXISTS tickets (
   event_id         text NOT NULL REFERENCES events(id) ON DELETE RESTRICT,
   ticket_type_id   text NOT NULL,
   ticket_type_name text NOT NULL,
-  buyer_email      text NOT NULL,
+  buyer_email      text NOT NULL,     -- recipient
+  owner_email      text NOT NULL,     -- session owner
   status           text NOT NULL CHECK (status IN ('VALID','USED','CANCELLED')),
   used_at          timestamptz NULL,
   created_at       timestamptz NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS tickets_owner_email_idx ON tickets(owner_email);
 
 -- =========================
 -- PAYMENTS + WEBHOOK DEDUPE
@@ -120,12 +124,13 @@ CREATE TABLE IF NOT EXISTS payments (
   hold_id      text NOT NULL UNIQUE REFERENCES holds(id) ON DELETE CASCADE,
 
   provider     text NOT NULL,
-  provider_ref text, -- ej: stripe session id
+  provider_ref text, -- ej: stripe session id / webpay token
 
   event_id     text, -- recomendado
   event_title  text NOT NULL,
   buyer_name   text NOT NULL,
-  buyer_email  text NOT NULL,
+  buyer_email  text NOT NULL,     -- recipient
+  owner_email  text NOT NULL,     -- session owner
 
   amount_clp   int  NOT NULL,
   currency     text NOT NULL DEFAULT 'CLP',
@@ -139,6 +144,7 @@ CREATE TABLE IF NOT EXISTS payments (
 
 CREATE INDEX IF NOT EXISTS payments_hold_id_idx ON payments(hold_id);
 CREATE INDEX IF NOT EXISTS payments_status_idx ON payments(status);
+CREATE INDEX IF NOT EXISTS payments_owner_email_idx ON payments(owner_email);
 
 -- Evita duplicados por proveedor+ref (cuando exista)
 CREATE UNIQUE INDEX IF NOT EXISTS payments_provider_ref_uniq
@@ -152,7 +158,6 @@ CREATE TABLE IF NOT EXISTS webhook_events (
   created_at timestamptz NOT NULL DEFAULT NOW(),
   PRIMARY KEY (provider, event_id)
 );
-
 
 -- =========================
 -- USEFUL INDEXES
