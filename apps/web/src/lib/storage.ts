@@ -1,3 +1,4 @@
+// /lib/storage.ts:
 export type OrderItem = {
   ticketTypeId: string;
   ticketTypeName: string;
@@ -17,6 +18,8 @@ export type Order = {
   items: OrderItem[];
 };
 
+export type TicketStatus = "VALID" | "USED" | "CANCELLED";
+
 export type Ticket = {
   id: string;
   orderId: string;
@@ -24,9 +27,8 @@ export type Ticket = {
   eventTitle: string;
   ticketTypeName: string;
   buyerEmail: string;
-  status: "VALID" | "USED" | "CANCELLED";
+  status: TicketStatus;
 };
-
 
 // =====================================================
 // Local fallback (por si la API no responde)
