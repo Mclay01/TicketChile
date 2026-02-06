@@ -24,8 +24,9 @@ export type Ticket = {
   eventTitle: string;
   ticketTypeName: string;
   buyerEmail: string;
-  status: "VALID" | "USED";
+  status: "VALID" | "USED" | "CANCELLED";
 };
+
 
 // =====================================================
 // Local fallback (por si la API no responde)
