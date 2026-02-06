@@ -4,6 +4,7 @@ import { pool } from "@/lib/db";
 import { sendTicketEmail } from "@/lib/tickets.email";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/auth";
+import { apiUrl } from "@/lib/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,6 +29,54 @@ function uniqEmails(emails: Array<string | null | undefined>) {
   return Array.from(set);
 }
 
+function normalizeBaseUrl(u: string) {
+  return String(u || "").replace(/\/+$/, "");
+}
+
+// ✅ Base URL robusta para server->server fetch en Vercel
+function baseUrlFromRequest(req: Request) {
+  const envBase = normalizeBaseUrl(
+    String(process.env.APP_BASE_URL || process.env.NEXTAUTH_URL || "").trim()
+  );
+  if (envBase) return envBase;
+
+  const proto = req.headers.get("x-forwarded-proto") || "http";
+  const host =
+    req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
+  if (!host) return "";
+  return normalizeBaseUrl(`${proto}://${host}`);
+}
+
+async function fetchQrPngBase64(req: Request, ticketId: string, eventId: string) {
+  try {
+    const base = baseUrlFromRequest(req);
+    if (!base) return null;
+
+    // Usa tu prefijo actual (api/demo o api, etc.)
+    const path = apiUrl(
+      `/qr?ticketId=${encodeURIComponent(ticketId)}&eventId=${encodeURIComponent(eventId)}`
+    );
+    const url = `${base}${path}`;
+
+    // Por si tu /qr requiere cookies de sesión (más robusto)
+    const cookie = req.headers.get("cookie") || "";
+
+    const r = await fetch(url, {
+      method: "GET",
+      headers: cookie ? { cookie } : undefined,
+      cache: "no-store",
+    });
+
+    if (!r.ok) return null;
+
+    const ab = await r.arrayBuffer();
+    const b64 = Buffer.from(ab).toString("base64");
+    return b64 || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: Request) {
   let body: any;
   try {
@@ -45,7 +94,6 @@ export async function POST(req: Request) {
 
   const client = await pool.connect();
   try {
-    // 1) Ticket + Order + Event
     const tRes = await client.query(
       `
       SELECT
@@ -71,7 +119,9 @@ export async function POST(req: Request) {
       [ticketId]
     );
 
-    if (tRes.rowCount === 0) return json(404, { ok: false, error: "Ticket no encontrado." });
+    if (tRes.rowCount === 0) {
+      return json(404, { ok: false, error: "Ticket no encontrado." });
+    }
 
     const row = tRes.rows[0];
 
@@ -79,14 +129,17 @@ export async function POST(req: Request) {
     const ownerEmailFromTicket = normalizeEmail(row.ticket_owner_email);
     const ownerEmailFromOrder = normalizeEmail(row.order_owner_email);
 
-    // ✅ destinatarios: checkout + owner (ticket/order) + sesión (fallback)
+    // ✅ destinatarios: checkout + owner(ticket/order) + sesión(fallback)
     const to = uniqEmails([buyerEmail, ownerEmailFromTicket, ownerEmailFromOrder, sessionEmail]);
 
     if (to.length === 0) {
       return json(409, { ok: false, error: "No hay destinatarios válidos para reenviar." });
     }
 
-    // 2) Enviar 1 por 1 (más robusto que array gigante)
+    // ✅ Traer QR en base64 una sola vez
+    const eventId = String(row.event_id || "").trim();
+    const qrPngBase64 = eventId ? await fetchQrPngBase64(req, String(row.ticket_id), eventId) : null;
+
     const sentTo: string[] = [];
     const failedTo: Array<{ email: string; error: string }> = [];
 
@@ -98,6 +151,7 @@ export async function POST(req: Request) {
             id: String(row.ticket_id),
             status: String(row.ticket_status),
             ticketTypeName: String(row.ticket_type_name || ""),
+            qrPngBase64, // ✅ aquí va el QR
           },
           order: {
             id: String(row.order_id),
@@ -106,7 +160,7 @@ export async function POST(req: Request) {
             ownerEmail: ownerEmailFromTicket || ownerEmailFromOrder || sessionEmail || "",
           },
           event: {
-            id: String(row.event_id || ""),
+            id: eventId,
             title: String(row.event_title || ""),
             city: String(row.city || ""),
             venue: String(row.venue || ""),
@@ -120,9 +174,13 @@ export async function POST(req: Request) {
       }
     }
 
-    // si al menos uno salió, ok true
     if (sentTo.length > 0) {
-      return json(200, { ok: true, sentTo, failedTo });
+      return json(200, {
+        ok: true,
+        sentTo,
+        failedTo,
+        qrIncluded: Boolean(qrPngBase64),
+      });
     }
 
     return json(500, {
