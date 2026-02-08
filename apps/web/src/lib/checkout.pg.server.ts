@@ -331,22 +331,52 @@ async function finalizeHoldToOrderCoreTx(
     throw new Error("Hold expiró.");
   }
 
-  // ---- pagos reales: exige payment PAID, y aquí sacamos owner/recipient reales
+  // ---- pagos reales: exige payment PAID, y aquí sacamos owner/recipient + datos comprador
   let ownerEmailFromPayment = "";
   let recipientEmailFromPayment = "";
   let buyerNameFromPayment = "";
 
+  // Campos extra (si existen en DB)
+  let buyerRutFromPayment = "";
+  let buyerPhoneFromPayment = "";
+  let buyerRegionFromPayment = "";
+  let buyerComunaFromPayment = "";
+  let buyerAddress1FromPayment = "";
+  let buyerAddress2FromPayment = "";
+
   if (input.requirePaidPayment) {
-    const payRes = await client.query(
-      `
-      SELECT id, status, order_id, owner_email, buyer_email, buyer_name
-      FROM payments
-      WHERE hold_id = $1
-        AND ($2::text IS NULL OR id = $2::text)
-      FOR UPDATE
-      `,
-      [holdId, input.paymentId]
-    );
+    // Nota: si aún no migraste la DB con buyer_rut/etc, este SELECT fallaría.
+    // Para no reventar entornos viejos, intentamos primero con columnas nuevas y
+    // si falla, caemos a SELECT antiguo.
+    let payRes: any;
+    try {
+      payRes = await client.query(
+        `
+        SELECT
+          id, status, order_id,
+          owner_email, buyer_email, buyer_name,
+          buyer_rut, buyer_phone,
+          buyer_region, buyer_comuna,
+          buyer_address1, buyer_address2
+        FROM payments
+        WHERE hold_id = $1
+          AND ($2::text IS NULL OR id = $2::text)
+        FOR UPDATE
+        `,
+        [holdId, input.paymentId]
+      );
+    } catch (err) {
+      payRes = await client.query(
+        `
+        SELECT id, status, order_id, owner_email, buyer_email, buyer_name
+        FROM payments
+        WHERE hold_id = $1
+          AND ($2::text IS NULL OR id = $2::text)
+        FOR UPDATE
+        `,
+        [holdId, input.paymentId]
+      );
+    }
 
     if (payRes.rowCount === 0) {
       throw new Error("No existe payment para este hold (o paymentId no coincide).");
@@ -360,6 +390,13 @@ async function finalizeHoldToOrderCoreTx(
     ownerEmailFromPayment = normalizeEmail(p.owner_email || "");
     recipientEmailFromPayment = normalizeEmail(p.buyer_email || "");
     buyerNameFromPayment = String(p.buyer_name || "").trim();
+
+    buyerRutFromPayment = String(p.buyer_rut || "").trim();
+    buyerPhoneFromPayment = String(p.buyer_phone || "").trim();
+    buyerRegionFromPayment = String(p.buyer_region || "").trim();
+    buyerComunaFromPayment = String(p.buyer_comuna || "").trim();
+    buyerAddress1FromPayment = String(p.buyer_address1 || "").trim();
+    buyerAddress2FromPayment = String(p.buyer_address2 || "").trim();
   }
 
   // recipient = correo escrito en checkout
@@ -372,7 +409,8 @@ async function finalizeHoldToOrderCoreTx(
     input.requirePaidPayment ? (ownerEmailFromPayment || recipientEmail) : recipientEmail
   );
 
-  const buyerNameFinal = (input.requirePaidPayment ? buyerNameFromPayment : input.buyerName).trim() || input.buyerName.trim();
+  const buyerNameFinal =
+    (input.requirePaidPayment ? buyerNameFromPayment : input.buyerName).trim() || input.buyerName.trim();
 
   const itemsRes = await client.query(
     `
@@ -387,18 +425,78 @@ async function finalizeHoldToOrderCoreTx(
   // Order idempotente por hold_id
   const newOrderId = makeId("ord");
 
-  const orderRes = await client.query(
-    `
-    INSERT INTO orders (id, hold_id, event_id, event_title, buyer_name, buyer_email, owner_email, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-    ON CONFLICT (hold_id) DO UPDATE
-      SET buyer_email = EXCLUDED.buyer_email,
-          buyer_name  = EXCLUDED.buyer_name,
-          owner_email = EXCLUDED.owner_email
-    RETURNING *
-    `,
-    [newOrderId, holdId, hold.event_id, input.eventTitle, buyerNameFinal, recipientEmail, ownerEmail]
-  );
+  // Solo persistimos los campos extra si el pago es real (PAID) y si vienen desde payments.
+  const buyerRutFinal = input.requirePaidPayment ? buyerRutFromPayment : "";
+  const buyerPhoneFinal = input.requirePaidPayment ? buyerPhoneFromPayment : "";
+  const buyerRegionFinal = input.requirePaidPayment ? buyerRegionFromPayment : "";
+  const buyerComunaFinal = input.requirePaidPayment ? buyerComunaFromPayment : "";
+  const buyerAddress1Final = input.requirePaidPayment ? buyerAddress1FromPayment : "";
+  const buyerAddress2Final = input.requirePaidPayment ? buyerAddress2FromPayment : "";
+
+  // Igual que con payments: si la DB no tiene columnas nuevas en orders, hacemos fallback.
+  let orderRes: any;
+  try {
+    orderRes = await client.query(
+      `
+      INSERT INTO orders (
+        id, hold_id, event_id, event_title,
+        buyer_name, buyer_email, owner_email,
+        buyer_rut, buyer_phone,
+        buyer_region, buyer_comuna,
+        buyer_address1, buyer_address2,
+        created_at
+      )
+      VALUES (
+        $1, $2, $3, $4,
+        $5, $6, $7,
+        $8, $9,
+        $10, $11,
+        $12, $13,
+        NOW()
+      )
+      ON CONFLICT (hold_id) DO UPDATE
+        SET buyer_email    = EXCLUDED.buyer_email,
+            buyer_name     = EXCLUDED.buyer_name,
+            owner_email    = EXCLUDED.owner_email,
+            buyer_rut      = EXCLUDED.buyer_rut,
+            buyer_phone    = EXCLUDED.buyer_phone,
+            buyer_region   = EXCLUDED.buyer_region,
+            buyer_comuna   = EXCLUDED.buyer_comuna,
+            buyer_address1 = EXCLUDED.buyer_address1,
+            buyer_address2 = EXCLUDED.buyer_address2
+      RETURNING *
+      `,
+      [
+        newOrderId,
+        holdId,
+        hold.event_id,
+        input.eventTitle,
+        buyerNameFinal,
+        recipientEmail,
+        ownerEmail,
+        buyerRutFinal,
+        buyerPhoneFinal,
+        buyerRegionFinal,
+        buyerComunaFinal,
+        buyerAddress1Final,
+        buyerAddress2Final,
+      ]
+    );
+  } catch (err) {
+    orderRes = await client.query(
+      `
+      INSERT INTO orders (id, hold_id, event_id, event_title, buyer_name, buyer_email, owner_email, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      ON CONFLICT (hold_id) DO UPDATE
+        SET buyer_email = EXCLUDED.buyer_email,
+            buyer_name  = EXCLUDED.buyer_name,
+            owner_email = EXCLUDED.owner_email
+      RETURNING *
+      `,
+      [newOrderId, holdId, hold.event_id, input.eventTitle, buyerNameFinal, recipientEmail, ownerEmail]
+    );
+  }
+
   const order = orderRes.rows[0];
 
   await client.query(

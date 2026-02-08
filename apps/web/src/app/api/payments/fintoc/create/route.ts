@@ -8,6 +8,8 @@ export const dynamic = "force-dynamic";
 
 const HOLD_TTL_MINUTES = 8;
 
+type FintocEnv = "test" | "live";
+
 function json(status: number, payload: any) {
   return NextResponse.json(payload, {
     status,
@@ -70,9 +72,57 @@ function normalizeBaseUrl(u: string) {
   return String(u || "").replace(/\/+$/, "");
 }
 
+// ✅ Nuevo: selector de ambiente (test/live)
+function fintocEnv(): FintocEnv {
+  const raw = String(process.env.FINTOC_ENV || "").trim().toLowerCase();
+
+  if (raw === "live" || raw === "prod" || raw === "production") return "live";
+  if (raw === "test" || raw === "sandbox") return "test";
+
+  // Si no está seteado: en producción asumimos live; en dev/preview asumimos test.
+  const vercelEnv = String(process.env.VERCEL_ENV || "").toLowerCase(); // production | preview | development
+  if (vercelEnv === "production") return "live";
+
+  return "test";
+}
+
+// ✅ Nuevo: permitir keys separadas por ambiente, sin romper lo actual
+function getFintocSecretKey(env: FintocEnv) {
+  const testKey = String(process.env.FINTOC_SECRET_KEY_TEST || "").trim();
+  const liveKey = String(process.env.FINTOC_SECRET_KEY_LIVE || "").trim();
+  const fallback = String(process.env.FINTOC_SECRET_KEY || "").trim(); // compat
+
+  const key = env === "live" ? (liveKey || fallback) : (testKey || fallback);
+  const source =
+    env === "live"
+      ? (liveKey ? "FINTOC_SECRET_KEY_LIVE" : "FINTOC_SECRET_KEY")
+      : (testKey ? "FINTOC_SECRET_KEY_TEST" : "FINTOC_SECRET_KEY");
+
+  return { key, source };
+}
+
+function keyHint(k: string) {
+  // solo para debug (no expone la key)
+  if (!k) return "";
+  const head = k.slice(0, 6);
+  const tail = k.slice(-4);
+  return `${head}…${tail}`;
+}
+
 export async function POST(req: Request) {
-  const apiKey = process.env.FINTOC_SECRET_KEY;
-  if (!apiKey) return json(500, { ok: false, error: "Falta FINTOC_SECRET_KEY en variables de entorno." });
+  const env = fintocEnv();
+  const { key: apiKey, source: keySource } = getFintocSecretKey(env);
+
+  // Fail-fast claro
+  if (!apiKey) {
+    return json(500, {
+      ok: false,
+      error:
+        env === "live"
+          ? "Fintoc LIVE activo pero falta FINTOC_SECRET_KEY_LIVE (o FINTOC_SECRET_KEY)."
+          : "Fintoc TEST activo pero falta FINTOC_SECRET_KEY_TEST (o FINTOC_SECRET_KEY).",
+    });
+  }
 
   let body: any;
   try {
@@ -219,11 +269,15 @@ export async function POST(req: Request) {
     const successUrl = `${base}/checkout/confirm?payment_id=${encodeURIComponent(String(payment.id))}`;
     const cancelUrl = `${base}/checkout/${encodeURIComponent(eventId)}?canceled=1`;
 
+    // ✅ LOG útil en Vercel
+    console.log("[fintoc:create] env=", env, "key=", keyHint(apiKey), "source=", keySource, "paymentId=", String(payment.id));
+
     // Fintoc checkout session
     const r = await fetch("https://api.fintoc.com/v1/checkout_sessions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json",
         Authorization: apiKey,
       },
       body: JSON.stringify({
@@ -239,6 +293,7 @@ export async function POST(req: Request) {
           eventTitle,
           buyerName,
           buyerEmail,
+          fintocEnv: env, // ✅ solo metadata
         },
       }),
     });
@@ -273,6 +328,11 @@ export async function POST(req: Request) {
       holdId,
       paymentId: String(payment.id),
       checkoutUrl: redirectUrl,
+
+      // ✅ Debug: así confirmas en Network qué ambiente estás usando
+      fintocEnv: env,
+      fintocKey: keyHint(apiKey),
+      fintocKeySource: keySource,
     });
   } catch (e: any) {
     try {
