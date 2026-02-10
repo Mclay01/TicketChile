@@ -298,11 +298,36 @@ export async function POST(req: Request) {
       }),
     });
 
-    const data = await r.json().catch(() => null);
-    if (!r.ok) {
-      const msg = data?.message || data?.error || `Error Fintoc ${r.status}`;
-      throw new Error(String(msg));
+    const raw = await r.text();
+    let data: any = null;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      // si no es JSON, dejamos raw como fallback
     }
+
+    if (!r.ok) {
+      const msg =
+        (typeof data?.message === "string" && data.message) ||
+        (typeof data?.error?.message === "string" && data.error.message) ||
+        (typeof data?.error === "string" && data.error) ||
+        (typeof data?.error_description === "string" && data.error_description) ||
+        (raw ? raw.slice(0, 800) : "") ||
+        `Error Fintoc ${r.status}`;
+
+      console.error("[fintoc:create] fintoc_error", {
+        status: r.status,
+        body: data ?? raw,
+      });
+
+      throw new Error(msg);
+    }
+
+    // si está ok, ahora sí necesitamos JSON
+    if (!data) {
+      throw new Error("Fintoc respondió OK pero no devolvió JSON válido.");
+    }
+
 
     const checkoutSessionId = String(data?.id || "");
     const redirectUrl = String(data?.redirect_url || "");

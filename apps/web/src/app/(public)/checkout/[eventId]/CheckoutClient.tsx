@@ -36,6 +36,35 @@ function onlyDigits(s: string) {
 }
 
 /** ---------------------------
+ *  API error -> human message
+ *  Evita el clásico "[object Object]"
+ *  -------------------------- */
+function apiErrorToMessage(data: any, status: number, raw?: string) {
+  const candidates = [
+    data?.error,
+    data?.error?.message,
+    data?.message,
+    data?.details,
+    data?.details?.message,
+  ];
+
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) return c.trim();
+  }
+
+  // Si viene un objeto como error, lo serializamos (sin romper UI)
+  if (data?.error && typeof data.error === "object") {
+    try {
+      return JSON.stringify(data.error);
+    } catch {}
+  }
+
+  // Si no pudimos parsear JSON, mostramos un pedazo del raw
+  const snippet = typeof raw === "string" ? raw.slice(0, 220) : "";
+  return snippet ? `Error ${status}: ${snippet}` : `Error ${status}`;
+}
+
+/** ---------------------------
  *  RUT (Chile) validation
  *  -------------------------- */
 function cleanRut(input: string) {
@@ -331,8 +360,24 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
         body: JSON.stringify(payload),
       });
 
-      const data = await r.json().catch(() => null);
-      if (!r.ok) throw new Error(data?.error || `Error ${r.status}`);
+      // ✅ Lee raw siempre (para manejar HTML/errores no-JSON)
+      const raw = await r.text();
+      let data: any = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        data = null;
+      }
+
+      // ✅ Error humano, nunca "[object Object]"
+      if (!r.ok) {
+        throw new Error(apiErrorToMessage(data, r.status, raw));
+      }
+
+      // Si vino OK pero no es JSON, igual es inválido para tu flujo
+      if (!data || typeof data !== "object") {
+        throw new Error("Respuesta inválida del servidor (no JSON).");
+      }
 
       const status = String(data?.status || "");
       const paymentId = String(data?.paymentId || "");
