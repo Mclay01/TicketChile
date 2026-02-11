@@ -8,8 +8,6 @@ export const dynamic = "force-dynamic";
 
 const HOLD_TTL_MINUTES = 8;
 
-type FintocEnv = "test" | "live";
-
 function json(status: number, payload: any) {
   return NextResponse.json(payload, {
     status,
@@ -72,38 +70,10 @@ function normalizeBaseUrl(u: string) {
   return String(u || "").replace(/\/+$/, "");
 }
 
-function onlyDigits(s: string) {
-  return String(s || "").replace(/\D+/g, "");
-}
-
 function cleanRutValue(input: string) {
   return String(input || "")
     .toUpperCase()
     .replace(/[^0-9K]/g, "");
-}
-
-function fintocEnv(): FintocEnv {
-  const raw = String(process.env.FINTOC_ENV || "").trim().toLowerCase();
-  if (raw === "live" || raw === "prod" || raw === "production") return "live";
-  if (raw === "test" || raw === "sandbox") return "test";
-
-  const vercelEnv = String(process.env.VERCEL_ENV || "").toLowerCase();
-  if (vercelEnv === "production") return "live";
-  return "test";
-}
-
-function getFintocSecretKey(env: FintocEnv) {
-  const testKey = String(process.env.FINTOC_SECRET_KEY_TEST || "").trim();
-  const liveKey = String(process.env.FINTOC_SECRET_KEY_LIVE || "").trim();
-  const fallback = String(process.env.FINTOC_SECRET_KEY || "").trim();
-
-  const key = env === "live" ? (liveKey || fallback) : (testKey || fallback);
-  const source =
-    env === "live"
-      ? (liveKey ? "FINTOC_SECRET_KEY_LIVE" : "FINTOC_SECRET_KEY")
-      : (testKey ? "FINTOC_SECRET_KEY_TEST" : "FINTOC_SECRET_KEY");
-
-  return { key, source };
 }
 
 function keyHint(k: string) {
@@ -111,59 +81,14 @@ function keyHint(k: string) {
   return `${k.slice(0, 6)}…${k.slice(-4)}`;
 }
 
-/**
- * ✅ Si tu organización tiene "collection" activado en Fintoc,
- * Fintoc ya tiene la cuenta destino preconfigurada:
- * => NO debes enviar recipient_account.
- *
- * Controlado por env para no depender de adivinar:
- * FINTOC_COLLECTION_ENABLED=1  (prod)
- * FINTOC_COLLECTION_ENABLED=0  (dev/test si quieres recipient_account)
- */
-function isCollectionEnabled() {
-  const raw = String(process.env.FINTOC_COLLECTION_ENABLED || "").trim().toLowerCase();
-  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
-}
-
-function getRecipientAccount() {
-  const holder_id = cleanRutValue(pickString(process.env.FINTOC_RECIPIENT_HOLDER_ID));
-  const institution_id = pickString(process.env.FINTOC_RECIPIENT_INSTITUTION_ID);
-  const type = pickString(process.env.FINTOC_RECIPIENT_ACCOUNT_TYPE);
-  const number = onlyDigits(pickString(process.env.FINTOC_RECIPIENT_ACCOUNT_NUMBER));
-
-  const missing: string[] = [];
-  if (!holder_id) missing.push("FINTOC_RECIPIENT_HOLDER_ID");
-  if (!institution_id) missing.push("FINTOC_RECIPIENT_INSTITUTION_ID");
-  if (!type) missing.push("FINTOC_RECIPIENT_ACCOUNT_TYPE");
-  if (!number) missing.push("FINTOC_RECIPIENT_ACCOUNT_NUMBER");
-
-  return { holder_id, institution_id, type, number, missing };
-}
-
 export async function POST(req: Request) {
-  const env = fintocEnv();
-  const { key: apiKey, source: keySource } = getFintocSecretKey(env);
+  // ✅ PRODUCCIÓN ÚNICA: usar SOLO key live en FINTOC_SECRET_KEY
+  const apiKey = String(process.env.FINTOC_SECRET_KEY || "").trim();
 
   if (!apiKey) {
     return json(500, {
       ok: false,
-      error:
-        env === "live"
-          ? "Fintoc LIVE activo pero falta FINTOC_SECRET_KEY_LIVE (o FINTOC_SECRET_KEY)."
-          : "Fintoc TEST activo pero falta FINTOC_SECRET_KEY_TEST (o FINTOC_SECRET_KEY).",
-    });
-  }
-
-  const collectionEnabled = isCollectionEnabled();
-  const recipient = getRecipientAccount();
-
-  // Solo exigimos recipient_account si NO hay collection
-  if (!collectionEnabled && recipient.missing.length > 0) {
-    return json(500, {
-      ok: false,
-      error:
-        "Falta configurar la cuenta destinataria para Fintoc (recipient_account). Agrega: " +
-        recipient.missing.join(", "),
+      error: "Falta FINTOC_SECRET_KEY (usa tu sk_live_... de producción).",
     });
   }
 
@@ -179,7 +104,7 @@ export async function POST(req: Request) {
 
   const buyerName = pickString(body?.buyerName);
   const buyerEmail = pickString(body?.buyerEmail);
-  const buyerRut = cleanRutValue(pickString(body?.buyerRut));
+  const buyerRut = cleanRutValue(pickString(body?.buyerRut)); // opcional
 
   if (buyerName.length < 2) return json(400, { ok: false, error: "buyerName inválido." });
   if (!buyerEmail.includes("@")) return json(400, { ok: false, error: "buyerEmail inválido." });
@@ -195,6 +120,7 @@ export async function POST(req: Request) {
 
     const eventId = eventIdFromBody;
 
+    // stock + hold
     const ids = itemsFromBody.map((x) => x.ticketTypeId);
 
     const ttRes = await client.query(
@@ -260,6 +186,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // total
     const itemsRes = await client.query(
       `
       SELECT unit_price_clp, qty
@@ -282,6 +209,7 @@ export async function POST(req: Request) {
     const evRes = await client.query(`SELECT title FROM events WHERE id=$1`, [eventId]);
     const eventTitle = pickString(evRes.rows?.[0]?.title) || `Evento ${eventId}`;
 
+    // payment row
     const newPaymentId = makeId("pay");
     const payRes = await client.query(
       `
@@ -309,19 +237,16 @@ export async function POST(req: Request) {
     const cancelUrl = `${base}/checkout/${encodeURIComponent(eventId)}?canceled=1`;
 
     console.log(
-      "[fintoc:create] env=",
-      env,
-      "collection=",
-      collectionEnabled ? "on" : "off",
-      "key=",
+      "[fintoc:create] PROD key=",
       keyHint(apiKey),
-      "source=",
-      keySource,
       "paymentId=",
-      String(payment.id)
+      String(payment.id),
+      "amount=",
+      Number(payment.amount_clp)
     );
 
-    // Payload base (sin recipient_account)
+    // ✅ Fintoc v2 Checkout Session (PROD, collection ON)
+    // OJO: NO enviamos recipient_account. Fintoc lo toma desde tu organización.
     const fintocPayload: any = {
       flow: "payment",
       amount: Number(payment.amount_clp),
@@ -341,23 +266,8 @@ export async function POST(req: Request) {
         eventTitle,
         buyerName,
         buyerEmail,
-        fintocEnv: env,
       },
     };
-
-    // ✅ SOLO si collection está OFF agregamos recipient_account
-    if (!collectionEnabled) {
-      fintocPayload.payment_method_options = {
-        bank_transfer: {
-          recipient_account: {
-            type: recipient.type,
-            number: recipient.number,
-            holder_id: recipient.holder_id,
-            institution_id: recipient.institution_id,
-          },
-        },
-      };
-    }
 
     const r = await fetch("https://api.fintoc.com/v2/checkout_sessions", {
       method: "POST",
@@ -402,10 +312,6 @@ export async function POST(req: Request) {
       holdId,
       paymentId: String(payment.id),
       checkoutUrl: redirectUrl,
-      fintocEnv: env,
-      fintocCollection: collectionEnabled,
-      fintocKey: keyHint(apiKey),
-      fintocKeySource: keySource,
     });
   } catch (e: any) {
     try {
