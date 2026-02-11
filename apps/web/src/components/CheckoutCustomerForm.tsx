@@ -6,6 +6,8 @@ import { formatCLP } from "@/lib/events";
 
 type CartItem = { ticketTypeId: string; qty: number };
 
+type PaymentMethod = "webpay" | "fintoc" | "transfer";
+
 function parseCartParam(cartParam: string): CartItem[] {
   // tt_general:2,tt_vip:1
   const raw = String(cartParam || "").trim();
@@ -23,6 +25,12 @@ function parseCartParam(cartParam: string): CartItem[] {
       };
     })
     .filter((x) => x.ticketTypeId && x.qty > 0);
+}
+
+function getPayButtonLabel(method: PaymentMethod) {
+  if (method === "webpay") return "Pagar con Webpay";
+  if (method === "fintoc") return "Pagar con Fintoc";
+  return "Pagar por transferencia (manual)";
 }
 
 export default function CheckoutCustomerForm({
@@ -55,19 +63,32 @@ export default function CheckoutCustomerForm({
 
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
+
+  const [method, setMethod] = useState<PaymentMethod>("fintoc"); // puedes dejar "webpay" si quieres
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // Si usas transferencia manual, aquí podrías mostrar instrucciones del backend
+  const [transferInfo, setTransferInfo] = useState<any>(null);
 
   const canPay =
     summary.lines.length > 0 && buyerName.trim().length >= 2 && buyerEmail.includes("@");
 
   async function onPay() {
     setErr(null);
+    setTransferInfo(null);
     setLoading(true);
+
     try {
       if (!canPay) throw new Error("Completa nombre/email y selecciona tickets.");
 
-      // 1) Crear HOLD (re-usa tu backend actual)
+      // MONTO EN CLP (ENTERO)
+      const amount = summary.total;
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error("amount_invalid_or_missing");
+      }
+
+      // 1) Crear HOLD
       const holdRes = await fetch("/api/demo/hold", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,31 +101,80 @@ export default function CheckoutCustomerForm({
 
       const holdData = await holdRes.json().catch(() => null);
       if (!holdRes.ok) {
-        throw new Error(holdData?.error || `No pude crear hold (${holdRes.status}).`);
+        throw new Error(
+          holdData?.error || holdData?.detail || holdData?.message || `No pude crear hold (${holdRes.status}).`
+        );
       }
 
       const holdId = String(holdData?.holdId || holdData?.id || "");
       if (!holdId) throw new Error("El hold no devolvió holdId.");
 
-      // 2) Crear checkout session Stripe
-      const payRes = await fetch("/api/payments/stripe/create", {
+      // 2) PAGO SEGÚN MÉTODO
+      let endpoint = "";
+      if (method === "webpay") endpoint = "/api/payments/webpay/create";
+      if (method === "fintoc") endpoint = "/api/payments/fintoc/create";
+      if (method === "transfer") endpoint = "/api/payments/transfer/create";
+
+      const payRes = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
         body: JSON.stringify({
+          // comunes
           holdId,
+          amount, // <-- CLAVE (especialmente para fintoc)
+          currency: "CLP",
+          eventId: event.id,
+
+          // datos cliente
+          name: buyerName.trim(),
           buyerName: buyerName.trim(),
+          email: buyerEmail.trim(),       // <-- CLAVE (tu backend fintoc exige email o tax_id)
           buyerEmail: buyerEmail.trim(),
+
+          // metadata útil
+          metadata: {
+            holdId,
+            eventId: event.id,
+            items: cart,
+          },
         }),
       });
 
       const payData = await payRes.json().catch(() => null);
+
       if (!payRes.ok) {
-        throw new Error(payData?.error || `Stripe create falló (${payRes.status}).`);
+        // para que veas el error REAL en UI (no solo "algo falló")
+        const msg =
+          payData?.error ||
+          payData?.detail ||
+          payData?.message ||
+          payData?.fintoc_error?.message ||
+          JSON.stringify(payData);
+        throw new Error(msg || `Pago falló (${payRes.status}).`);
       }
 
-      const url = String(payData?.checkoutUrl || "");
-      if (!url) throw new Error("Stripe no devolvió checkoutUrl.");
+      // Si es transferencia manual, quizás NO hay redirect: mostramos instrucciones
+      if (method === "transfer") {
+        setTransferInfo(payData);
+        setLoading(false);
+        return;
+      }
+
+      // Para fintoc/webpay normalmente viene un redirect
+      const url = String(
+        payData?.redirect_url ||
+          payData?.redirectUrl ||
+          payData?.checkoutUrl ||
+          payData?.paymentUrl ||
+          payData?.url ||
+          ""
+      );
+
+      if (!url) {
+        // Si no hay URL, mostramos lo que devolvió el backend para debug
+        throw new Error(`El proveedor no devolvió URL de redirección: ${JSON.stringify(payData)}`);
+      }
 
       window.location.href = url;
     } catch (e: any) {
@@ -115,9 +185,9 @@ export default function CheckoutCustomerForm({
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-      {/* Resumen MINIMAL (no selector, no invento) */}
+      {/* Resumen */}
       <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-        <p className="text-sm font-semibold text-white/80">Tu compra</p>
+        <p className="text-sm font-semibold text-white/80">Resumen</p>
 
         {summary.lines.length === 0 ? (
           <p className="mt-2 text-sm text-white/60">
@@ -133,25 +203,65 @@ export default function CheckoutCustomerForm({
                 <span className="text-white/70">
                   {x.qty}× {x.name}
                 </span>
-                <span className="font-semibold text-white">
-                  ${formatCLP(x.subtotal)}
-                </span>
+                <span className="font-semibold text-white">${formatCLP(x.subtotal)}</span>
               </div>
             ))}
 
             <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
-              <span className="text-xs font-semibold tracking-wide text-white/70">
-                TOTAL
-              </span>
-              <span className="text-sm font-semibold text-white">
-                ${formatCLP(summary.total)}
-              </span>
+              <span className="text-xs font-semibold tracking-wide text-white/70">TOTAL</span>
+              <span className="text-sm font-semibold text-white">${formatCLP(summary.total)}</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* SOLO datos del cliente */}
+      {/* Método de pago */}
+      <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+        <p className="text-sm font-semibold text-white/80">Método de pago</p>
+
+        <div className="mt-3 space-y-2">
+          <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="radio"
+                name="paymethod"
+                checked={method === "webpay"}
+                onChange={() => setMethod("webpay")}
+              />
+              <span className="text-sm text-white/80">Tarjeta (Webpay)</span>
+            </div>
+            <span className="text-xs text-white/40">Instantáneo</span>
+          </label>
+
+          <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="radio"
+                name="paymethod"
+                checked={method === "fintoc"}
+                onChange={() => setMethod("fintoc")}
+              />
+              <span className="text-sm text-white/80">Transferencia (Fintoc)</span>
+            </div>
+            <span className="text-xs text-white/40">Banco</span>
+          </label>
+
+          <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="radio"
+                name="paymethod"
+                checked={method === "transfer"}
+                onChange={() => setMethod("transfer")}
+              />
+              <span className="text-sm text-white/80">Transferencia (manual)</span>
+            </div>
+            <span className="text-xs text-white/40">Con referencia</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Datos cliente */}
       <div className="mt-5 grid gap-3">
         <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
           <label className="text-xs font-semibold text-white/70">Nombre</label>
@@ -175,8 +285,17 @@ export default function CheckoutCustomerForm({
 
         {err ? (
           <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4">
-            <p className="text-sm font-semibold text-white">Error</p>
+            <p className="text-sm font-semibold text-white">No se pudo iniciar el pago</p>
             <p className="mt-1 text-sm text-white/70">{err}</p>
+          </div>
+        ) : null}
+
+        {transferInfo ? (
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <p className="text-sm font-semibold text-white/80">Instrucciones transferencia</p>
+            <pre className="mt-2 whitespace-pre-wrap text-xs text-white/60">
+              {JSON.stringify(transferInfo, null, 2)}
+            </pre>
           </div>
         ) : null}
 
@@ -186,11 +305,15 @@ export default function CheckoutCustomerForm({
           onClick={onPay}
           className="mt-1 w-full rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-50"
         >
-          {loading ? "Abriendo Stripe…" : "Pagar con Stripe"}
+          {loading ? "Iniciando pago…" : getPayButtonLabel(method)}
         </button>
 
         <p className="text-center text-xs text-white/40">
-          Te redirigimos a Stripe para completar el pago.
+          {method === "fintoc"
+            ? "Te redirigimos a Fintoc para completar el pago."
+            : method === "webpay"
+            ? "Te redirigimos a Webpay para completar el pago."
+            : "Generamos una referencia para pagar por transferencia manual."}
         </p>
       </div>
     </div>

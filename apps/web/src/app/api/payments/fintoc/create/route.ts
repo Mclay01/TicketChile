@@ -1,183 +1,167 @@
-// apps/web/app/api/payments/fintoc/create/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-function parseCLPAmount(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    const n = Math.trunc(value);
-    return n > 0 ? n : null;
-  }
-
-  if (typeof value === "string") {
-    // Acepta "$12.000", "12,000", "12000", etc.
-    const digits = value.replace(/[^\d]/g, "");
-    if (!digits) return null;
-    const n = parseInt(digits, 10);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  }
-
-  return null;
+function pickString(v: any) {
+  return typeof v === "string" ? v.trim() : "";
 }
 
-function getOrigin(req: NextRequest) {
-  // Prioriza env para producción
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.APP_URL ||
-    req.headers.get("origin") ||
-    "http://localhost:3000"
-  );
+function parsePositiveInt(v: any) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  const i = Math.floor(n);
+  return i > 0 ? i : null;
 }
 
-function keyMode(key: string) {
-  if (key.startsWith("sk_live_")) return "live";
-  if (key.startsWith("sk_test_")) return "test";
-  return "unknown";
-}
-
-export async function POST(req: NextRequest) {
+function safeJsonParse(raw: string) {
   try {
-    const FINTOC_SECRET_KEY =
-      process.env.FINTOC_SECRET_KEY ||
-      process.env.FINTOC_SECRET_API_KEY ||
-      process.env.FINTOC_SECRET;
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
-    if (!FINTOC_SECRET_KEY) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "missing_fintoc_secret_key",
-          detail: "Missing FINTOC secret key env (FINTOC_SECRET_KEY).",
-        },
-        { status: 500 }
-      );
-    }
+function normalizeCurrency(v: any) {
+  const c = String(v || "").toUpperCase().trim();
+  if (c === "CLP" || c === "MXN") return c;
+  return "CLP";
+}
 
-    const body = await req.json().catch(() => ({} as any));
+function getBaseUrl(req: Request) {
+  // Prioridad: env -> headers (para Vercel / reverse proxy)
+  const envUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    "";
+  if (envUrl) return envUrl.replace(/\/+$/, "");
 
-    // Acepta varios nombres comunes por si tu frontend manda otro
-    const amount = parseCLPAmount(body?.amount ?? body?.total ?? body?.price);
-    if (!amount) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "amount_invalid_or_missing",
-          detail: "Amount must be an integer CLP (e.g. 12000).",
-        },
-        { status: 400 }
-      );
-    }
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
+  if (!host) return "";
+  return `${proto}://${host}`;
+}
 
-    const currencyRaw = body?.currency ?? "CLP";
-    const currency = String(currencyRaw).toUpperCase();
-    if (currency !== "CLP") {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "currency_not_supported",
-          detail: "This integration expects CLP.",
-        },
-        { status: 400 }
-      );
-    }
+export async function POST(req: Request) {
+  const secret =
+    process.env.FINTOC_SECRET_KEY ||
+    process.env.FINTOC_SECRET_API_KEY ||
+    process.env.FINTOC_SECRET ||
+    "";
 
-    const origin = getOrigin(req);
-
-    const eventId = body?.eventId ?? null;
-    const success_url =
-      body?.success_url ||
-      `${origin}/checkout/success?provider=fintoc${
-        eventId ? `&eventId=${encodeURIComponent(eventId)}` : ""
-      }`;
-    const cancel_url =
-      body?.cancel_url ||
-      `${origin}${eventId ? `/checkout/${encodeURIComponent(eventId)}` : "/checkout"}?canceled=1`;
-
-    // Fintoc Checkout Sessions usa customer_email
-    const customer_email =
-      typeof body?.customer_email === "string"
-        ? body.customer_email
-        : typeof body?.email === "string"
-          ? body.email
-          : null;
-
-    if (!customer_email) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "customer_missing",
-          detail: "Send customer_email (or email) to create the Checkout Session.",
-        },
-        { status: 400 }
-      );
-    }
-
-    const payload = {
-      amount,
-      currency: "CLP",
-      customer_email,
-      success_url,
-      cancel_url,
-      metadata: {
-        ...(body?.metadata && typeof body.metadata === "object" ? body.metadata : {}),
-        eventId: eventId ?? undefined,
-        orderId: body?.orderId ?? undefined,
-      },
-    };
-
-    // Log mínimo, sin filtrar datos sensibles
-    console.log("[fintoc:create]", {
-      mode: keyMode(FINTOC_SECRET_KEY),
-      amount,
-      currency: "CLP",
-      hasEmail: true,
-    });
-
-    // ✅ Endpoint y campos según docs oficiales
-    const fintocRes = await fetch("https://api.fintoc.com/v1/checkout_sessions", {
-      method: "POST",
-      headers: {
-        Authorization: FINTOC_SECRET_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await fintocRes.json().catch(() => ({}));
-
-    if (!fintocRes.ok) {
-      return NextResponse.json(
-        {
-          ok: false,
-          provider: "fintoc",
-          status: fintocRes.status,
-          fintoc_error: data?.error ?? data,
-        },
-        { status: fintocRes.status }
-      );
-    }
-
-    const redirect_url = data?.redirect_url ?? null;
-    const id = data?.id ?? null;
-    const mode = data?.mode ?? null;
-
-    return NextResponse.json({
-      ok: true,
-      provider: "fintoc",
-      id,
-      checkoutSessionId: id,
-      redirect_url,
-      redirectUrl: redirect_url,
-      mode, // <- esto te permite confirmar live/test en frontend si quieres
-      raw: data,
-    });
-  } catch (err: any) {
+  if (!secret) {
     return NextResponse.json(
-      { ok: false, error: "internal_error", detail: err?.message ?? String(err) },
+      { error: "Falta FINTOC_SECRET_KEY en variables de entorno." },
       { status: 500 }
     );
   }
+
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Body inválido (no JSON)." }, { status: 400 });
+  }
+
+  // Lo mínimo que Fintoc exige
+  const amount = parsePositiveInt(body.amount);
+  if (!amount) {
+    // devolvemos el mismo “estilo” de error que viste para que sea obvio
+    return NextResponse.json({ error: "amount_invalid_or_missing" }, { status: 400 });
+  }
+
+  const currency = normalizeCurrency(body.currency);
+
+  const baseUrl = getBaseUrl(req);
+  const successUrl =
+    pickString(body.success_url) ||
+    pickString(body.successUrl) ||
+    (baseUrl ? `${baseUrl}/checkout/confirm?provider=fintoc` : "");
+  const cancelUrl =
+    pickString(body.cancel_url) ||
+    pickString(body.cancelUrl) ||
+    (baseUrl ? `${baseUrl}/eventos?canceled=1` : "");
+
+  if (!successUrl || !cancelUrl) {
+    return NextResponse.json(
+      { error: "Faltan success_url/cancel_url (o no pude inferir base URL)." },
+      { status: 400 }
+    );
+  }
+
+  // Customer (v2)
+  const customerName = pickString(body?.customer?.name) || pickString(body.buyerName);
+  const customerEmail = pickString(body?.customer?.email) || pickString(body.email) || pickString(body.buyerEmail);
+
+  // Tax id según docs (cl_rut + value como string)
+  // Nota: en docs lo mandan como número sin DV en `value`. :contentReference[oaicite:2]{index=2}
+  const taxIdType = pickString(body?.customer?.tax_id?.type) || "cl_rut";
+  const taxIdValue = pickString(body?.customer?.tax_id?.value) || "";
+
+  const customer: any = {
+    name: customerName || undefined,
+    email: customerEmail || undefined,
+    metadata: body?.customer?.metadata && typeof body.customer.metadata === "object" ? body.customer.metadata : {},
+  };
+
+  if (taxIdValue) {
+    customer.tax_id = { type: taxIdType, value: taxIdValue };
+  }
+
+  const metadata =
+    body?.metadata && typeof body.metadata === "object"
+      ? body.metadata
+      : {};
+
+  const payload = {
+    amount,
+    currency,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    customer,
+    metadata,
+  };
+
+  const fintocRes = await fetch("https://api.fintoc.com/v2/checkout_sessions", {
+    method: "POST",
+    headers: {
+      Authorization: secret, // así lo muestra el ejemplo oficial :contentReference[oaicite:3]{index=3}
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const raw = await fintocRes.text();
+  const data = safeJsonParse(raw);
+
+  if (!fintocRes.ok) {
+    // Le devolvemos el error tal cual (para debug rápido)
+    const msg =
+      (typeof data?.error === "string" && data.error) ||
+      (typeof data?.message === "string" && data.message) ||
+      raw?.slice(0, 220) ||
+      `Fintoc error HTTP ${fintocRes.status}`;
+
+    return NextResponse.json({ error: msg, details: data ?? raw }, { status: fintocRes.status });
+  }
+
+  const redirectUrl =
+    pickString(data?.redirect_url) ||
+    pickString(data?.redirectUrl) ||
+    pickString(data?.checkoutUrl) ||
+    pickString(data?.url);
+
+  if (!redirectUrl) {
+    return NextResponse.json(
+      { error: "Fintoc respondió OK pero sin redirect_url.", details: data ?? raw },
+      { status: 502 }
+    );
+  }
+
+  return NextResponse.json({
+    status: "CREATED",
+    checkoutUrl: redirectUrl,
+    fintoc: {
+      id: pickString(data?.id),
+      url: redirectUrl,
+      mode: pickString(data?.mode), // test / live según key :contentReference[oaicite:4]{index=4}
+    },
+  });
 }
