@@ -1,324 +1,183 @@
-import { NextResponse } from "next/server";
-import crypto from "node:crypto";
-import { pool } from "@/lib/db";
-import { appBaseUrl } from "@/lib/stripe.server";
+// apps/web/app/api/payments/fintoc/create/route.ts
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const HOLD_TTL_MINUTES = 8;
-
-function json(status: number, payload: any) {
-  return NextResponse.json(payload, {
-    status,
-    headers: { "Cache-Control": "no-store" },
-  });
-}
-
-function pickString(v: any) {
-  return typeof v === "string" ? v.trim() : "";
-}
-
-function makeId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
-}
-
-function parseItems(raw: any) {
-  if (!Array.isArray(raw)) return [];
-  const out: { ticketTypeId: string; qty: number }[] = [];
-  for (const x of raw) {
-    const ticketTypeId = pickString(x?.ticketTypeId);
-    const qty = Number(x?.qty);
-    if (!ticketTypeId) continue;
-    if (!Number.isFinite(qty) || qty <= 0) continue;
-    out.push({ ticketTypeId, qty: Math.floor(qty) });
+function parseCLPAmount(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const n = Math.trunc(value);
+    return n > 0 ? n : null;
   }
-  return out;
+
+  if (typeof value === "string") {
+    // Acepta "$12.000", "12,000", "12000", etc.
+    const digits = value.replace(/[^\d]/g, "");
+    if (!digits) return null;
+    const n = parseInt(digits, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  return null;
 }
 
-async function releaseExpiredHoldsTx(client: any) {
-  const expired = await client.query(`
-    WITH expired AS (
-      UPDATE holds
-      SET status='EXPIRED'
-      WHERE status='ACTIVE' AND expires_at <= NOW()
-      RETURNING id
-    )
-    SELECT id FROM expired
-  `);
-
-  const ids: string[] = expired.rows.map((r: any) => r.id);
-  if (ids.length === 0) return;
-
-  await client.query(
-    `
-    UPDATE ticket_types tt
-    SET held = GREATEST(0, tt.held - x.qty)
-    FROM (
-      SELECT hi.event_id, hi.ticket_type_id, SUM(hi.qty)::int AS qty
-      FROM hold_items hi
-      WHERE hi.hold_id = ANY($1::text[])
-      GROUP BY hi.event_id, hi.ticket_type_id
-    ) x
-    WHERE tt.event_id = x.event_id AND tt.id = x.ticket_type_id
-    `,
-    [ids]
+function getOrigin(req: NextRequest) {
+  // Prioriza env para producción
+  return (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    process.env.APP_URL ||
+    req.headers.get("origin") ||
+    "http://localhost:3000"
   );
 }
 
-function normalizeBaseUrl(u: string) {
-  return String(u || "").replace(/\/+$/, "");
+function keyMode(key: string) {
+  if (key.startsWith("sk_live_")) return "live";
+  if (key.startsWith("sk_test_")) return "test";
+  return "unknown";
 }
 
-function cleanRutValue(input: string) {
-  return String(input || "")
-    .toUpperCase()
-    .replace(/[^0-9K]/g, "");
-}
-
-function keyHint(k: string) {
-  if (!k) return "";
-  return `${k.slice(0, 6)}…${k.slice(-4)}`;
-}
-
-export async function POST(req: Request) {
-  // ✅ PRODUCCIÓN ÚNICA: usar SOLO key live en FINTOC_SECRET_KEY
-  const apiKey = String(process.env.FINTOC_SECRET_KEY || "").trim();
-
-  if (!apiKey) {
-    return json(500, {
-      ok: false,
-      error: "Falta FINTOC_SECRET_KEY (usa tu sk_live_... de producción).",
-    });
-  }
-
-  let body: any;
+export async function POST(req: NextRequest) {
   try {
-    body = await req.json();
-  } catch {
-    return json(400, { ok: false, error: "Body inválido (JSON)." });
-  }
+    const FINTOC_SECRET_KEY =
+      process.env.FINTOC_SECRET_KEY ||
+      process.env.FINTOC_SECRET_API_KEY ||
+      process.env.FINTOC_SECRET;
 
-  const eventIdFromBody = pickString(body?.eventId);
-  const itemsFromBody = parseItems(body?.items);
-
-  const buyerName = pickString(body?.buyerName);
-  const buyerEmail = pickString(body?.buyerEmail);
-  const buyerRut = cleanRutValue(pickString(body?.buyerRut)); // opcional
-
-  if (buyerName.length < 2) return json(400, { ok: false, error: "buyerName inválido." });
-  if (!buyerEmail.includes("@")) return json(400, { ok: false, error: "buyerEmail inválido." });
-
-  if (!eventIdFromBody) return json(400, { ok: false, error: "Falta eventId." });
-  if (itemsFromBody.length === 0) return json(400, { ok: false, error: "Faltan items (cart vacío)." });
-
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    await releaseExpiredHoldsTx(client);
-
-    const eventId = eventIdFromBody;
-
-    // stock + hold
-    const ids = itemsFromBody.map((x) => x.ticketTypeId);
-
-    const ttRes = await client.query(
-      `
-      SELECT id, name, price_clp, capacity, sold, held
-      FROM ticket_types
-      WHERE event_id=$1 AND id = ANY($2::text[])
-      FOR UPDATE
-      `,
-      [eventId, ids]
-    );
-
-    if (ttRes.rowCount !== ids.length) {
-      return json(409, { ok: false, error: "Algún ticket_type_id no existe para este evento." });
-    }
-
-    const byId = new Map<string, any>();
-    for (const r of ttRes.rows) byId.set(String(r.id), r);
-
-    for (const it of itemsFromBody) {
-      const r = byId.get(it.ticketTypeId);
-      const capacity = Number(r.capacity) || 0;
-      const sold = Number(r.sold) || 0;
-      const held = Number(r.held) || 0;
-      const remaining = Math.max(capacity - sold - held, 0);
-
-      if (it.qty > remaining) {
-        return json(409, {
+    if (!FINTOC_SECRET_KEY) {
+      return NextResponse.json(
+        {
           ok: false,
-          error: `No hay stock suficiente para "${String(r.name)}". Quedan ${remaining}.`,
-        });
-      }
-    }
-
-    const holdId = makeId("hold");
-
-    await client.query(
-      `
-      INSERT INTO holds (id, event_id, status, created_at, expires_at)
-      VALUES ($1, $2, 'ACTIVE', NOW(), NOW() + ($3 || ' minutes')::interval)
-      `,
-      [holdId, eventId, String(HOLD_TTL_MINUTES)]
-    );
-
-    for (const it of itemsFromBody) {
-      const r = byId.get(it.ticketTypeId);
-
-      await client.query(
-        `
-        INSERT INTO hold_items (hold_id, event_id, ticket_type_id, ticket_type_name, unit_price_clp, qty)
-        VALUES ($1,$2,$3,$4,$5,$6)
-        `,
-        [holdId, eventId, it.ticketTypeId, String(r.name), Number(r.price_clp) || 0, it.qty]
-      );
-
-      await client.query(
-        `
-        UPDATE ticket_types
-        SET held = held + $1
-        WHERE event_id=$2 AND id=$3
-        `,
-        [it.qty, eventId, it.ticketTypeId]
+          error: "missing_fintoc_secret_key",
+          detail: "Missing FINTOC secret key env (FINTOC_SECRET_KEY).",
+        },
+        { status: 500 }
       );
     }
 
-    // total
-    const itemsRes = await client.query(
-      `
-      SELECT unit_price_clp, qty
-      FROM hold_items
-      WHERE hold_id=$1
-      `,
-      [holdId]
-    );
+    const body = await req.json().catch(() => ({} as any));
 
-    const amountClp = itemsRes.rows.reduce((acc: number, r: any) => {
-      const unit = Math.round(Number(r.unit_price_clp) || 0);
-      const qty = Math.floor(Number(r.qty) || 0);
-      return acc + unit * qty;
-    }, 0);
-
-    if (!Number.isFinite(amountClp) || amountClp <= 0) {
-      return json(409, { ok: false, error: "Monto inválido." });
+    // Acepta varios nombres comunes por si tu frontend manda otro
+    const amount = parseCLPAmount(body?.amount ?? body?.total ?? body?.price);
+    if (!amount) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "amount_invalid_or_missing",
+          detail: "Amount must be an integer CLP (e.g. 12000).",
+        },
+        { status: 400 }
+      );
     }
 
-    const evRes = await client.query(`SELECT title FROM events WHERE id=$1`, [eventId]);
-    const eventTitle = pickString(evRes.rows?.[0]?.title) || `Evento ${eventId}`;
+    const currencyRaw = body?.currency ?? "CLP";
+    const currency = String(currencyRaw).toUpperCase();
+    if (currency !== "CLP") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "currency_not_supported",
+          detail: "This integration expects CLP.",
+        },
+        { status: 400 }
+      );
+    }
 
-    // payment row
-    const newPaymentId = makeId("pay");
-    const payRes = await client.query(
-      `
-      INSERT INTO payments
-        (id, hold_id, provider, provider_ref, event_id, event_title, buyer_name, buyer_email, amount_clp, currency, status, created_at, updated_at)
-      VALUES
-        ($1, $2, 'fintoc', NULL, $3, $4, $5, $6, $7, 'CLP', 'CREATED', NOW(), NOW())
-      ON CONFLICT (hold_id) DO UPDATE
-        SET event_id     = EXCLUDED.event_id,
-            event_title  = EXCLUDED.event_title,
-            buyer_name   = EXCLUDED.buyer_name,
-            buyer_email  = EXCLUDED.buyer_email,
-            amount_clp   = EXCLUDED.amount_clp,
-            provider     = 'fintoc',
-            updated_at   = NOW()
-      RETURNING *
-      `,
-      [newPaymentId, holdId, eventId, eventTitle, buyerName, buyerEmail, amountClp]
-    );
+    const origin = getOrigin(req);
 
-    const payment = payRes.rows[0];
+    const eventId = body?.eventId ?? null;
+    const success_url =
+      body?.success_url ||
+      `${origin}/checkout/success?provider=fintoc${
+        eventId ? `&eventId=${encodeURIComponent(eventId)}` : ""
+      }`;
+    const cancel_url =
+      body?.cancel_url ||
+      `${origin}${eventId ? `/checkout/${encodeURIComponent(eventId)}` : "/checkout"}?canceled=1`;
 
-    const base = normalizeBaseUrl(appBaseUrl());
-    const successUrl = `${base}/checkout/confirm?payment_id=${encodeURIComponent(String(payment.id))}`;
-    const cancelUrl = `${base}/checkout/${encodeURIComponent(eventId)}?canceled=1`;
+    // Fintoc Checkout Sessions usa customer_email
+    const customer_email =
+      typeof body?.customer_email === "string"
+        ? body.customer_email
+        : typeof body?.email === "string"
+          ? body.email
+          : null;
 
-    console.log(
-      "[fintoc:create] PROD key=",
-      keyHint(apiKey),
-      "paymentId=",
-      String(payment.id),
-      "amount=",
-      Number(payment.amount_clp)
-    );
+    if (!customer_email) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "customer_missing",
+          detail: "Send customer_email (or email) to create the Checkout Session.",
+        },
+        { status: 400 }
+      );
+    }
 
-    // ✅ Fintoc v2 Checkout Session (PROD, collection ON)
-    // OJO: NO enviamos recipient_account. Fintoc lo toma desde tu organización.
-    const fintocPayload: any = {
-      flow: "payment",
-      amount: Number(payment.amount_clp),
+    const payload = {
+      amount,
       currency: "CLP",
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      customer: {
-        name: buyerName,
-        email: buyerEmail,
-        ...(buyerRut ? { tax_id: { type: "cl_rut", value: buyerRut } } : {}),
-      },
-      payment_method_types: ["bank_transfer"],
+      customer_email,
+      success_url,
+      cancel_url,
       metadata: {
-        holdId,
-        paymentId: String(payment.id),
-        eventId,
-        eventTitle,
-        buyerName,
-        buyerEmail,
+        ...(body?.metadata && typeof body.metadata === "object" ? body.metadata : {}),
+        eventId: eventId ?? undefined,
+        orderId: body?.orderId ?? undefined,
       },
     };
 
-    const r = await fetch("https://api.fintoc.com/v2/checkout_sessions", {
+    // Log mínimo, sin filtrar datos sensibles
+    console.log("[fintoc:create]", {
+      mode: keyMode(FINTOC_SECRET_KEY),
+      amount,
+      currency: "CLP",
+      hasEmail: true,
+    });
+
+    // ✅ Endpoint y campos según docs oficiales
+    const fintocRes = await fetch("https://api.fintoc.com/v1/checkout_sessions", {
       method: "POST",
       headers: {
+        Authorization: FINTOC_SECRET_KEY,
         "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: apiKey,
       },
-      body: JSON.stringify(fintocPayload),
+      body: JSON.stringify(payload),
     });
 
-    const data = await r.json().catch(() => null);
+    const data = await fintocRes.json().catch(() => ({}));
 
-    if (!r.ok) {
-      console.error("[fintoc:create] fintoc_error", { status: r.status, body: data });
-      const msg = data?.error?.message || data?.message || data?.error || `Error Fintoc ${r.status}`;
-      throw new Error(String(msg));
+    if (!fintocRes.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          provider: "fintoc",
+          status: fintocRes.status,
+          fintoc_error: data?.error ?? data,
+        },
+        { status: fintocRes.status }
+      );
     }
 
-    const checkoutSessionId = pickString(data?.id);
-    const redirectUrl = pickString(data?.redirect_url || data?.redirectUrl);
+    const redirect_url = data?.redirect_url ?? null;
+    const id = data?.id ?? null;
+    const mode = data?.mode ?? null;
 
-    if (!checkoutSessionId || !redirectUrl) {
-      console.error("[fintoc:create] bad_response", data);
-      throw new Error("Fintoc no devolvió id/redirect_url.");
-    }
-
-    await client.query(
-      `
-      UPDATE payments
-      SET provider_ref=$2, status='PENDING', updated_at=NOW()
-      WHERE id=$1
-      `,
-      [payment.id, checkoutSessionId]
-    );
-
-    await client.query("COMMIT");
-
-    return json(200, {
+    return NextResponse.json({
       ok: true,
-      status: "PENDING",
-      holdId,
-      paymentId: String(payment.id),
-      checkoutUrl: redirectUrl,
+      provider: "fintoc",
+      id,
+      checkoutSessionId: id,
+      redirect_url,
+      redirectUrl: redirect_url,
+      mode, // <- esto te permite confirmar live/test en frontend si quieres
+      raw: data,
     });
-  } catch (e: any) {
-    try {
-      await client.query("ROLLBACK");
-    } catch {}
-    return json(500, { ok: false, error: String(e?.message || e) });
-  } finally {
-    client.release();
+  } catch (err: any) {
+    return NextResponse.json(
+      { ok: false, error: "internal_error", detail: err?.message ?? String(err) },
+      { status: 500 }
+    );
   }
 }
