@@ -1,5 +1,5 @@
 // apps/web/src/lib/db.ts
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 
 export const runtime = "nodejs";
 
@@ -20,25 +20,26 @@ function mustConnString() {
  * - Controlamos SSL por config (ssl: { rejectUnauthorized: true })
  */
 function stripSslMode(cs: string) {
-  // Intento “URL parser” (robusto)
   try {
     const u = new URL(cs);
-    // Parametros que suelen venir en Neon/Vercel
     u.searchParams.delete("sslmode");
     u.searchParams.delete("ssl");
     u.searchParams.delete("uselibpqcompat");
     return u.toString();
   } catch {
-    // Fallback por regex si la URL no parsea por caracteres raros
     let out = cs;
 
-    // elimina sslmode=... (con ? o &)
-    out = out.replace(/([?&])sslmode=[^&]+(&)?/gi, (m, p1, p2) => (p1 === "?" && p2 ? "?" : p2 ? p1 : ""));
-    // elimina ssl=... y uselibpqcompat=...
-    out = out.replace(/([?&])ssl=[^&]+(&)?/gi, (m, p1, p2) => (p1 === "?" && p2 ? "?" : p2 ? p1 : ""));
-    out = out.replace(/([?&])uselibpqcompat=[^&]+(&)?/gi, (m, p1, p2) => (p1 === "?" && p2 ? "?" : p2 ? p1 : ""));
+    const dropParam = (key: string) => {
+      out = out.replace(
+        new RegExp(`([?&])${key}=[^&]+(&)?`, "gi"),
+        (_m, p1, p2) => (p1 === "?" && p2 ? "?" : p2 ? p1 : "")
+      );
+    };
 
-    // limpia ? final o && o ?&
+    dropParam("sslmode");
+    dropParam("ssl");
+    dropParam("uselibpqcompat");
+
     out = out.replace(/\?$/, "");
     out = out.replace(/\?&/, "?");
     out = out.replace(/&&/g, "&");
@@ -65,15 +66,40 @@ export const pool: Pool = (() => {
   const raw = mustConnString();
   const connectionString = stripSslMode(raw);
 
+  // En prod normalmente sí o sí SSL.
+  // (tu env en Vercel se llama DATABASE_SSL = true)
   const useSSL = envBool("DATABASE_SSL", process.env.NODE_ENV === "production");
   const max = envInt("DATABASE_POOL_MAX", 5);
 
   global.__pgPool = new Pool({
     connectionString,
     max,
-    // Con Neon/Vercel esto es lo normal:
     ssl: useSSL ? { rejectUnauthorized: true } : undefined,
   });
 
   return global.__pgPool;
 })();
+
+/**
+ * Helper transaccional que tu webhook está esperando.
+ * - BEGIN
+ * - fn(client)
+ * - COMMIT / ROLLBACK
+ * - release()
+ */
+export async function withTx<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {}
+    throw e;
+  } finally {
+    client.release();
+  }
+}

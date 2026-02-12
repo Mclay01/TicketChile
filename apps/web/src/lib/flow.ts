@@ -1,3 +1,4 @@
+// apps/web/src/lib/flow.ts
 import { createHmac } from "node:crypto";
 
 export type FlowStatus = {
@@ -25,9 +26,11 @@ export function flowBaseUrl() {
   return process.env.FLOW_BASE_URL || "https://www.flow.cl/api";
 }
 
+/**
+ * Firma: ordenar keys y concatenar key+value, HMAC-SHA256(secretKey), hex
+ * (exactamente como documenta Flow)
+ */
 export function flowSign(params: Record<string, string>) {
-  // Firma: ordenar keys y concatenar key+value, HMAC-SHA256(secretKey), hex
-  // (exactamente como documenta Flow)
   const secretKey = mustEnv("FLOW_SECRET_KEY");
   const keys = Object.keys(params).sort();
   let toSign = "";
@@ -92,7 +95,7 @@ export async function flowCreatePayment(args: {
 
   if (!url || !token) throw new Error("Flow create: respuesta inválida (sin url/token).");
 
-  // Para redirigir: url + "?token=" + token (según docs)
+  // Para redirigir: url + "?token=" + token
   return { url, token, flowOrder };
 }
 
