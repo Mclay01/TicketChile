@@ -111,14 +111,6 @@ function isValidRut(input: string) {
   return rutDv(num) === dv;
 }
 
-// 👉 Para Fintoc: usamos SOLO el número (sin DV)
-function rutNumberOnly(input: string) {
-  const n = normalizeRut(input);
-  if (!n) return "";
-  const [num] = n.split("-");
-  return onlyDigits(num);
-}
-
 /** ---------------------------
  *  Email anti-typos
  *  -------------------------- */
@@ -353,17 +345,23 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
 
     try {
       const endpoint =
-        paymentMethod === "webpay" ? "/api/payments/webpay/create" : "/api/payments/fintoc/create";
+        paymentMethod === "webpay"
+          ? "/api/payments/webpay/create"
+          : "/api/payments/fintoc/create";
 
-      const safeEmail = normalizeEmail(emailSuggestion || email);
-      const taxId = rutNumberOnly(rut); // SOLO número
-
-      const payload: any = {
+      // ✅ AHORA incluimos amount/currency/metadata (aunque el server ya lo recalcula)
+      const payload = {
         eventId: event.id,
         items: itemsForApi,
+        amount: orderSummary.total,
+        currency: "CLP",
+        metadata: {
+          cart: cartString,
+          eventSlug: event.slug,
+        },
 
         buyerName: pickString(name),
-        buyerEmail: safeEmail,
+        buyerEmail: normalizeEmail(emailSuggestion || email),
         buyerRut: normalizeRut(rut),
         buyerPhone: onlyDigits(phone),
         buyerRegion: regionName,
@@ -371,30 +369,6 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
         buyerAddress1: pickString(address1),
         buyerAddress2: pickString(address2),
       };
-
-      // ✅ LO QUE TE FALTABA: campos mínimos para tu route.ts de Fintoc
-      if (paymentMethod === "fintoc") {
-        const origin = window.location.origin;
-
-        payload.amount = Math.round(Number(orderSummary.total) || 0);
-        payload.currency = "CLP";
-
-        // Tu route.ts los acepta, y si no, los infiere: pero mejor mandarlos bien.
-        payload.success_url = `${origin}/checkout/success?provider=fintoc&eventId=${encodeURIComponent(eventId)}`;
-        payload.cancel_url = `${origin}/checkout/${encodeURIComponent(eventId)}?canceled=1&cart=${encodeURIComponent(cartString)}`;
-
-        // Tu route.ts lee `email` o `buyerEmail`. Mandamos ambos para cero dudas.
-        payload.email = safeEmail;
-
-        // Tu route.ts lee `tax_id` (y ahora también lo soportará desde buyerRut, ver archivo 2)
-        payload.tax_id = taxId || null;
-
-        payload.metadata = {
-          ...(payload.metadata || {}),
-          eventId: event.id,
-          cart: cartString,
-        };
-      }
 
       const r = await fetch(endpoint, {
         method: "POST",
@@ -440,11 +414,11 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
         return;
       }
 
-      // Fintoc / general redirects
+      // Fintoc: usamos checkoutUrl/redirectUrl
       const checkoutUrl =
         String(data?.checkoutUrl || "") ||
-        String(data?.redirect_url || "") ||
         String(data?.redirectUrl || "") ||
+        String(data?.redirect_url || "") ||
         String(data?.url || "") ||
         String(data?.fintoc?.url || "");
 
@@ -580,6 +554,9 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                   </div>
                 </div>
 
+                {/* ... RESTO DEL ARCHIVO EXACTAMENTE IGUAL ... */}
+                {/* (Lo dejo igual para no romperte estilos ni validaciones) */}
+
                 {/* Nombre */}
                 <div>
                   <label htmlFor="name" className="block text-purple-200 font-medium mb-2">
@@ -684,7 +661,8 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       onClick={() => setEmail(emailSuggestion)}
                       className="mt-2 text-xs text-purple-200/90 hover:text-purple-200 underline"
                     >
-                      ¿Quisiste decir <span className="font-semibold">{emailSuggestion}</span>?</button>
+                      ¿Quisiste decir <span className="font-semibold">{emailSuggestion}</span>?
+                    </button>
                   ) : null}
 
                   {validation.errors.email ? (

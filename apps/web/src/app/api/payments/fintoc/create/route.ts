@@ -1,23 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getEventById } from "@/lib/events";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function parseCLPAmount(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    const n = Math.trunc(value);
-    return n > 0 ? n : null;
-  }
+type Item = { ticketTypeId: string; qty: number };
 
-  if (typeof value === "string") {
-    // Acepta "$12.000", "12,000", "12000", etc.
-    const digits = value.replace(/[^\d]/g, "");
-    if (!digits) return null;
-    const n = parseInt(digits, 10);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  }
-
-  return null;
+function pickString(v: unknown) {
+  return typeof v === "string" ? v.trim() : "";
 }
 
 function getOrigin(req: NextRequest) {
@@ -29,24 +19,32 @@ function getOrigin(req: NextRequest) {
   );
 }
 
-function pickString(v: any) {
-  return typeof v === "string" ? v.trim() : "";
+function parseItems(input: unknown): Item[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((x: any) => ({
+      ticketTypeId: pickString(x?.ticketTypeId),
+      qty: Number(x?.qty),
+    }))
+    .filter((x) => x.ticketTypeId && Number.isFinite(x.qty) && x.qty > 0)
+    .map((x) => ({ ticketTypeId: x.ticketTypeId, qty: Math.floor(x.qty) }));
 }
 
-// Devuelve SOLO el número de RUT (sin DV)
-function rutNumberOnly(input: unknown): string | null {
-  const s = pickString(input);
-  if (!s) return null;
+function computeAmountFromEvent(eventId: string, items: Item[]): number | null {
+  const event = getEventById(eventId);
+  if (!event) return null;
 
-  // Deja 0-9 y K, pero para tax_id solo nos sirve el número
-  const cleaned = s.toUpperCase().replace(/[^0-9K]/g, "");
-  if (cleaned.length < 2) return null;
+  const byId = new Map(event.ticketTypes.map((t) => [t.id, t.priceCLP] as const));
 
-  const num = cleaned.slice(0, -1); // sin DV
-  const digits = num.replace(/\D/g, "");
-  if (!digits) return null;
-  if (digits.length < 7) return null;
-  return digits;
+  let total = 0;
+  for (const it of items) {
+    const price = byId.get(it.ticketTypeId);
+    if (!price) continue;
+    total += price * it.qty;
+  }
+
+  total = Math.trunc(total);
+  return total > 0 ? total : null;
 }
 
 export async function POST(req: NextRequest) {
@@ -58,136 +56,103 @@ export async function POST(req: NextRequest) {
 
     if (!FINTOC_SECRET_KEY) {
       return NextResponse.json(
-        { ok: false, error: "Missing FINTOC secret key env (FINTOC_SECRET_KEY)." },
-        { status: 500 }
-      );
-    }
-
-    const keyMode = FINTOC_SECRET_KEY.startsWith("sk_live") ? "live" : "test";
-
-    const FINTOC_RECIPIENT_ACCOUNT =
-      process.env.FINTOC_RECIPIENT_ACCOUNT ||
-      process.env.FINTOC_RECIPIENT_ACCOUNT_ID ||
-      process.env.FINTOC_BANK_TRANSFER_RECIPIENT_ACCOUNT ||
-      null;
-
-    // ✅ En live lo exigimos, en test no te bloqueamos
-    if (keyMode === "live" && !FINTOC_RECIPIENT_ACCOUNT) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "missing_fintoc_recipient_account",
-          detail:
-            "Define FINTOC_RECIPIENT_ACCOUNT (required in live for payment_method_options.bank_transfer.recipient_account).",
-        },
+        { ok: false, error: "missing_env", detail: "Missing FINTOC secret key env (FINTOC_SECRET_KEY)." },
         { status: 500 }
       );
     }
 
     const body = await req.json().catch(() => ({} as any));
 
-    const amount = parseCLPAmount(body?.amount);
-    if (!amount) {
+    const eventId = pickString(body?.eventId);
+    const items = parseItems(body?.items);
+
+    if (!eventId) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: "amount_invalid_or_missing",
-          detail: "Amount must be an integer CLP (e.g. 12000).",
-        },
+        { ok: false, error: "eventId_missing", detail: "Send eventId." },
         { status: 400 }
       );
     }
 
-    const currency = (body?.currency ?? "CLP") as string;
-    if (currency !== "CLP") {
+    if (items.length === 0) {
       return NextResponse.json(
-        { ok: false, error: "currency_not_supported", detail: "This integration expects CLP." },
+        { ok: false, error: "items_missing", detail: "Send items: [{ticketTypeId, qty}]." },
+        { status: 400 }
+      );
+    }
+
+    const amount = computeAmountFromEvent(eventId, items);
+    if (!amount) {
+      return NextResponse.json(
+        { ok: false, error: "amount_invalid", detail: "Could not compute amount from eventId/items." },
         { status: 400 }
       );
     }
 
     const origin = getOrigin(req);
 
-    const eventId = body?.eventId ?? null;
     const success_url =
-      body?.success_url ||
-      `${origin}/checkout/success?provider=fintoc${eventId ? `&eventId=${encodeURIComponent(eventId)}` : ""}`;
+      pickString(body?.success_url) ||
+      `${origin}/checkout/success?provider=fintoc&eventId=${encodeURIComponent(eventId)}`;
+
     const cancel_url =
-      body?.cancel_url ||
-      `${origin}${eventId ? `/checkout/${encodeURIComponent(eventId)}` : "/checkout"}?canceled=1`;
+      pickString(body?.cancel_url) ||
+      `${origin}/checkout/${encodeURIComponent(eventId)}?canceled=1`;
 
-    // Customer requerido: al menos email o tax_id (RUT)
-    const email =
-      typeof body?.email === "string"
-        ? body.email
-        : typeof body?.buyerEmail === "string"
-        ? body.buyerEmail
-        : null;
+    // customer_data: al menos email o tax_id
+    const buyerEmail = pickString(body?.buyerEmail) || pickString(body?.email);
+    const buyerName = pickString(body?.buyerName) || pickString(body?.name);
+    const buyerRut = pickString(body?.buyerRut) || pickString(body?.tax_id);
 
-    // ✅ soporta tax_id directo o buyerRut
-    const taxIdRaw =
-      typeof body?.tax_id === "string"
-        ? body.tax_id
-        : typeof body?.buyerRut === "string"
-        ? body.buyerRut
-        : null;
-
-    const taxId = rutNumberOnly(taxIdRaw);
-
-    if (!email && !taxId) {
+    if (!buyerEmail && !buyerRut) {
       return NextResponse.json(
         {
           ok: false,
           error: "customer_missing",
-          detail: "Send customer email or tax_id (RUT) to create the Checkout Session.",
+          detail: "Send buyerEmail or buyerRut to create the Checkout Session.",
         },
         { status: 400 }
       );
     }
 
-    const payment_method_types = ["bank_transfer"];
+    // Opcional: preseleccionar banco (ej: 'cl_banco_estado')
+    const bankInstitutionId = pickString(body?.bank_institution_id);
 
-    // Opcional: preseleccionar banco
-    const bankInstitutionId =
-      typeof body?.bank_institution_id === "string" ? body.bank_institution_id : null;
-
-    const bankTransferOptions: any = {};
-
-    if (FINTOC_RECIPIENT_ACCOUNT) {
-      bankTransferOptions.recipient_account = FINTOC_RECIPIENT_ACCOUNT;
-    }
-    if (bankInstitutionId) {
-      bankTransferOptions.institution_id = bankInstitutionId;
-    }
-
-    const customer: any = {};
-    if (email) customer.email = email;
-    if (taxId) customer.tax_id = { type: "cl_rut", value: taxId };
+    const customer_data: any = {
+      ...(buyerName ? { name: buyerName } : {}),
+      ...(buyerEmail ? { email: buyerEmail } : {}),
+      ...(buyerRut
+        ? { tax_id: { type: "cl_rut", value: buyerRut } }
+        : {}),
+      metadata: {
+        eventId,
+      },
+    };
 
     const payload: any = {
-      flow: "payment",
       amount,
       currency: "CLP",
       success_url,
       cancel_url,
-      payment_method_types,
-      payment_method_options: {
-        bank_transfer: bankTransferOptions,
-      },
-      metadata: {
-        ...(body?.metadata && typeof body.metadata === "object" ? body.metadata : {}),
-        eventId: eventId ?? undefined,
-        orderId: body?.orderId ?? undefined,
-        holdId: body?.holdId ?? undefined,
-      },
-      customer,
+
+      // ✅ método correcto para transferencias vía banco
+      payment_methods: ["payment_initiation"],
+
+      ...(bankInstitutionId
+        ? {
+            payment_method_options: {
+              payment_initiation: { institution_id: bankInstitutionId },
+            },
+          }
+        : {}),
+
+      customer_data,
     };
 
     console.log("[fintoc:create]", {
-      keyMode,
+      keyMode: FINTOC_SECRET_KEY.startsWith("sk_live") ? "live" : "test",
+      eventId,
       amount,
-      currency: payload.currency,
-      recipient: FINTOC_RECIPIENT_ACCOUNT ? "set" : "not_set",
+      bankInstitutionId: bankInstitutionId || null,
     });
 
     const fintocRes = await fetch("https://api.fintoc.com/v2/checkout_sessions", {
@@ -216,13 +181,6 @@ export async function POST(req: NextRequest) {
     const redirect_url = data?.redirect_url ?? data?.redirectUrl ?? null;
     const id = data?.id ?? null;
 
-    if (!redirect_url) {
-      return NextResponse.json(
-        { ok: false, error: "missing_redirect_url", detail: "Fintoc respondió sin redirect_url.", raw: data },
-        { status: 502 }
-      );
-    }
-
     return NextResponse.json({
       ok: true,
       provider: "fintoc",
@@ -230,8 +188,6 @@ export async function POST(req: NextRequest) {
       checkoutSessionId: id,
       redirect_url,
       redirectUrl: redirect_url,
-      checkoutUrl: redirect_url, // ✅ alias para tu frontend
-      raw: data,
     });
   } catch (err: any) {
     return NextResponse.json(
