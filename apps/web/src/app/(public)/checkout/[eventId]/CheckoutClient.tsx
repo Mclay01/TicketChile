@@ -52,12 +52,14 @@ function apiErrorToMessage(data: any, status: number, raw?: string) {
     if (typeof c === "string" && c.trim()) return c.trim();
   }
 
+  // Si viene un objeto como error, lo serializamos (sin romper UI)
   if (data?.error && typeof data.error === "object") {
     try {
       return JSON.stringify(data.error);
     } catch {}
   }
 
+  // Si no pudimos parsear JSON, mostramos un pedazo del raw
   const snippet = typeof raw === "string" ? raw.slice(0, 220) : "";
   return snippet ? `Error ${status}: ${snippet}` : `Error ${status}`;
 }
@@ -109,8 +111,8 @@ function isValidRut(input: string) {
   return rutDv(num) === dv;
 }
 
+// 👉 Para Fintoc: usamos SOLO el número (sin DV)
 function rutNumberOnly(input: string) {
-  // Para Fintoc docs: suelen mandar solo el número (sin DV).
   const n = normalizeRut(input);
   if (!n) return "";
   const [num] = n.split("-");
@@ -133,6 +135,7 @@ function normalizeEmail(input: string) {
 
 function looksLikeEmail(input: string) {
   const e = normalizeEmail(input);
+  // Suficiente para UI; el server valida de nuevo.
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
@@ -330,18 +333,7 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
     if (orderSummary.total <= 0) errors.cart = "Carrito inválido.";
 
     return { ok: Object.keys(errors).length === 0, errors };
-  }, [
-    name,
-    rut,
-    phone,
-    email,
-    email2,
-    regionCode,
-    comunaCode,
-    address1,
-    acceptTerms,
-    orderSummary.total,
-  ]);
+  }, [name, rut, phone, email, email2, regionCode, comunaCode, address1, acceptTerms, orderSummary.total]);
 
   const dateLabel = event ? formatEventDateLabel(event.dateISO) : "";
   const timeLabel = event ? formatEventTimeLabel(event.dateISO) : "";
@@ -361,20 +353,18 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
 
     try {
       const endpoint =
-        paymentMethod === "webpay"
-          ? "/api/payments/webpay/create"
-          : "/api/payments/fintoc/create";
+        paymentMethod === "webpay" ? "/api/payments/webpay/create" : "/api/payments/fintoc/create";
 
       const safeEmail = normalizeEmail(emailSuggestion || email);
-      const rutNorm = normalizeRut(rut);
-      const rutNumOnly = rutNumberOnly(rut);
+      const taxId = rutNumberOnly(rut); // SOLO número
 
-      const basePayload: any = {
+      const payload: any = {
         eventId: event.id,
         items: itemsForApi,
+
         buyerName: pickString(name),
         buyerEmail: safeEmail,
-        buyerRut: rutNorm,
+        buyerRut: normalizeRut(rut),
         buyerPhone: onlyDigits(phone),
         buyerRegion: regionName,
         buyerComuna: comunaName,
@@ -382,41 +372,37 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
         buyerAddress2: pickString(address2),
       };
 
-      // ✅ Fintoc exige amount/currency/success_url/cancel_url
+      // ✅ LO QUE TE FALTABA: campos mínimos para tu route.ts de Fintoc
       if (paymentMethod === "fintoc") {
         const origin = window.location.origin;
 
-        basePayload.amount = Math.round(Number(orderSummary.total) || 0);
-        basePayload.currency = "CLP";
+        payload.amount = Math.round(Number(orderSummary.total) || 0);
+        payload.currency = "CLP";
 
-        // URLs de retorno (las usa el backend para crear la sesión)
-        basePayload.success_url = `${origin}/checkout/confirm?provider=fintoc`;
-        basePayload.cancel_url = `${origin}/checkout/${encodeURIComponent(
-          eventId
-        )}?canceled=1&cart=${encodeURIComponent(cartString)}`;
+        // Tu route.ts los acepta, y si no, los infiere: pero mejor mandarlos bien.
+        payload.success_url = `${origin}/checkout/success?provider=fintoc&eventId=${encodeURIComponent(eventId)}`;
+        payload.cancel_url = `${origin}/checkout/${encodeURIComponent(eventId)}?canceled=1&cart=${encodeURIComponent(cartString)}`;
 
-        // Customer (según docs v2)
-        basePayload.customer = {
-          name: pickString(name),
-          email: safeEmail,
-          tax_id: rutNumOnly
-            ? { type: "cl_rut", value: rutNumOnly }
-            : undefined,
-          metadata: {},
-        };
+        // Tu route.ts lee `email` o `buyerEmail`. Mandamos ambos para cero dudas.
+        payload.email = safeEmail;
 
-        basePayload.metadata = {
-          order: `evt_${event.id}`,
+        // Tu route.ts lee `tax_id` (y ahora también lo soportará desde buyerRut, ver archivo 2)
+        payload.tax_id = taxId || null;
+
+        payload.metadata = {
+          ...(payload.metadata || {}),
           eventId: event.id,
+          cart: cartString,
         };
       }
 
       const r = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(basePayload),
+        body: JSON.stringify(payload),
       });
 
+      // ✅ Lee raw siempre (para manejar HTML/errores no-JSON)
       const raw = await r.text();
       let data: any = null;
       try {
@@ -425,6 +411,7 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
         data = null;
       }
 
+      // ✅ Error humano, nunca "[object Object]"
       if (!r.ok) {
         throw new Error(apiErrorToMessage(data, r.status, raw));
       }
@@ -453,13 +440,13 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
         return;
       }
 
-      // Fallback general: checkoutUrl / redirectUrl / url / fintoc.url
+      // Fintoc / general redirects
       const checkoutUrl =
         String(data?.checkoutUrl || "") ||
+        String(data?.redirect_url || "") ||
         String(data?.redirectUrl || "") ||
         String(data?.url || "") ||
-        String(data?.fintoc?.url || "") ||
-        String(data?.redirect_url || "");
+        String(data?.fintoc?.url || "");
 
       if (!checkoutUrl) {
         throw new Error("No recibí una URL válida para continuar el pago.");
@@ -526,9 +513,7 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
           {canceled ? (
             <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-center">
               <p className="text-white/90 font-semibold">Pago cancelado</p>
-              <p className="mt-1 text-sm text-white/70">
-                No se realizó ningún cobro. Puedes intentarlo de nuevo.
-              </p>
+              <p className="mt-1 text-sm text-white/70">No se realizó ningún cobro. Puedes intentarlo de nuevo.</p>
             </div>
           ) : null}
 
@@ -610,9 +595,7 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       required
                       className={[
                         "w-full pl-12 pr-4 py-3 bg-black/30 border rounded-xl text-white placeholder-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-400/20 transition-all",
-                        validation.errors.name
-                          ? "border-red-500/40"
-                          : "border-purple-500/30 focus:border-purple-400",
+                        validation.errors.name ? "border-red-500/40" : "border-purple-500/30 focus:border-purple-400",
                       ].join(" ")}
                       placeholder="Juan Pérez"
                     />
@@ -638,9 +621,7 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       required
                       className={[
                         "w-full pl-12 pr-4 py-3 bg-black/30 border rounded-xl text-white placeholder-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-400/20 transition-all",
-                        validation.errors.rut
-                          ? "border-red-500/40"
-                          : "border-purple-500/30 focus:border-purple-400",
+                        validation.errors.rut ? "border-red-500/40" : "border-purple-500/30 focus:border-purple-400",
                       ].join(" ")}
                       placeholder="12.345.678-5"
                     />
@@ -665,9 +646,7 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       required
                       className={[
                         "w-full pl-12 pr-4 py-3 bg-black/30 border rounded-xl text-white placeholder-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-400/20 transition-all",
-                        validation.errors.phone
-                          ? "border-red-500/40"
-                          : "border-purple-500/30 focus:border-purple-400",
+                        validation.errors.phone ? "border-red-500/40" : "border-purple-500/30 focus:border-purple-400",
                       ].join(" ")}
                       placeholder="9 1234 5678"
                       inputMode="tel"
@@ -693,9 +672,7 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       required
                       className={[
                         "w-full pl-12 pr-4 py-3 bg-black/30 border rounded-xl text-white placeholder-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-400/20 transition-all",
-                        validation.errors.email
-                          ? "border-red-500/40"
-                          : "border-purple-500/30 focus:border-purple-400",
+                        validation.errors.email ? "border-red-500/40" : "border-purple-500/30 focus:border-purple-400",
                       ].join(" ")}
                       placeholder="tu@email.com"
                     />
@@ -707,8 +684,7 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       onClick={() => setEmail(emailSuggestion)}
                       className="mt-2 text-xs text-purple-200/90 hover:text-purple-200 underline"
                     >
-                      ¿Quisiste decir <span className="font-semibold">{emailSuggestion}</span>?
-                    </button>
+                      ¿Quisiste decir <span className="font-semibold">{emailSuggestion}</span>?</button>
                   ) : null}
 
                   {validation.errors.email ? (
@@ -731,9 +707,7 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       required
                       className={[
                         "w-full pl-12 pr-4 py-3 bg-black/30 border rounded-xl text-white placeholder-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-400/20 transition-all",
-                        validation.errors.email2
-                          ? "border-red-500/40"
-                          : "border-purple-500/30 focus:border-purple-400",
+                        validation.errors.email2 ? "border-red-500/40" : "border-purple-500/30 focus:border-purple-400",
                       ].join(" ")}
                       placeholder="repite tu@email.com"
                     />
@@ -754,9 +728,7 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                         onChange={(ev) => setRegionCode(ev.target.value)}
                         className={[
                           "w-full pl-12 pr-4 py-3 bg-black/30 border rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-400/20 transition-all",
-                          validation.errors.region
-                            ? "border-red-500/40"
-                            : "border-purple-500/30 focus:border-purple-400",
+                          validation.errors.region ? "border-red-500/40" : "border-purple-500/30 focus:border-purple-400",
                         ].join(" ")}
                       >
                         <option value="">{loadingGeo ? "Cargando..." : "Selecciona región"}</option>
@@ -782,17 +754,11 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                         disabled={!regionCode || comunas.length === 0}
                         className={[
                           "w-full pl-12 pr-4 py-3 bg-black/30 border rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-400/20 transition-all disabled:opacity-60",
-                          validation.errors.comuna
-                            ? "border-red-500/40"
-                            : "border-purple-500/30 focus:border-purple-400",
+                          validation.errors.comuna ? "border-red-500/40" : "border-purple-500/30 focus:border-purple-400",
                         ].join(" ")}
                       >
                         <option value="">
-                          {!regionCode
-                            ? "Elige región primero"
-                            : loadingGeo
-                            ? "Cargando..."
-                            : "Selecciona comuna"}
+                          {!regionCode ? "Elige región primero" : loadingGeo ? "Cargando..." : "Selecciona comuna"}
                         </option>
                         {comunas.map((c) => (
                           <option key={c.codigo} value={c.codigo}>
@@ -831,9 +797,7 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                     required
                     className={[
                       "w-full px-4 py-3 bg-black/30 border rounded-xl text-white placeholder-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-400/20 transition-all",
-                      validation.errors.address1
-                        ? "border-red-500/40"
-                        : "border-purple-500/30 focus:border-purple-400",
+                      validation.errors.address1 ? "border-red-500/40" : "border-purple-500/30 focus:border-purple-400",
                     ].join(" ")}
                     placeholder="Av. Siempre Viva 123, depto 45"
                   />
@@ -865,12 +829,9 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                     className="mt-1"
                   />
                   <span className="text-sm text-white/75">
-                    Acepto términos y condiciones y autorizo el uso de mis datos para emitir y
-                    enviar mis tickets.
+                    Acepto términos y condiciones y autorizo el uso de mis datos para emitir y enviar mis tickets.
                     {validation.errors.terms ? (
-                      <span className="block mt-1 text-xs text-red-300">
-                        {validation.errors.terms}
-                      </span>
+                      <span className="block mt-1 text-xs text-red-300">{validation.errors.terms}</span>
                     ) : null}
                   </span>
                 </label>
@@ -899,9 +860,8 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                 </button>
 
                 <p className="text-[11px] text-white/45 leading-relaxed">
-                  Nota honesta: ningún sistema puede “adivinar” si un correo existe sin enviar algo.
-                  Aquí evitamos errores típicos y el server valida dominio/MX (si lo activas). Para
-                  100% real: verificación por código (OTP).
+                  Nota honesta: ningún sistema puede “adivinar” si un correo existe sin enviar algo. Aquí evitamos errores
+                  típicos y el server valida dominio/MX (si lo activas). Para 100% real: verificación por código (OTP).
                 </p>
               </form>
             </div>
@@ -946,9 +906,7 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                 </div>
               </div>
 
-              <p className="mt-6 text-center text-[11px] text-white/25 break-all">
-                cart: {cartString}
-              </p>
+              <p className="mt-6 text-center text-[11px] text-white/25 break-all">cart: {cartString}</p>
             </div>
           </div>
         </div>
