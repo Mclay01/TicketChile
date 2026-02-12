@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Pool } from "pg";
 import { createHmac, randomUUID } from "node:crypto";
-import { pool } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const FLOW_API_BASE = process.env.FLOW_BASE_URL || "https://api.flow.cl";
+const FLOW_API_BASE = "https://api.flow.cl";
 const HOLD_TTL_MINUTES = 15;
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __pgPoolFlow: Pool | undefined;
+}
+
+function getDbPool() {
+  if (global.__pgPoolFlow) return global.__pgPoolFlow;
+
+  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!connectionString) throw new Error("Missing DATABASE_URL (or POSTGRES_URL).");
+
+  global.__pgPoolFlow = new Pool({ connectionString });
+  return global.__pgPoolFlow;
+}
 
 function mustEnv(name: string) {
   const v = process.env[name];
@@ -96,23 +111,29 @@ async function flowCreatePayment(params: {
       ok: false as const,
       status: r.status,
       error: j?.message || j?.error || j || "flow_error",
+      raw: j,
     };
   }
 
   const token = String(j?.token || "");
   const url = String(j?.url || "");
 
-  if (!token || !url) return { ok: false as const, status: 500, error: "flow_invalid_response" };
+  if (!token || !url) {
+    return { ok: false as const, status: 500, error: "flow_invalid_response", raw: j };
+  }
 
   const checkoutUrl = `${url}?token=${encodeURIComponent(token)}`;
   return { ok: true as const, token, url, checkoutUrl, raw: j };
 }
 
 export async function POST(req: NextRequest) {
+  const reqId = `flow_create_${randomUUID().slice(0, 8)}`;
+
   try {
     const FLOW_API_KEY = mustEnv("FLOW_API_KEY");
     const FLOW_SECRET_KEY = mustEnv("FLOW_SECRET_KEY");
 
+    const pool = getDbPool();
     const body = await req.json().catch(() => ({} as any));
 
     const eventId = pickString(body?.eventId);
@@ -127,25 +148,41 @@ export async function POST(req: NextRequest) {
       }))
       .filter((x: any) => x.ticketTypeId && Number.isFinite(x.qty) && x.qty > 0);
 
-    if (!eventId) return NextResponse.json({ ok: false, error: "eventId_missing" }, { status: 400 });
-    if (!buyerName || buyerName.length < 2)
+    // ✅ LOG siempre (sin datos sensibles)
+    console.log("[flow:create][in]", {
+      reqId,
+      eventId: !!eventId,
+      buyerNameLen: buyerName?.length || 0,
+      buyerEmail: buyerEmail ? buyerEmail.replace(/(.{2}).+(@.+)/, "$1***$2") : "",
+      itemsCount: normalizedItems.length,
+    });
+
+    if (!eventId) {
+      return NextResponse.json({ ok: false, error: "eventId_missing" }, { status: 400 });
+    }
+    if (!buyerName || buyerName.length < 2) {
       return NextResponse.json({ ok: false, error: "buyerName_invalid" }, { status: 400 });
-    if (!buyerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail))
+    }
+    if (!buyerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) {
       return NextResponse.json({ ok: false, error: "buyerEmail_invalid" }, { status: 400 });
-    if (normalizedItems.length === 0)
+    }
+    if (normalizedItems.length === 0) {
       return NextResponse.json({ ok: false, error: "items_empty" }, { status: 400 });
+    }
 
     const amountFromClient = parseCLPAmount(body?.amount);
 
+    const client = await pool.connect();
     let paymentId = "";
     let holdId = "";
-    let totalServer = 0;
+
+    let total = 0;
     let eventTitle = "";
 
-    const client = await pool.connect();
     try {
       await client.query("BEGIN");
 
+      // Event title
       const ev = await client.query(`SELECT id, title FROM events WHERE id = $1`, [eventId]);
       if (ev.rowCount === 0) {
         await client.query("ROLLBACK");
@@ -153,6 +190,7 @@ export async function POST(req: NextRequest) {
       }
       eventTitle = String(ev.rows[0].title);
 
+      // Ticket types
       const ids = normalizedItems.map((x: any) => x.ticketTypeId);
       const tt = await client.query(
         `SELECT id, name, price_clp, capacity, sold, held
@@ -169,7 +207,8 @@ export async function POST(req: NextRequest) {
       const byId = new Map<string, any>();
       for (const row of tt.rows) byId.set(String(row.id), row);
 
-      let total = 0;
+      // Recalcular total server-side
+      total = 0;
       for (const it of normalizedItems) {
         const row = byId.get(it.ticketTypeId);
         total += Number(row.price_clp) * it.qty;
@@ -180,6 +219,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, error: "amount_invalid" }, { status: 400 });
       }
 
+      // Si viene amount del client y no calza, lo frenamos (evita manipulación)
       if (amountFromClient && amountFromClient !== total) {
         await client.query("ROLLBACK");
         return NextResponse.json(
@@ -188,8 +228,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      totalServer = total;
-
+      // Hold
       holdId = `hold_${randomUUID()}`;
       const expiresAt = new Date(Date.now() + HOLD_TTL_MINUTES * 60_000).toISOString();
 
@@ -199,6 +238,7 @@ export async function POST(req: NextRequest) {
         [holdId, eventId, expiresAt]
       );
 
+      // Reservar (held) con condición de capacidad
       for (const it of normalizedItems) {
         const u = await client.query(
           `UPDATE ticket_types
@@ -223,6 +263,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Payment
       paymentId = `pay_${randomUUID()}`;
       await client.query(
         `INSERT INTO payments
@@ -233,29 +274,31 @@ export async function POST(req: NextRequest) {
           ($1, $2, 'flow', NULL, $3, $4,
            $5, $6, $7,
            $8, 'CLP', 'CREATED')`,
-        [paymentId, holdId, eventId, eventTitle, buyerName, buyerEmail, buyerEmail, totalServer]
+        [paymentId, holdId, eventId, eventTitle, buyerName, buyerEmail, buyerEmail, total]
       );
 
       await client.query("COMMIT");
     } catch (e) {
-      try {
-        await client.query("ROLLBACK");
-      } catch {}
+      await client.query("ROLLBACK");
       throw e;
     } finally {
       client.release();
     }
 
+    // ✅ Llamada a Flow (afuera de la TX DB) con el TOTAL REAL (no el body.amount)
     const origin = getOrigin(req);
+
     const urlConfirmation = `${origin}/api/payments/flow/confirm`;
     const urlReturn = `${origin}/api/payments/flow/kick`;
+
+    console.log("[flow:create][flow_call]", { reqId, paymentId, holdId, total, origin });
 
     const flowRes = await flowCreatePayment({
       apiKey: FLOW_API_KEY,
       secretKey: FLOW_SECRET_KEY,
-      commerceOrder: paymentId,
+      commerceOrder: paymentId, // clave
       subject: `Compra tickets - ${eventTitle}`,
-      amount: totalServer,
+      amount: total, // ✅ SIEMPRE el server total
       payerEmail: buyerEmail,
       urlConfirmation,
       urlReturn,
@@ -263,13 +306,17 @@ export async function POST(req: NextRequest) {
     });
 
     if (!flowRes.ok) {
+      console.error("[flow:create][flow_error]", { reqId, paymentId, holdId, status: flowRes.status, error: flowRes.error });
+
+      // Cleanup suave: marcar FAILED y liberar held
+      const pool = getDbPool();
       const c = await pool.connect();
       try {
         await c.query("BEGIN");
 
         await c.query(`UPDATE payments SET status='FAILED', updated_at=NOW() WHERE id=$1`, [paymentId]);
 
-        const hi = await c.query(`SELECT ticket_type_id, qty FROM hold_items WHERE hold_id=$1`, [holdId]);
+        const hi = await c.query(`SELECT ticket_type_id, qty FROM hold_items WHERE hold_id = $1`, [holdId]);
         for (const row of hi.rows) {
           await c.query(
             `UPDATE ticket_types
@@ -279,13 +326,10 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        await c.query(`UPDATE holds SET status='EXPIRED' WHERE id=$1`, [holdId]);
-
+        await c.query(`UPDATE holds SET status='EXPIRED' WHERE id = $1`, [holdId]);
         await c.query("COMMIT");
-      } catch {
-        try {
-          await c.query("ROLLBACK");
-        } catch {}
+      } catch (e) {
+        try { await c.query("ROLLBACK"); } catch {}
       } finally {
         c.release();
       }
@@ -296,28 +340,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const c2 = await pool.connect();
+    // Guardar token en DB + pasar URL al cliente
+    const pool2 = getDbPool();
+    const c2 = await pool2.connect();
     try {
       await c2.query(
         `UPDATE payments
-           SET provider_ref=$2, status='PENDING', updated_at=NOW()
-         WHERE id=$1`,
+           SET provider_ref = $2, status = 'PENDING', updated_at = NOW()
+         WHERE id = $1`,
         [paymentId, flowRes.token]
       );
     } finally {
       c2.release();
     }
 
-    console.log("[flow:create]", { paymentId, holdId, amount: totalServer, checkout: true });
+    console.log("[flow:create][ok]", { reqId, paymentId, holdId, total });
 
     return NextResponse.json({
       ok: true,
       provider: "flow",
       paymentId,
       checkoutUrl: flowRes.checkoutUrl,
-      token: flowRes.token,
     });
   } catch (err: any) {
+    console.error("[flow:create][fatal]", { detail: err?.message ?? String(err) });
     return NextResponse.json(
       { ok: false, error: "internal_error", detail: err?.message ?? String(err) },
       { status: 500 }
