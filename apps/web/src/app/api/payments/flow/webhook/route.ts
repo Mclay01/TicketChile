@@ -1,7 +1,7 @@
 // apps/web/src/app/api/payments/flow/webhook/route.ts
 import { NextResponse } from "next/server";
 import { withTx } from "@/lib/db";
-import { flowGetStatus, flowVerifyWebhookSignature } from "@/lib/flow";
+import { flowGetStatus } from "@/lib/flow";
 import { finalizePaidHoldToOrderPgTx } from "@/lib/checkout.pg.server";
 
 export const runtime = "nodejs";
@@ -14,167 +14,130 @@ function json(status: number, payload: any) {
   });
 }
 
-/**
- * Flow pega aquí (urlConfirmation).
- * OJO:
- * - Flow normalmente manda x-www-form-urlencoded.
- * - Siempre respondemos 200 rápido para que no reintente.
- */
+function pickFormValue(obj: Record<string, string>, key: string) {
+  return String(obj[key] || "").trim();
+}
+
+async function readBodyAsKV(req: Request): Promise<Record<string, string>> {
+  const ct = req.headers.get("content-type") || "";
+  const out: Record<string, string> = {};
+
+  if (ct.includes("application/json")) {
+    const j = await req.json().catch(() => ({}));
+    for (const [k, v] of Object.entries(j || {})) out[k] = String(v ?? "");
+    return out;
+  }
+
+  // x-www-form-urlencoded o cualquier texto parseable
+  const raw = await req.text().catch(() => "");
+  const sp = new URLSearchParams(raw);
+  for (const [k, v] of sp.entries()) out[k] = v;
+  return out;
+}
+
 export async function POST(req: Request) {
   try {
-    const ct = req.headers.get("content-type") || "";
-    let form: Record<string, string> = {};
+    const form = await readBodyAsKV(req);
 
-    if (ct.includes("application/x-www-form-urlencoded")) {
-      const bodyText = await req.text();
-      const sp = new URLSearchParams(bodyText);
-      for (const [k, v] of sp.entries()) form[k] = v;
-    } else if (ct.includes("application/json")) {
-      const j = await req.json().catch(() => ({}));
-      for (const [k, v] of Object.entries(j || {})) form[k] = String(v ?? "");
-    } else {
-      // intento fallback
-      const bodyText = await req.text().catch(() => "");
-      const sp = new URLSearchParams(bodyText);
-      for (const [k, v] of sp.entries()) form[k] = v;
-    }
+    // Flow típicamente manda `token`. A veces también `commerceOrder`.
+    const tokenFromWebhook = pickFormValue(form, "token");
+    const commerceOrder = pickFormValue(form, "commerceOrder"); // en create: commerceOrder = paymentId
 
-    /**
-     * Flow suele enviar:
-     * - token (token del payment en Flow)
-     * - optional / commerceOrder depende del endpoint
-     *
-     * En tu create, pusimos commerceOrder = paymentId (pay_xxx).
-     * En confirm, lo más confiable es:
-     * - si llega commerceOrder => es tu paymentId
-     * - si no, con token consultamos estado en Flow y recuperamos commerceOrder.
-     */
-    const token = String(form.token || "").trim();
-    const commerceOrder = String(form.commerceOrder || "").trim();
-
-    // (opcional pero recomendado) validar firma si tú lo implementaste
-    // Si tu lib/flow no tiene esto, deja el verify en true y listo.
-    // Si ya tienes firma en Flow, úsalo:
-    try {
-      if (typeof flowVerifyWebhookSignature === "function") {
-        const ok = flowVerifyWebhookSignature(form);
-        if (!ok) return json(200, { ok: true }); // respondemos 200 igual, no le des info a nadie
-      }
-    } catch {
-      // silencio
-    }
-
-    // Resolve paymentId
-    let paymentId = commerceOrder;
-    if (!paymentId && token) {
-      const st = await flowGetStatus(token);
-      if (st?.ok && st.commerceOrder) paymentId = String(st.commerceOrder);
-    }
-
-    if (!paymentId) {
-      // Siempre 200 para Flow (si respondes 4xx/5xx va a reintentar)
-      return json(200, { ok: true });
-    }
-
-    // 1) Leer payment + hold y si Flow dice pagado => marcar PAID
-    // 2) Emitir tickets (idempotente) con finalizePaidHoldToOrderPgTx
+    // Flow reintenta si no respondes 200, así que siempre devolvemos 200 al final.
     await withTx(async (client) => {
-      // Lock del payment para evitar carreras
+      // Buscar payment por:
+      // 1) id = commerceOrder (si viene)
+      // 2) provider_ref = token (si no viene commerceOrder)
       const pRes = await client.query(
         `
         SELECT id, hold_id, status, provider_ref, buyer_name, buyer_email, event_title
         FROM payments
-        WHERE id=$1
+        WHERE
+          ( $1 <> '' AND id = $1 )
+          OR ( $2 <> '' AND provider = 'flow' AND provider_ref = $2 )
         LIMIT 1
         FOR UPDATE
         `,
-        [paymentId]
+        [commerceOrder, tokenFromWebhook]
       );
 
       if (pRes.rowCount === 0) return;
 
       const p = pRes.rows[0];
+      const paymentId = String(p.id);
       const holdId = String(p.hold_id || "");
       const currentStatus = String(p.status || "").toUpperCase();
-      const providerRef = String(p.provider_ref || ""); // aquí guardaste token flow en create
-      const buyerName = String(p.buyer_name || "");
-      const buyerEmail = String(p.buyer_email || "");
-      const eventTitle = String(p.event_title || "");
 
-      // Si ya está pagado, no insistimos
-      if (currentStatus === "PAID") {
-        // pero igual intentamos emitir si aún no se emitió (idempotente)
+      // Usa token del webhook o el guardado en DB
+      const token = tokenFromWebhook || String(p.provider_ref || "");
+      if (!token) return;
+
+      // Consultar estado real a Flow
+      let st;
+      try {
+        st = await flowGetStatus(token);
+      } catch {
+        // si Flow falla, no rompemos el webhook (evita loops)
+        return;
+      }
+
+      // Flow status:
+      // 1 pending, 2 paid, 3 rejected, 4 cancelled
+      const s = Number(st.status);
+
+      if (s === 2) {
+        // PAID
+        if (currentStatus !== "PAID") {
+          await client.query(
+            `UPDATE payments
+               SET status='PAID', paid_at=NOW(), updated_at=NOW()
+             WHERE id=$1`,
+            [paymentId]
+          );
+        }
+
+        // Emitir tickets (idempotente)
+        const buyerName = String(p.buyer_name || "");
+        const buyerEmail = String(p.buyer_email || "");
+        const eventTitle = String(p.event_title || "");
+
         if (holdId && buyerEmail.includes("@") && buyerName.length >= 2 && eventTitle) {
-          await finalizePaidHoldToOrderPgTx(client, {
-            holdId,
-            eventTitle,
-            buyerName,
-            buyerEmail,
-            paymentId,
-          });
+          try {
+            await finalizePaidHoldToOrderPgTx(client, {
+              holdId,
+              eventTitle,
+              buyerName,
+              buyerEmail,
+              paymentId,
+            });
+          } catch {
+            // idempotente: si otra request ganó la carrera, ok
+          }
         }
         return;
       }
 
-      // consultar Flow estado
-      const flowToken = token || providerRef;
-      if (!flowToken) return;
+      if (s === 3) {
+        // rejected => FAILED
+        await client.query(`UPDATE payments SET status='FAILED', updated_at=NOW() WHERE id=$1`, [paymentId]);
+        return;
+      }
 
-      const st = await flowGetStatus(flowToken);
-      if (!st?.ok) return;
+      if (s === 4) {
+        // cancelled => CANCELLED
+        await client.query(`UPDATE payments SET status='CANCELLED', updated_at=NOW() WHERE id=$1`, [paymentId]);
+        return;
+      }
 
-      // Normaliza a tu “PAID”
-      const flowStatus = String(st.status || st.paymentStatus || "").toUpperCase();
-
-      // Ajusta acá según tu lib/flow:
-      // - algunos devuelven status = 2 (pagado), 1 (pendiente), 3 (rechazado)
-      const isPaid =
-        flowStatus === "PAID" ||
-        flowStatus === "COMPLETED" ||
-        flowStatus === "SUCCESS" ||
-        flowStatus === "2" ||
-        st.status === 2;
-
-      const isFailed =
-        flowStatus === "FAILED" ||
-        flowStatus === "REJECTED" ||
-        flowStatus === "CANCELLED" ||
-        flowStatus === "3" ||
-        st.status === 3;
-
-      if (isPaid) {
-        await client.query(
-          `UPDATE payments
-             SET status='PAID', paid_at=NOW(), updated_at=NOW()
-           WHERE id=$1`,
-          [paymentId]
-        );
-
-        if (holdId && buyerEmail.includes("@") && buyerName.length >= 2 && eventTitle) {
-          await finalizePaidHoldToOrderPgTx(client, {
-            holdId,
-            eventTitle,
-            buyerName,
-            buyerEmail,
-            paymentId,
-          });
-        }
-      } else if (isFailed) {
-        await client.query(
-          `UPDATE payments
-             SET status='FAILED', updated_at=NOW()
-           WHERE id=$1`,
-          [paymentId]
-        );
-      } else {
-        // queda PENDING
+      // s === 1 => PENDING
+      if (currentStatus !== "PENDING") {
         await client.query(`UPDATE payments SET status='PENDING', updated_at=NOW() WHERE id=$1`, [paymentId]);
       }
     });
 
     return json(200, { ok: true });
-  } catch (e: any) {
-    // IMPORTANTÍSIMO: Flow webhook => responde 200 igual para evitar spam de reintentos
+  } catch {
+    // NUNCA devuelvas 500: Flow te reintenta y te hace spam
     return json(200, { ok: true, swallowed: true });
   }
 }
