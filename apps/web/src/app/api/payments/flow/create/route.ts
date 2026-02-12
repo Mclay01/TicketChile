@@ -5,22 +5,12 @@ import { createHmac, randomUUID } from "node:crypto";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const FLOW_API_BASE = "https://api.flow.cl";
+const FLOW_API_BASE = process.env.FLOW_BASE_URL || "https://api.flow.cl";
 const HOLD_TTL_MINUTES = 15;
 
 declare global {
   // eslint-disable-next-line no-var
   var __pgPoolFlow: Pool | undefined;
-}
-
-function getDbPool() {
-  if (global.__pgPoolFlow) return global.__pgPoolFlow;
-
-  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  if (!connectionString) throw new Error("Missing DATABASE_URL (or POSTGRES_URL).");
-
-  global.__pgPoolFlow = new Pool({ connectionString });
-  return global.__pgPoolFlow;
 }
 
 function mustEnv(name: string) {
@@ -54,6 +44,41 @@ function getOrigin(req: NextRequest) {
     req.headers.get("origin") ||
     "http://localhost:3000"
   );
+}
+
+/**
+ * Evita warning de pg-connection-string:
+ * - si el conn string trae sslmode=require|prefer|verify-ca => lo hacemos explícito verify-full
+ * - si no trae sslmode => se lo agregamos SOLO en prod / DATABASE_SSL=true
+ */
+function normalizePgConnString(cs: string) {
+  const wantsSsl =
+    String(process.env.DATABASE_SSL || "").toLowerCase() === "true" ||
+    process.env.NODE_ENV === "production";
+
+  // En local podrías estar usando un URL sin SSL: no lo tocamos.
+  if (!wantsSsl) return cs;
+
+  const hasSslMode = /([?&])sslmode=/.test(cs);
+
+  if (!hasSslMode) {
+    return cs + (cs.includes("?") ? "&" : "?") + "sslmode=verify-full";
+  }
+
+  // Cambia modos que gatillan el warning a verify-full explícito
+  return cs.replace(/sslmode=(prefer|required|verify-ca)/g, "sslmode=verify-full");
+}
+
+function getDbPool() {
+  if (global.__pgPoolFlow) return global.__pgPoolFlow;
+
+  const raw = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!raw) throw new Error("Missing DATABASE_URL (or POSTGRES_URL).");
+
+  const connectionString = normalizePgConnString(raw);
+
+  global.__pgPoolFlow = new Pool({ connectionString });
+  return global.__pgPoolFlow;
 }
 
 /**
@@ -145,28 +170,22 @@ export async function POST(req: NextRequest) {
       }))
       .filter((x: any) => x.ticketTypeId && Number.isFinite(x.qty) && x.qty > 0);
 
-    if (!eventId) {
-      return NextResponse.json({ ok: false, error: "eventId_missing" }, { status: 400 });
-    }
-    if (!buyerName || buyerName.length < 2) {
+    if (!eventId) return NextResponse.json({ ok: false, error: "eventId_missing" }, { status: 400 });
+    if (!buyerName || buyerName.length < 2)
       return NextResponse.json({ ok: false, error: "buyerName_invalid" }, { status: 400 });
-    }
-    if (!buyerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) {
+    if (!buyerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail))
       return NextResponse.json({ ok: false, error: "buyerEmail_invalid" }, { status: 400 });
-    }
-    if (normalizedItems.length === 0) {
+    if (normalizedItems.length === 0)
       return NextResponse.json({ ok: false, error: "items_empty" }, { status: 400 });
-    }
 
     const amountFromClient = parseCLPAmount(body?.amount);
 
-    const client = await pool.connect();
-
     let paymentId = "";
     let holdId = "";
-    let total = 0;
+    let totalServer = 0;
     let eventTitle = "";
 
+    const client = await pool.connect();
     try {
       await client.query("BEGIN");
 
@@ -196,7 +215,7 @@ export async function POST(req: NextRequest) {
       for (const row of tt.rows) byId.set(String(row.id), row);
 
       // Recalcular total server-side
-      total = 0;
+      let total = 0;
       for (const it of normalizedItems) {
         const row = byId.get(it.ticketTypeId);
         total += Number(row.price_clp) * it.qty;
@@ -207,7 +226,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, error: "amount_invalid" }, { status: 400 });
       }
 
-      // Si viene amount del client y no calza, lo frenamos (evita manipulación)
+      // Si viene amount del client y no calza, frenar (anti-manipulación)
       if (amountFromClient && amountFromClient !== total) {
         await client.query("ROLLBACK");
         return NextResponse.json(
@@ -215,6 +234,8 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+
+      totalServer = total;
 
       // Hold
       holdId = `hold_${randomUUID()}`;
@@ -237,7 +258,6 @@ export async function POST(req: NextRequest) {
            RETURNING id`,
           [eventId, it.ticketTypeId, it.qty]
         );
-
         if (u.rowCount === 0) {
           await client.query("ROLLBACK");
           return NextResponse.json({ ok: false, error: "capacity_exceeded" }, { status: 409 });
@@ -263,12 +283,14 @@ export async function POST(req: NextRequest) {
           ($1, $2, 'flow', NULL, $3, $4,
            $5, $6, $7,
            $8, 'CLP', 'CREATED')`,
-        [paymentId, holdId, eventId, eventTitle, buyerName, buyerEmail, buyerEmail, total]
+        [paymentId, holdId, eventId, eventTitle, buyerName, buyerEmail, buyerEmail, totalServer]
       );
 
       await client.query("COMMIT");
     } catch (e) {
-      await client.query("ROLLBACK");
+      try {
+        await client.query("ROLLBACK");
+      } catch {}
       throw e;
     } finally {
       client.release();
@@ -277,29 +299,23 @@ export async function POST(req: NextRequest) {
     // Llamada a Flow (afuera de la TX DB)
     const origin = getOrigin(req);
 
-    // OJO: urlConfirmation debe ser público (Vercel/Ngrok/etc.)
     const urlConfirmation = `${origin}/api/payments/flow/confirm`;
-    const urlReturn = `${origin}/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}`;
+    const urlReturn = `${origin}/api/payments/flow/kick`;
 
     const flowRes = await flowCreatePayment({
       apiKey: FLOW_API_KEY,
       secretKey: FLOW_SECRET_KEY,
-      commerceOrder: paymentId,
-      subject: `Tickets ${eventTitle} (${paymentId})`,
-      amount: total, // ✅ SIEMPRE el total real server-side
+      commerceOrder: paymentId, // clave: Flow nos devuelve esto en getStatus
+      subject: `Compra tickets - ${eventTitle}`,
+      amount: totalServer, // ✅ SIEMPRE total server-side
       payerEmail: buyerEmail,
       urlConfirmation,
       urlReturn,
-      optional: {
-        eventId,
-        holdId,
-        paymentId,
-      },
+      optional: { eventId, holdId, paymentId },
     });
 
     if (!flowRes.ok) {
       // Cleanup suave: marcar FAILED y liberar held
-      const pool = getDbPool();
       const c = await pool.connect();
       try {
         await c.query("BEGIN");
@@ -325,7 +341,9 @@ export async function POST(req: NextRequest) {
 
         await c.query("COMMIT");
       } catch {
-        await c.query("ROLLBACK");
+        try {
+          await c.query("ROLLBACK");
+        } catch {}
       } finally {
         c.release();
       }
@@ -337,8 +355,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Guardar token en DB + pasar URL al cliente
-    const pool2 = getDbPool();
-    const c2 = await pool2.connect();
+    const c2 = await pool.connect();
     try {
       await c2.query(
         `UPDATE payments
@@ -353,7 +370,7 @@ export async function POST(req: NextRequest) {
     console.log("[flow:create]", {
       paymentId,
       holdId,
-      amount: total,
+      amount: totalServer,
       checkout: true,
     });
 
@@ -361,9 +378,8 @@ export async function POST(req: NextRequest) {
       ok: true,
       provider: "flow",
       paymentId,
-      redirectUrl: flowRes.checkoutUrl, // ✅ el frontend usa esto
-      checkoutUrl: flowRes.checkoutUrl, // compat
-      token: flowRes.token, // debug
+      checkoutUrl: flowRes.checkoutUrl,
+      token: flowRes.token, // útil para debug
     });
   } catch (err: any) {
     return NextResponse.json(
