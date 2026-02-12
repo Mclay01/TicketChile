@@ -96,21 +96,22 @@ async function flowCreatePayment(params: {
   }
 
   const s = flowSign(base, params.secretKey);
-
   const body = new URLSearchParams({ ...base, s });
 
   const r = await fetch(`${FLOW_API_BASE}/payment/create`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
   });
 
   const j = await r.json().catch(() => null);
 
   if (!r.ok) {
-    return { ok: false as const, status: r.status, error: j?.message || j?.error || j || "flow_error" };
+    return {
+      ok: false as const,
+      status: r.status,
+      error: j?.message || j?.error || j || "flow_error",
+    };
   }
 
   const token = String(j?.token || "");
@@ -160,8 +161,11 @@ export async function POST(req: NextRequest) {
     const amountFromClient = parseCLPAmount(body?.amount);
 
     const client = await pool.connect();
+
     let paymentId = "";
     let holdId = "";
+    let total = 0;
+    let eventTitle = "";
 
     try {
       await client.query("BEGIN");
@@ -172,7 +176,7 @@ export async function POST(req: NextRequest) {
         await client.query("ROLLBACK");
         return NextResponse.json({ ok: false, error: "event_not_found" }, { status: 404 });
       }
-      const eventTitle = String(ev.rows[0].title);
+      eventTitle = String(ev.rows[0].title);
 
       // Ticket types
       const ids = normalizedItems.map((x: any) => x.ticketTypeId);
@@ -192,7 +196,7 @@ export async function POST(req: NextRequest) {
       for (const row of tt.rows) byId.set(String(row.id), row);
 
       // Recalcular total server-side
-      let total = 0;
+      total = 0;
       for (const it of normalizedItems) {
         const row = byId.get(it.ticketTypeId);
         total += Number(row.price_clp) * it.qty;
@@ -233,6 +237,7 @@ export async function POST(req: NextRequest) {
            RETURNING id`,
           [eventId, it.ticketTypeId, it.qty]
         );
+
         if (u.rowCount === 0) {
           await client.query("ROLLBACK");
           return NextResponse.json({ ok: false, error: "capacity_exceeded" }, { status: 409 });
@@ -272,15 +277,16 @@ export async function POST(req: NextRequest) {
     // Llamada a Flow (afuera de la TX DB)
     const origin = getOrigin(req);
 
+    // OJO: urlConfirmation debe ser público (Vercel/Ngrok/etc.)
     const urlConfirmation = `${origin}/api/payments/flow/confirm`;
-    const urlReturn = `${origin}/api/payments/flow/kick`;
+    const urlReturn = `${origin}/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}`;
 
     const flowRes = await flowCreatePayment({
       apiKey: FLOW_API_KEY,
       secretKey: FLOW_SECRET_KEY,
-      commerceOrder: paymentId, // clave: Flow nos devuelve esto en getStatus
-      subject: `Compra tickets - ${paymentId}`,
-      amount: Number(body?.amount) ? Number(body.amount) : undefined as any, // se ignora abajo
+      commerceOrder: paymentId,
+      subject: `Tickets ${eventTitle} (${paymentId})`,
+      amount: total, // ✅ SIEMPRE el total real server-side
       payerEmail: buyerEmail,
       urlConfirmation,
       urlReturn,
@@ -291,11 +297,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // (seguridad) usa el total real:
-    if (flowRes.ok) {
-      // ok
-    }
-
     if (!flowRes.ok) {
       // Cleanup suave: marcar FAILED y liberar held
       const pool = getDbPool();
@@ -303,7 +304,6 @@ export async function POST(req: NextRequest) {
       try {
         await c.query("BEGIN");
 
-        // Marcar payment FAILED
         await c.query(
           `UPDATE payments
              SET status = 'FAILED', updated_at = NOW()
@@ -311,7 +311,6 @@ export async function POST(req: NextRequest) {
           [paymentId]
         );
 
-        // Liberar held y expirar hold
         const hi = await c.query(`SELECT ticket_type_id, qty FROM hold_items WHERE hold_id = $1`, [holdId]);
         for (const row of hi.rows) {
           await c.query(
@@ -354,7 +353,7 @@ export async function POST(req: NextRequest) {
     console.log("[flow:create]", {
       paymentId,
       holdId,
-      amount: body?.amount,
+      amount: total,
       checkout: true,
     });
 
@@ -362,8 +361,9 @@ export async function POST(req: NextRequest) {
       ok: true,
       provider: "flow",
       paymentId,
-      checkoutUrl: flowRes.checkoutUrl,
-      token: flowRes.token, // útil para debug
+      redirectUrl: flowRes.checkoutUrl, // ✅ el frontend usa esto
+      checkoutUrl: flowRes.checkoutUrl, // compat
+      token: flowRes.token, // debug
     });
   } catch (err: any) {
     return NextResponse.json(

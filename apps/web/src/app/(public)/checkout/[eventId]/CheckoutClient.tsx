@@ -3,7 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ShoppingCart, Mail, User, ArrowLeft, Phone, MapPin, Landmark, BadgeCheck } from "lucide-react";
+import {
+  ShoppingCart,
+  Mail,
+  User,
+  CreditCard,
+  ArrowLeft,
+  Phone,
+  MapPin,
+  Landmark,
+  BadgeCheck,
+} from "lucide-react";
 import {
   getEventById,
   parseCartString,
@@ -15,7 +25,7 @@ import {
 type Region = { codigo: string; nombre: string };
 type Comuna = { codigo: string; nombre: string };
 
-const DPA_BASE = "https://apis.digital.gob.cl/dpa";
+const DPA_BASE = "https://apis.digital.gob.cl/dpa"; // API DPA (regiones/comunas)
 
 function pickString(v: any) {
   return typeof v === "string" ? v.trim() : "";
@@ -25,26 +35,43 @@ function onlyDigits(s: string) {
   return String(s || "").replace(/\D+/g, "");
 }
 
+/** ---------------------------
+ *  API error -> human message
+ *  Evita el clásico "[object Object]"
+ *  -------------------------- */
 function apiErrorToMessage(data: any, status: number, raw?: string) {
-  const candidates = [data?.error, data?.error?.message, data?.message, data?.details, data?.details?.message];
+  const candidates = [
+    data?.error,
+    data?.error?.message,
+    data?.message,
+    data?.details,
+    data?.details?.message,
+    data?.detail,
+  ];
+
   for (const c of candidates) {
     if (typeof c === "string" && c.trim()) return c.trim();
   }
+
   if (data?.error && typeof data.error === "object") {
     try {
       return JSON.stringify(data.error);
     } catch {}
   }
+
   const snippet = typeof raw === "string" ? raw.slice(0, 220) : "";
   return snippet ? `Error ${status}: ${snippet}` : `Error ${status}`;
 }
 
-/** RUT (Chile) */
+/** ---------------------------
+ *  RUT (Chile) validation
+ *  -------------------------- */
 function cleanRut(input: string) {
   return String(input || "")
     .toUpperCase()
     .replace(/[^0-9K]/g, "");
 }
+
 function rutDv(num: string) {
   let sum = 0;
   let mul = 2;
@@ -57,6 +84,7 @@ function rutDv(num: string) {
   if (mod === 10) return "K";
   return String(mod);
 }
+
 function normalizeRut(input: string) {
   const c = cleanRut(input);
   if (c.length < 2) return "";
@@ -64,6 +92,7 @@ function normalizeRut(input: string) {
   const dv = c.slice(-1);
   return `${num}-${dv}`;
 }
+
 function formatRut(input: string) {
   const n = normalizeRut(input);
   if (!n) return "";
@@ -71,6 +100,7 @@ function formatRut(input: string) {
   const withDots = num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `${withDots}-${dv}`;
 }
+
 function isValidRut(input: string) {
   const n = normalizeRut(input);
   if (!n) return false;
@@ -80,7 +110,9 @@ function isValidRut(input: string) {
   return rutDv(num) === dv;
 }
 
-/** Email anti-typos */
+/** ---------------------------
+ *  Email anti-typos
+ *  -------------------------- */
 const COMMON_EMAIL_DOMAIN_FIXES: Array<[RegExp, string]> = [
   [/(@)gmal\.com$/i, "$1gmail.com"],
   [/(@)gmial\.com$/i, "$1gmail.com"],
@@ -91,14 +123,34 @@ const COMMON_EMAIL_DOMAIN_FIXES: Array<[RegExp, string]> = [
 function normalizeEmail(input: string) {
   return String(input || "").trim().toLowerCase();
 }
+
 function looksLikeEmail(input: string) {
   const e = normalizeEmail(input);
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
+
 function suggestEmailFix(email: string) {
   let out = email;
   for (const [re, rep] of COMMON_EMAIL_DOMAIN_FIXES) out = out.replace(re, rep);
   return out;
+}
+
+/** ---------------------------
+ *  Webpay redirect helper
+ *  -------------------------- */
+function submitToWebpay(url: string, token: string) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = url;
+
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "token_ws";
+  input.value = token;
+
+  form.appendChild(input);
+  document.body.appendChild(form);
+  form.submit();
 }
 
 export default function CheckoutClient({ eventId }: { eventId: string }) {
@@ -111,8 +163,8 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
   const cart = parseCartString(cartString);
   const canceled = (searchParams?.get("canceled") || "") === "1";
 
-  // ✅ Flow-only
-  const [paymentMethod] = useState<"flow">("flow");
+  // ✅ Ahora: Webpay o Flow (sacamos Fintoc)
+  const [paymentMethod, setPaymentMethod] = useState<"webpay" | "flow">("flow");
 
   // Datos comprador
   const [name, setName] = useState("");
@@ -289,7 +341,10 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
     setIsProcessing(true);
 
     try {
-      const endpoint = "/api/payments/flow/create";
+      const endpoint =
+        paymentMethod === "webpay"
+          ? "/api/payments/webpay/create"
+          : "/api/payments/flow/create";
 
       const payload = {
         eventId: event.id,
@@ -329,11 +384,38 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
         throw new Error(apiErrorToMessage(data, r.status, raw));
       }
 
-      const checkoutUrl = String(data?.checkoutUrl || "");
+      if (!data || typeof data !== "object") {
+        throw new Error("Respuesta inválida del servidor (no JSON).");
+      }
+
+      const status = String(data?.status || "");
       const paymentId = String(data?.paymentId || "");
 
-      if (!checkoutUrl || !paymentId) {
-        throw new Error("No recibí una URL válida para continuar el pago (Flow).");
+      if (status === "PAID") {
+        if (paymentId) {
+          router.push(`/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}`);
+        } else {
+          router.push(`/eventos/${event.slug}?paid=1`);
+        }
+        return;
+      }
+
+      // WEBPAY: requiere POST con token_ws
+      const wpUrl = String(data?.webpay?.url || "");
+      const wpToken = String(data?.webpay?.token || "");
+      if (wpUrl && wpToken) {
+        submitToWebpay(wpUrl, wpToken);
+        return;
+      }
+
+      // FLOW: usa redirectUrl/checkoutUrl
+      const checkoutUrl =
+        String(data?.redirectUrl || "") ||
+        String(data?.checkoutUrl || "") ||
+        String(data?.url || "");
+
+      if (!checkoutUrl) {
+        throw new Error("No recibí una URL válida para continuar el pago.");
       }
 
       window.location.assign(checkoutUrl);
@@ -366,7 +448,9 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
         <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 backdrop-blur-sm border border-slate-700/50 rounded-3xl p-8 max-w-md text-center">
           <ShoppingCart className="w-16 h-16 text-purple-400 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white mb-4">Carrito vacío</h1>
-          <p className="text-slate-400 mb-6">Selecciona tickets desde la página del evento para continuar.</p>
+          <p className="text-slate-400 mb-6">
+            Selecciona tickets desde la página del evento para continuar.
+          </p>
           <Link
             href={`/eventos/${event.slug}`}
             className="inline-block px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl transition-colors"
@@ -421,15 +505,44 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                     <BadgeCheck className="w-4 h-4 text-purple-300" />
                     Método de pago
                   </p>
-
-                  <div className="rounded-xl border border-purple-400/60 bg-purple-500/10 px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <Landmark className="w-5 h-5 text-purple-300" />
-                      <div>
-                        <p className="text-white font-semibold">Flow</p>
-                        <p className="text-xs text-white/60">Webpay / transferencias / lo que tengas habilitado</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("webpay")}
+                      className={[
+                        "rounded-xl border px-4 py-3 text-left transition-all",
+                        paymentMethod === "webpay"
+                          ? "border-purple-400/60 bg-purple-500/10"
+                          : "border-white/10 bg-white/5 hover:bg-white/10",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-center gap-3">
+                        <CreditCard className="w-5 h-5 text-purple-300" />
+                        <div>
+                          <p className="text-white font-semibold">Webpay</p>
+                          <p className="text-xs text-white/60">Tarjeta débito / crédito</p>
+                        </div>
                       </div>
-                    </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("flow")}
+                      className={[
+                        "rounded-xl border px-4 py-3 text-left transition-all",
+                        paymentMethod === "flow"
+                          ? "border-purple-400/60 bg-purple-500/10"
+                          : "border-white/10 bg-white/5 hover:bg-white/10",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Landmark className="w-5 h-5 text-purple-300" />
+                        <div>
+                          <p className="text-white font-semibold">Flow</p>
+                          <p className="text-xs text-white/60">Redirección a pago</p>
+                        </div>
+                      </div>
+                    </button>
                   </div>
                 </div>
 
@@ -453,7 +566,9 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       placeholder="Juan Pérez"
                     />
                   </div>
-                  {validation.errors.name ? <p className="mt-1 text-xs text-red-300">{validation.errors.name}</p> : null}
+                  {validation.errors.name ? (
+                    <p className="mt-1 text-xs text-red-300">{validation.errors.name}</p>
+                  ) : null}
                 </div>
 
                 {/* RUT */}
@@ -477,7 +592,9 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       placeholder="12.345.678-5"
                     />
                   </div>
-                  {validation.errors.rut ? <p className="mt-1 text-xs text-red-300">{validation.errors.rut}</p> : null}
+                  {validation.errors.rut ? (
+                    <p className="mt-1 text-xs text-red-300">{validation.errors.rut}</p>
+                  ) : null}
                 </div>
 
                 {/* Teléfono */}
@@ -501,7 +618,9 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       inputMode="tel"
                     />
                   </div>
-                  {validation.errors.phone ? <p className="mt-1 text-xs text-red-300">{validation.errors.phone}</p> : null}
+                  {validation.errors.phone ? (
+                    <p className="mt-1 text-xs text-red-300">{validation.errors.phone}</p>
+                  ) : null}
                 </div>
 
                 {/* Email */}
@@ -535,7 +654,9 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                     </button>
                   ) : null}
 
-                  {validation.errors.email ? <p className="mt-1 text-xs text-red-300">{validation.errors.email}</p> : null}
+                  {validation.errors.email ? (
+                    <p className="mt-1 text-xs text-red-300">{validation.errors.email}</p>
+                  ) : null}
                 </div>
 
                 {/* Confirm Email */}
@@ -558,7 +679,9 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       placeholder="repite tu@email.com"
                     />
                   </div>
-                  {validation.errors.email2 ? <p className="mt-1 text-xs text-red-300">{validation.errors.email2}</p> : null}
+                  {validation.errors.email2 ? (
+                    <p className="mt-1 text-xs text-red-300">{validation.errors.email2}</p>
+                  ) : null}
                 </div>
 
                 {/* Región / Comuna */}
@@ -583,7 +706,9 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                         ))}
                       </select>
                     </div>
-                    {validation.errors.region ? <p className="mt-1 text-xs text-red-300">{validation.errors.region}</p> : null}
+                    {validation.errors.region ? (
+                      <p className="mt-1 text-xs text-red-300">{validation.errors.region}</p>
+                    ) : null}
                   </div>
 
                   <div>
@@ -609,14 +734,20 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                         ))}
                       </select>
                     </div>
-                    {validation.errors.comuna ? <p className="mt-1 text-xs text-red-300">{validation.errors.comuna}</p> : null}
+                    {validation.errors.comuna ? (
+                      <p className="mt-1 text-xs text-red-300">{validation.errors.comuna}</p>
+                    ) : null}
                   </div>
                 </div>
 
                 {geoError ? (
                   <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3">
-                    <p className="text-xs text-white/80">No pude cargar regiones/comunas automáticamente. ({geoError})</p>
-                    <p className="text-xs text-white/60 mt-1">Tip: esto depende de red/CORS. Si te pasa en prod, lo mejor es proxy interno.</p>
+                    <p className="text-xs text-white/80">
+                      No pude cargar regiones/comunas automáticamente. ({geoError})
+                    </p>
+                    <p className="text-xs text-white/60 mt-1">
+                      Tip: esto depende de red/CORS. Si te pasa en prod, lo mejor es proxy interno.
+                    </p>
                   </div>
                 ) : null}
 
@@ -637,7 +768,9 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                     ].join(" ")}
                     placeholder="Av. Siempre Viva 123, depto 45"
                   />
-                  {validation.errors.address1 ? <p className="mt-1 text-xs text-red-300">{validation.errors.address1}</p> : null}
+                  {validation.errors.address1 ? (
+                    <p className="mt-1 text-xs text-red-300">{validation.errors.address1}</p>
+                  ) : null}
                 </div>
 
                 <div>
@@ -656,10 +789,17 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
 
                 {/* Términos */}
                 <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <input type="checkbox" checked={acceptTerms} onChange={(ev) => setAcceptTerms(ev.target.checked)} className="mt-1" />
+                  <input
+                    type="checkbox"
+                    checked={acceptTerms}
+                    onChange={(ev) => setAcceptTerms(ev.target.checked)}
+                    className="mt-1"
+                  />
                   <span className="text-sm text-white/75">
                     Acepto términos y condiciones y autorizo el uso de mis datos para emitir y enviar mis tickets.
-                    {validation.errors.terms ? <span className="block mt-1 text-xs text-red-300">{validation.errors.terms}</span> : null}
+                    {validation.errors.terms ? (
+                      <span className="block mt-1 text-xs text-red-300">{validation.errors.terms}</span>
+                    ) : null}
                   </span>
                 </label>
 
@@ -673,6 +813,11 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Procesando...
                     </>
+                  ) : paymentMethod === "webpay" ? (
+                    <>
+                      <CreditCard className="w-6 h-6" />
+                      Pagar con Webpay
+                    </>
                   ) : (
                     <>
                       <Landmark className="w-6 h-6" />
@@ -682,7 +827,8 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                 </button>
 
                 <p className="text-[11px] text-white/45 leading-relaxed">
-                  Nota honesta: no existe magia para “adivinar” si un correo existe sin enviar algo. Aquí evitamos errores típicos; para 100% real: verificación por código (OTP).
+                  Nota honesta: ningún sistema puede “adivinar” si un correo existe sin enviar algo. Aquí evitamos errores
+                  típicos y el server valida dominio/MX (si lo activas). Para 100% real: verificación por código (OTP).
                 </p>
               </form>
             </div>
@@ -721,7 +867,9 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
               <div className="border-t border-purple-400/20 pt-6">
                 <div className="flex justify-between items-center">
                   <span className="text-white font-bold text-2xl">Total</span>
-                  <span className="text-purple-300 font-bold text-3xl">${formatCLP(orderSummary.total)}</span>
+                  <span className="text-purple-300 font-bold text-3xl">
+                    ${formatCLP(orderSummary.total)}
+                  </span>
                 </div>
               </div>
 
