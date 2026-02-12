@@ -7,7 +7,7 @@ import type { Event } from "@/lib/events";
 import { formatCLP } from "@/lib/events";
 
 type HoldItem = { ticketTypeId: string; qty: number };
-type PayMethod = "webpay" | "fintoc" | "transfer";
+type PayMethod = "webpay" | "flow" | "fintoc" | "transfer";
 
 /* ----------------------------
    Validaciones / Normalización
@@ -36,8 +36,6 @@ function normalizePhoneCL(input: string) {
   // si viene con 0 inicial
   if (digits.startsWith("0")) digits = digits.replace(/^0+/, "");
 
-  // Chile móvil típico: 9 + 8 dígitos = 9 dígitos
-  // si trae 8 dígitos, a veces falta el 9 (no inventamos)
   // devolvemos solo dígitos (9 o más) y lo validamos aparte
   return digits;
 }
@@ -357,6 +355,7 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
     return {
       eventId: event.id,
       items,
+      amount: subtotal, // ✅ importante para flow: tu endpoint soporta amount y valida server-side
       buyerName: buyerName.trim(),
       buyerEmail: normalizeEmail(buyerEmail),
       buyerPhone: normalizePhoneCL(buyerPhone), // solo dígitos sin 56
@@ -392,6 +391,39 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
       if (!url || !token) throw new Error("Webpay no devolvió url/token.");
 
       submitWebpayForm(url, token);
+    } catch (e: any) {
+      setPayErr(String(e?.message || e));
+      setOkMsg(null);
+      setPaying(false);
+    }
+  }
+
+  async function payWithFlow() {
+    setPayErr(null);
+    setOkMsg(null);
+    if (!canPay) return;
+
+    setPaying(true);
+    try {
+      setOkMsg("Abriendo Flow…");
+
+      const res = await fetch(`/api/payments/flow/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify(payloadBase()),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
+
+      // ✅ tu create devuelve redirectUrl y/o checkoutUrl
+      const redirectUrl =
+        String(data?.redirectUrl || "") || String(data?.checkoutUrl || "") || String(data?.url || "");
+
+      if (!redirectUrl) throw new Error("Flow no devolvió redirectUrl/checkoutUrl.");
+
+      window.location.href = redirectUrl;
     } catch (e: any) {
       setPayErr(String(e?.message || e));
       setOkMsg(null);
@@ -460,7 +492,14 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
     }
   }
 
-  const onPay = payMethod === "webpay" ? payWithWebpay : payMethod === "fintoc" ? payWithFintoc : payWithTransfer;
+  const onPay =
+    payMethod === "webpay"
+      ? payWithWebpay
+      : payMethod === "flow"
+        ? payWithFlow
+        : payMethod === "fintoc"
+          ? payWithFintoc
+          : payWithTransfer;
 
   // Mensaje de ayuda (por qué no deja pagar)
   const whyBlocked = useMemo(() => {
@@ -597,7 +636,9 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
 
         {/* hints sutiles (no rompe UI) */}
         <div className="mt-4 space-y-2 text-xs text-white/55">
-          {buyerPhone.trim() ? <div>Teléfono detectado: {formatPhoneCLForDisplay(normalizePhoneCL(buyerPhone))}</div> : null}
+          {buyerPhone.trim() ? (
+            <div>Teléfono detectado: {formatPhoneCLForDisplay(normalizePhoneCL(buyerPhone))}</div>
+          ) : null}
           {buyerRut.trim() ? (
             <div className={rutOk ? "text-white/55" : "text-red-300"}>
               RUT: {rutFormat(buyerRut)} {rutOk ? "✓" : "✗"}
@@ -642,6 +683,21 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
                   <span className="text-sm text-white/85">Tarjeta (Webpay)</span>
                 </div>
                 <span className="text-xs text-white/55">Instantáneo</span>
+              </label>
+
+              {/* ✅ FLOW */}
+              <label className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="payMethod"
+                    checked={payMethod === "flow"}
+                    onChange={() => setPayMethod("flow")}
+                    disabled={paying}
+                  />
+                  <span className="text-sm text-white/85">Transferencia (Flow)</span>
+                </div>
+                <span className="text-xs text-white/55">Banco</span>
               </label>
 
               <label className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
@@ -693,7 +749,7 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
             onClick={onPay}
             className="mt-5 w-full rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {paying ? "Procesando..." : "Pagar"}
+            {paying ? "Procesando..." : payMethod === "webpay" ? "Pagar con Webpay" : payMethod === "flow" ? "Pagar con Flow" : "Pagar"}
           </button>
 
           {!canPay ? (
