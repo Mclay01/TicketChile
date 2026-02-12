@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -11,7 +11,6 @@ import {
   ArrowLeft,
   Phone,
   MapPin,
-  Landmark,
   BadgeCheck,
 } from "lucide-react";
 import {
@@ -52,14 +51,12 @@ function apiErrorToMessage(data: any, status: number, raw?: string) {
     if (typeof c === "string" && c.trim()) return c.trim();
   }
 
-  // Si viene un objeto como error, lo serializamos (sin romper UI)
   if (data?.error && typeof data.error === "object") {
     try {
       return JSON.stringify(data.error);
     } catch {}
   }
 
-  // Si no pudimos parsear JSON, mostramos un pedazo del raw
   const snippet = typeof raw === "string" ? raw.slice(0, 220) : "";
   return snippet ? `Error ${status}: ${snippet}` : `Error ${status}`;
 }
@@ -127,34 +124,13 @@ function normalizeEmail(input: string) {
 
 function looksLikeEmail(input: string) {
   const e = normalizeEmail(input);
-  // Suficiente para UI; el server valida de nuevo.
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
 function suggestEmailFix(email: string) {
   let out = email;
-  for (const [re, rep] of COMMON_EMAIL_DOMAIN_FIXES) {
-    out = out.replace(re, rep);
-  }
+  for (const [re, rep] of COMMON_EMAIL_DOMAIN_FIXES) out = out.replace(re, rep);
   return out;
-}
-
-/** ---------------------------
- *  Webpay redirect helper
- *  -------------------------- */
-function submitToWebpay(url: string, token: string) {
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = url;
-
-  const input = document.createElement("input");
-  input.type = "hidden";
-  input.name = "token_ws";
-  input.value = token;
-
-  form.appendChild(input);
-  document.body.appendChild(form);
-  form.submit();
 }
 
 export default function CheckoutClient({ eventId }: { eventId: string }) {
@@ -166,8 +142,6 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
   const cartString = searchParams?.get("cart") || "";
   const cart = parseCartString(cartString);
   const canceled = (searchParams?.get("canceled") || "") === "1";
-
-  const [paymentMethod, setPaymentMethod] = useState<"webpay" | "fintoc">("webpay");
 
   // Datos comprador
   const [name, setName] = useState("");
@@ -344,30 +318,27 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
     setIsProcessing(true);
 
     try {
-      const endpoint =
-        paymentMethod === "webpay"
-          ? "/api/payments/webpay/create"
-          : "/api/payments/fintoc/create";
+      const endpoint = "/api/payments/flow/create";
 
-      // ✅ AHORA incluimos amount/currency/metadata (aunque el server ya lo recalcula)
       const payload = {
         eventId: event.id,
         items: itemsForApi,
-        amount: orderSummary.total,
-        currency: "CLP",
-        metadata: {
-          cart: cartString,
-          eventSlug: event.slug,
-        },
 
+        // buyer data
         buyerName: pickString(name),
         buyerEmail: normalizeEmail(emailSuggestion || email),
         buyerRut: normalizeRut(rut),
         buyerPhone: onlyDigits(phone),
+
         buyerRegion: regionName,
         buyerComuna: comunaName,
         buyerAddress1: pickString(address1),
         buyerAddress2: pickString(address2),
+
+        metadata: {
+          cart: cartString,
+          eventSlug: event.slug,
+        },
       };
 
       const r = await fetch(endpoint, {
@@ -376,7 +347,6 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
         body: JSON.stringify(payload),
       });
 
-      // ✅ Lee raw siempre (para manejar HTML/errores no-JSON)
       const raw = await r.text();
       let data: any = null;
       try {
@@ -385,46 +355,12 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
         data = null;
       }
 
-      // ✅ Error humano, nunca "[object Object]"
       if (!r.ok) {
         throw new Error(apiErrorToMessage(data, r.status, raw));
       }
 
-      if (!data || typeof data !== "object") {
-        throw new Error("Respuesta inválida del servidor (no JSON).");
-      }
-
-      const status = String(data?.status || "");
-      const paymentId = String(data?.paymentId || "");
-
-      if (status === "PAID") {
-        if (paymentId) {
-          router.push(`/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}`);
-        } else {
-          router.push(`/eventos/${event.slug}?paid=1`);
-        }
-        return;
-      }
-
-      // WEBPAY: requiere POST con token_ws
-      const wpUrl = String(data?.webpay?.url || "");
-      const wpToken = String(data?.webpay?.token || "");
-      if (wpUrl && wpToken) {
-        submitToWebpay(wpUrl, wpToken);
-        return;
-      }
-
-      // Fintoc: usamos checkoutUrl/redirectUrl
-      const checkoutUrl =
-        String(data?.checkoutUrl || "") ||
-        String(data?.redirectUrl || "") ||
-        String(data?.redirect_url || "") ||
-        String(data?.url || "") ||
-        String(data?.fintoc?.url || "");
-
-      if (!checkoutUrl) {
-        throw new Error("No recibí una URL válida para continuar el pago.");
-      }
+      const checkoutUrl = String(data?.checkoutUrl || "");
+      if (!checkoutUrl) throw new Error("No recibí una URL válida para continuar el pago.");
 
       window.location.assign(checkoutUrl);
     } catch (e: any) {
@@ -507,55 +443,25 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
               ) : null}
 
               <form onSubmit={handlePayment} className="space-y-5">
-                {/* Método de pago */}
+                {/* Método de pago (Flow fijo) */}
                 <div className="rounded-2xl border border-purple-400/15 bg-black/20 p-4">
                   <p className="text-sm text-white/80 mb-3 font-semibold flex items-center gap-2">
                     <BadgeCheck className="w-4 h-4 text-purple-300" />
                     Método de pago
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("webpay")}
-                      className={[
-                        "rounded-xl border px-4 py-3 text-left transition-all",
-                        paymentMethod === "webpay"
-                          ? "border-purple-400/60 bg-purple-500/10"
-                          : "border-white/10 bg-white/5 hover:bg-white/10",
-                      ].join(" ")}
-                    >
-                      <div className="flex items-center gap-3">
-                        <CreditCard className="w-5 h-5 text-purple-300" />
-                        <div>
-                          <p className="text-white font-semibold">Webpay</p>
-                          <p className="text-xs text-white/60">Tarjeta débito / crédito</p>
-                        </div>
-                      </div>
-                    </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("fintoc")}
-                      className={[
-                        "rounded-xl border px-4 py-3 text-left transition-all",
-                        paymentMethod === "fintoc"
-                          ? "border-purple-400/60 bg-purple-500/10"
-                          : "border-white/10 bg-white/5 hover:bg-white/10",
-                      ].join(" ")}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Landmark className="w-5 h-5 text-purple-300" />
-                        <div>
-                          <p className="text-white font-semibold">Fintoc</p>
-                          <p className="text-xs text-white/60">Transferencia bancaria</p>
-                        </div>
+                  <div className="rounded-xl border border-purple-400/60 bg-purple-500/10 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="w-5 h-5 text-purple-300" />
+                      <div>
+                        <p className="text-white font-semibold">Flow</p>
+                        <p className="text-xs text-white/60">
+                          Tarjeta / transferencia / métodos según Flow
+                        </p>
                       </div>
-                    </button>
+                    </div>
                   </div>
                 </div>
-
-                {/* ... RESTO DEL ARCHIVO EXACTAMENTE IGUAL ... */}
-                {/* (Lo dejo igual para no romperte estilos ni validaciones) */}
 
                 {/* Nombre */}
                 <div>
@@ -824,22 +730,17 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Procesando...
                     </>
-                  ) : paymentMethod === "webpay" ? (
-                    <>
-                      <CreditCard className="w-6 h-6" />
-                      Pagar con Webpay
-                    </>
                   ) : (
                     <>
-                      <Landmark className="w-6 h-6" />
-                      Pagar con Fintoc
+                      <CreditCard className="w-6 h-6" />
+                      Pagar con Flow
                     </>
                   )}
                 </button>
 
                 <p className="text-[11px] text-white/45 leading-relaxed">
-                  Nota honesta: ningún sistema puede “adivinar” si un correo existe sin enviar algo. Aquí evitamos errores
-                  típicos y el server valida dominio/MX (si lo activas). Para 100% real: verificación por código (OTP).
+                  Nota honesta: Flow se consulta y confirma desde el server (webhook). Si el método es asíncrono, puede
+                  quedar “pendiente” y actualizarse segundos después.
                 </p>
               </form>
             </div>

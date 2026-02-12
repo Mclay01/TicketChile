@@ -39,10 +39,13 @@ export default function CheckoutConfirmClient() {
   const sp = useSearchParams();
   const router = useRouter();
 
-  // ✅ Nuevo: payment_id (Webpay/Fintoc)
+  // ✅ payment_id (Webpay/Fintoc/Flow)
   const paymentId = (sp.get("payment_id") ?? "").trim();
 
-  // Legacy: por si quedó un link viejo de Stripe
+  // ✅ Flow token (lo agregamos en /api/payments/flow/return redirect)
+  const flowToken = (sp.get("flow_token") ?? "").trim();
+
+  // Legacy: Stripe
   const sessionId = (sp.get("session_id") ?? "").trim();
 
   const endpoint = useMemo(() => {
@@ -67,6 +70,9 @@ export default function CheckoutConfirmClient() {
   const inFlightRef = useRef(false);
   const startedAtRef = useRef<number>(0);
   const aliveRef = useRef(true);
+
+  // ✅ evita re-kick múltiple de Flow
+  const flowKickRef = useRef(false);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -115,6 +121,29 @@ export default function CheckoutConfirmClient() {
     },
     [endpoint]
   );
+
+  // ✅ Flow kick: si volvió el usuario con flow_token y el webhook aún no pegó,
+  // esto fuerza al backend a consultar Flow y finalizar (idempotente).
+  const flowKick = useCallback(async () => {
+    if (!paymentId) return;
+    if (!flowToken) return;
+    if (flowKickRef.current) return;
+
+    flowKickRef.current = true;
+
+    try {
+      // Endpoint que debes crear (te lo dejo abajo si no lo tienes):
+      // POST /api/payments/flow/kick  body: { paymentId, token }
+      await fetch("/api/payments/flow/kick", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ paymentId, token: flowToken }),
+      }).catch(() => null);
+    } catch {
+      // silencioso: si falla, igual seguimos con polling normal
+    }
+  }, [paymentId, flowToken]);
 
   // ✅ Poll “single-threaded”
   const poll = useCallback(async () => {
@@ -176,6 +205,9 @@ export default function CheckoutConfirmClient() {
     setSendMsg(null);
     setElapsed(0);
 
+    // reset kick al cambiar compra
+    flowKickRef.current = false;
+
     if (!paymentId && !sessionId) {
       setErr("Falta payment_id o session_id en la URL.");
       setLoading(false);
@@ -190,6 +222,9 @@ export default function CheckoutConfirmClient() {
     setPolling(true);
 
     (async () => {
+      // ✅ intenta “kick” solo si es Flow (tenemos flow_token)
+      await flowKick();
+
       await loadOnce({ silent: false });
       clearTimer();
       timerRef.current = window.setTimeout(poll, POLL_MS);
@@ -199,7 +234,7 @@ export default function CheckoutConfirmClient() {
       aliveRef.current = false;
       stopAll();
     };
-  }, [paymentId, sessionId, loadOnce, clearTimer, poll, stopAll]);
+  }, [paymentId, sessionId, loadOnce, clearTimer, poll, stopAll, flowKick]);
 
   // ✅ Reenvía por ticketId (no por orderId/email). Reenvía todos los tickets de la compra.
   async function resendEmail() {
@@ -254,10 +289,9 @@ export default function CheckoutConfirmClient() {
     const first = data?.tickets?.[0];
     if (!first) return;
 
-    const r = await fetch(
-      `/api/wallet/google/save-url?ticket_id=${encodeURIComponent(first.id)}`,
-      { cache: "no-store" }
-    );
+    const r = await fetch(`/api/wallet/google/save-url?ticket_id=${encodeURIComponent(first.id)}`, {
+      cache: "no-store",
+    });
 
     const j = await r.json().catch(() => null);
     if (!r.ok) {
@@ -283,6 +317,8 @@ export default function CheckoutConfirmClient() {
     if (provider === "webpay") return "Webpay confirmó el pago; estamos emitiendo tus tickets.";
     if (provider === "fintoc") return "Estamos esperando confirmación de la transferencia para emitir tus tickets.";
     if (provider === "transfer") return "Estamos procesando la transferencia para emitir tus tickets.";
+    if (provider === "flow")
+      return "Flow confirmó/está confirmando el pago; estamos emitiendo tus tickets.";
     return "Estamos procesando tu pago y emitiendo tickets.";
   })();
 
@@ -292,9 +328,7 @@ export default function CheckoutConfirmClient() {
         <h1 className="text-3xl font-bold tracking-tight text-white">
           {ready ? "Compra confirmada" : "Confirmando tu compra…"}
         </h1>
-        <p className="text-sm text-white/60">
-          {ready ? "Tus tickets ya fueron emitidos." : waitingText}
-        </p>
+        <p className="text-sm text-white/60">{ready ? "Tus tickets ya fueron emitidos." : waitingText}</p>
       </div>
 
       {loading ? (
@@ -344,8 +378,15 @@ export default function CheckoutConfirmClient() {
                 {statusUpper === "CANCELLED" || statusUpper === "FAILED" ? (
                   <p className="mt-2 text-sm text-white/70">
                     Parece que el pago quedó{" "}
-                    <span className="text-white/90 font-semibold">{statusUpper}</span>. Si fue un error, vuelve al
-                    evento e intenta nuevamente.
+                    <span className="text-white/90 font-semibold">{statusUpper}</span>. Si fue un error, vuelve al evento
+                    e intenta nuevamente.
+                  </p>
+                ) : null}
+
+                {/* ✅ Ayuda extra: si estamos en Flow y tenemos token, explícito */}
+                {provider === "flow" && flowToken ? (
+                  <p className="mt-2 text-xs text-white/50">
+                    (Flow token recibido. Si el estado es asíncrono, puede tardar unos segundos en confirmarse.)
                   </p>
                 ) : null}
               </div>
