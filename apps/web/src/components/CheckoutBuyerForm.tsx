@@ -19,43 +19,27 @@ function normalizeEmail(v: string) {
 
 function isEmailValid(s: string) {
   const v = normalizeEmail(s);
-  // RFC-lite: suficiente para checkout
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
 }
 
 function normalizePhoneCL(input: string) {
-  // Acepta: "9 1234 5678", "+56912345678", "0912345678", "56912345678"
   const raw = String(input || "").replace(/[^\d+]/g, "").trim();
-
-  // si viene con +, removemos todo excepto dígitos
   let digits = raw.startsWith("+") ? raw.slice(1).replace(/\D/g, "") : raw.replace(/\D/g, "");
-
-  // si viene con 56 al inicio
   if (digits.startsWith("56")) digits = digits.slice(2);
-
-  // si viene con 0 inicial
   if (digits.startsWith("0")) digits = digits.replace(/^0+/, "");
-
-  // devolvemos solo dígitos (9 o más) y lo validamos aparte
   return digits;
 }
 
 function formatPhoneCLForDisplay(digits: string) {
-  // muestra amigable: +56 9 XXXX XXXX (si calza)
   const d = String(digits || "").replace(/\D/g, "");
-  if (d.length === 9 && d.startsWith("9")) {
-    return `+56 ${d[0]} ${d.slice(1, 5)} ${d.slice(5)}`;
-  }
-  if (d.length === 8) {
-    return `+56 ${d.slice(0, 4)} ${d.slice(4)}`;
-  }
+  if (d.length === 9 && d.startsWith("9")) return `+56 ${d[0]} ${d.slice(1, 5)} ${d.slice(5)}`;
+  if (d.length === 8) return `+56 ${d.slice(0, 4)} ${d.slice(4)}`;
   if (!d) return "";
   return `+56 ${d}`;
 }
 
 function isPhoneValidCL(input: string) {
   const d = normalizePhoneCL(input);
-  // Aceptamos móvil 9 dígitos (ideal) o fijo 8 dígitos (si alguien pone)
   return d.length === 9 || d.length === 8;
 }
 
@@ -70,7 +54,6 @@ function rutClean(rut: string) {
 }
 
 function rutComputeDV(num: string) {
-  // num: solo dígitos sin DV
   let sum = 0;
   let mul = 2;
   for (let i = num.length - 1; i >= 0; i--) {
@@ -99,7 +82,6 @@ function rutFormat(rut: string) {
   const dv = c.slice(-1);
   let num = c.slice(0, -1);
 
-  // separa miles
   let out = "";
   while (num.length > 3) {
     out = `.${num.slice(-3)}${out}`;
@@ -111,7 +93,6 @@ function rutFormat(rut: string) {
 
 /* ----------------------------
    Regiones / Comunas (Chile)
-   - dataset compacto y ampliable
 ----------------------------- */
 
 type Region = { code: string; name: string; comunas: string[] };
@@ -205,7 +186,6 @@ const CHILE_REGIONES: Region[] = [
 ----------------------------- */
 
 function parseCartParam(s: string) {
-  // "tt_general:2,tt_vip:1"
   const out: Record<string, number> = {};
   const v = (s || "").trim();
   if (!v) return out;
@@ -302,7 +282,6 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
   }, [buyerRegion]);
 
   useEffect(() => {
-    // si cambias región, resetea comuna si ya no existe
     if (!buyerRegion) {
       if (buyerComuna) setBuyerComuna("");
       return;
@@ -319,10 +298,7 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
   const rutProvided = buyerRut.trim().length > 0;
   const rutOk = !rutProvided ? true : rutIsValid(buyerRut);
 
-  const addressOk =
-    buyerRegion.trim().length > 0 &&
-    buyerComuna.trim().length > 0 &&
-    buyerAddress1.trim().length >= 5;
+  const addressOk = buyerRegion.trim().length > 0 && buyerComuna.trim().length > 0 && buyerAddress1.trim().length >= 5;
 
   const canPay =
     !paying &&
@@ -335,7 +311,6 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
     addressOk;
 
   function submitWebpayForm(url: string, token: string) {
-    // Webpay exige POST con token_ws
     const form = document.createElement("form");
     form.method = "POST";
     form.action = url;
@@ -351,14 +326,12 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
   }
 
   function payloadBase() {
-    // backend: guarda estos campos en payments/orders
     return {
       eventId: event.id,
       items,
-      amount: subtotal, // ✅ importante para flow: tu endpoint soporta amount y valida server-side
       buyerName: buyerName.trim(),
       buyerEmail: normalizeEmail(buyerEmail),
-      buyerPhone: normalizePhoneCL(buyerPhone), // solo dígitos sin 56
+      buyerPhone: normalizePhoneCL(buyerPhone),
       buyerRut: buyerRut.trim() ? rutFormat(buyerRut.trim()) : "",
       buyerRegion: buyerRegion.trim(),
       buyerComuna: buyerComuna.trim(),
@@ -415,15 +388,12 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
       });
 
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
+      if (!res.ok) throw new Error(data?.error || data?.detail || `Error ${res.status}`);
 
-      // ✅ tu create devuelve redirectUrl y/o checkoutUrl
-      const redirectUrl =
-        String(data?.redirectUrl || "") || String(data?.checkoutUrl || "") || String(data?.url || "");
+      const checkoutUrl = String(data?.checkoutUrl || "");
+      if (!checkoutUrl) throw new Error("Flow no devolvió checkoutUrl.");
 
-      if (!redirectUrl) throw new Error("Flow no devolvió redirectUrl/checkoutUrl.");
-
-      window.location.href = redirectUrl;
+      window.location.href = checkoutUrl;
     } catch (e: any) {
       setPayErr(String(e?.message || e));
       setOkMsg(null);
@@ -501,7 +471,8 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
           ? payWithFintoc
           : payWithTransfer;
 
-  // Mensaje de ayuda (por qué no deja pagar)
+  const payBtnText = paying ? "Procesando..." : payMethod === "flow" ? "Pagar con Flow" : "Pagar";
+
   const whyBlocked = useMemo(() => {
     const reasons: string[] = [];
     if (buyerName.trim().length < 2) reasons.push("Nombre inválido");
@@ -546,7 +517,6 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
             disabled={paying || emailLocked}
           />
 
-          {/* comprar para otro correo */}
           {sessionEmail ? (
             <div className="md:col-span-2 -mt-1 flex flex-wrap items-center justify-between gap-3 text-xs">
               <label className="flex cursor-pointer items-center gap-2 text-white/70">
@@ -587,7 +557,6 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
             disabled={paying}
           />
 
-          {/* Región */}
           <select
             value={buyerRegion}
             onChange={(e) => setBuyerRegion(e.target.value)}
@@ -602,7 +571,6 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
             ))}
           </select>
 
-          {/* Comuna */}
           <select
             value={buyerComuna}
             onChange={(e) => setBuyerComuna(e.target.value)}
@@ -634,11 +602,8 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
           />
         </div>
 
-        {/* hints sutiles (no rompe UI) */}
         <div className="mt-4 space-y-2 text-xs text-white/55">
-          {buyerPhone.trim() ? (
-            <div>Teléfono detectado: {formatPhoneCLForDisplay(normalizePhoneCL(buyerPhone))}</div>
-          ) : null}
+          {buyerPhone.trim() ? <div>Teléfono detectado: {formatPhoneCLForDisplay(normalizePhoneCL(buyerPhone))}</div> : null}
           {buyerRut.trim() ? (
             <div className={rutOk ? "text-white/55" : "text-red-300"}>
               RUT: {rutFormat(buyerRut)} {rutOk ? "✓" : "✗"}
@@ -666,7 +631,6 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
             <span className="text-sm font-semibold text-white">${formatCLP(subtotal)}</span>
           </div>
 
-          {/* Método pago */}
           <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs font-semibold text-white/70">Método de pago</p>
 
@@ -685,7 +649,6 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
                 <span className="text-xs text-white/55">Instantáneo</span>
               </label>
 
-              {/* ✅ FLOW */}
               <label className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
                 <div className="flex items-center gap-2">
                   <input
@@ -749,7 +712,7 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
             onClick={onPay}
             className="mt-5 w-full rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {paying ? "Procesando..." : payMethod === "webpay" ? "Pagar con Webpay" : payMethod === "flow" ? "Pagar con Flow" : "Pagar"}
+            {payBtnText}
           </button>
 
           {!canPay ? (

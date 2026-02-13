@@ -1,3 +1,4 @@
+// apps/web/src/app/api/payments/flow/create/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { pool } from "@/lib/db";
@@ -8,22 +9,14 @@ export const dynamic = "force-dynamic";
 
 const HOLD_TTL_MINUTES = 15;
 
-function pickString(v: any) {
-  return typeof v === "string" ? v.trim() : "";
+function mustEnv(name: string) {
+  const v = process.env[name];
+  if (!v) throw new Error(`Missing env: ${name}`);
+  return v;
 }
 
-function parseCLPAmount(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    const n = Math.trunc(value);
-    return n > 0 ? n : null;
-  }
-  if (typeof value === "string") {
-    const digits = value.replace(/[^\d]/g, "");
-    if (!digits) return null;
-    const n = parseInt(digits, 10);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  }
-  return null;
+function pickString(v: any) {
+  return typeof v === "string" ? v.trim() : "";
 }
 
 function getOrigin(req: NextRequest) {
@@ -35,30 +28,36 @@ function getOrigin(req: NextRequest) {
   );
 }
 
+type HoldItem = { ticketTypeId: string; qty: number };
+
 export async function POST(req: NextRequest) {
-  const reqId = `flow_create_${Math.random().toString(16).slice(2, 10)}`;
+  const reqId = `flow_create_${randomUUID().slice(0, 8)}`;
 
   try {
+    // obliga a tener env (para que falle claro si falta)
+    mustEnv("FLOW_API_KEY");
+    mustEnv("FLOW_SECRET_KEY");
+
     const body = await req.json().catch(() => ({} as any));
 
     const eventId = pickString(body?.eventId);
     const buyerName = pickString(body?.buyerName);
     const buyerEmail = pickString(body?.buyerEmail).toLowerCase();
 
-    const items = Array.isArray(body?.items) ? body.items : [];
-    const normalizedItems = items
+    const itemsRaw = Array.isArray(body?.items) ? body.items : [];
+    const items: HoldItem[] = itemsRaw
       .map((x: any) => ({
         ticketTypeId: pickString(x?.ticketTypeId),
         qty: Math.floor(Number(x?.qty)),
       }))
-      .filter((x: any) => x.ticketTypeId && Number.isFinite(x.qty) && x.qty > 0);
+      .filter((x) => x.ticketTypeId && Number.isFinite(x.qty) && x.qty > 0);
 
     console.log("[flow:create][in]", {
       reqId,
       eventId: !!eventId,
       buyerNameLen: buyerName.length,
-      buyerEmail: buyerEmail ? buyerEmail.replace(/(^.).+(@.*$)/, "$1***$2") : "",
-      itemsCount: normalizedItems.length,
+      buyerEmail: buyerEmail ? buyerEmail.replace(/(.{2}).+(@.+)/, "$1***$2") : "",
+      itemsCount: items.length,
     });
 
     if (!eventId) return NextResponse.json({ ok: false, error: "eventId_missing" }, { status: 400 });
@@ -66,10 +65,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "buyerName_invalid" }, { status: 400 });
     if (!buyerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail))
       return NextResponse.json({ ok: false, error: "buyerEmail_invalid" }, { status: 400 });
-    if (normalizedItems.length === 0)
-      return NextResponse.json({ ok: false, error: "items_empty" }, { status: 400 });
-
-    const amountFromClient = parseCLPAmount(body?.amount);
+    if (items.length === 0) return NextResponse.json({ ok: false, error: "items_empty" }, { status: 400 });
 
     let paymentId = "";
     let holdId = "";
@@ -80,8 +76,8 @@ export async function POST(req: NextRequest) {
     try {
       await client.query("BEGIN");
 
-      // Event title
-      const ev = await client.query(`SELECT id, title FROM events WHERE id=$1`, [eventId]);
+      // Event
+      const ev = await client.query(`SELECT id, title FROM events WHERE id = $1`, [eventId]);
       if (ev.rowCount === 0) {
         await client.query("ROLLBACK");
         return NextResponse.json({ ok: false, error: "event_not_found" }, { status: 404 });
@@ -89,11 +85,11 @@ export async function POST(req: NextRequest) {
       eventTitle = String(ev.rows[0].title || "");
 
       // Ticket types
-      const ids = normalizedItems.map((x: any) => x.ticketTypeId);
+      const ids = items.map((x) => x.ticketTypeId);
       const tt = await client.query(
         `SELECT id, name, price_clp, capacity, sold, held
-           FROM ticket_types
-          WHERE event_id=$1 AND id = ANY($2::text[])`,
+         FROM ticket_types
+         WHERE event_id = $1 AND id = ANY($2::text[])`,
         [eventId, ids]
       );
 
@@ -105,9 +101,9 @@ export async function POST(req: NextRequest) {
       const byId = new Map<string, any>();
       for (const row of tt.rows) byId.set(String(row.id), row);
 
-      // total server-side
+      // Total server-side (IGNORA monto cliente)
       total = 0;
-      for (const it of normalizedItems) {
+      for (const it of items) {
         const row = byId.get(it.ticketTypeId);
         total += Number(row.price_clp) * it.qty;
       }
@@ -115,15 +111,6 @@ export async function POST(req: NextRequest) {
       if (!Number.isFinite(total) || total <= 0) {
         await client.query("ROLLBACK");
         return NextResponse.json({ ok: false, error: "amount_invalid" }, { status: 400 });
-      }
-
-      // anti-manipulación
-      if (amountFromClient && amountFromClient !== total) {
-        await client.query("ROLLBACK");
-        return NextResponse.json(
-          { ok: false, error: "amount_mismatch", detail: `server=${total} client=${amountFromClient}` },
-          { status: 400 }
-        );
       }
 
       // Hold
@@ -136,18 +123,17 @@ export async function POST(req: NextRequest) {
         [holdId, eventId, expiresAt]
       );
 
-      // Reservar (held)
-      for (const it of normalizedItems) {
+      // Reservar held
+      for (const it of items) {
         const u = await client.query(
           `UPDATE ticket_types
-              SET held = held + $3
-            WHERE event_id=$1
-              AND id=$2
-              AND (sold + held + $3) <= capacity
-          RETURNING id`,
+             SET held = held + $3
+           WHERE event_id = $1
+             AND id = $2
+             AND (sold + held + $3) <= capacity
+           RETURNING id`,
           [eventId, it.ticketTypeId, it.qty]
         );
-
         if (u.rowCount === 0) {
           await client.query("ROLLBACK");
           return NextResponse.json({ ok: false, error: "capacity_exceeded" }, { status: 409 });
@@ -162,7 +148,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Payment (CREATED)
+      // Payment
       paymentId = `pay_${randomUUID()}`;
       await client.query(
         `INSERT INTO payments
@@ -186,76 +172,47 @@ export async function POST(req: NextRequest) {
       client.release();
     }
 
-    // Flow (afuera de la TX)
+    // Llamada a Flow (fuera TX)
     const origin = getOrigin(req);
+    const urlConfirmation = `${origin}/api/payments/flow/webhook`;
+    const urlReturn = `${origin}/api/payments/flow/kick`;
 
-    const urlConfirmation = `${origin}/api/payments/flow/webhook`; // tu webhook
-    const urlReturn = `${origin}/api/payments/flow/kick`; // tu retorno
-
-    let flowToken = "";
+    let flowRes: { url: string; token: string; flowOrder: number };
     try {
-      const flow = await flowCreatePayment({
-        commerceOrder: paymentId, // Flow devolverá esto en getStatus
-        subject: `Compra tickets - ${eventTitle || paymentId}`,
-        amount: total, // ✅ total real (no client)
+      flowRes = await flowCreatePayment({
+        commerceOrder: paymentId,
+        subject: `Compra tickets - ${eventTitle}`,
+        amount: total, // ✅ SIEMPRE el total real
         email: buyerEmail,
         urlReturn,
         urlConfirmation,
         timeoutSeconds: HOLD_TTL_MINUTES * 60,
         optional: { eventId, holdId, paymentId },
       });
-
-      flowToken = flow.token;
-
-      // Guardar token + status=PENDING
-      const c2 = await pool.connect();
-      try {
-        await c2.query(
-          `UPDATE payments
-              SET provider_ref=$2, status='PENDING', updated_at=NOW()
-            WHERE id=$1`,
-          [paymentId, flowToken]
-        );
-      } finally {
-        c2.release();
-      }
-
-      const checkoutUrl = `${flow.url}?token=${encodeURIComponent(flow.token)}`;
-
-      console.log("[flow:create][ok]", { reqId, paymentId, holdId, total, checkout: true });
-
-      return NextResponse.json({
-        ok: true,
-        provider: "flow",
-        paymentId,
-        checkoutUrl,
-        token: flow.token, // útil para debug
-      });
     } catch (err: any) {
-      console.log("[flow:create][fail]", { reqId, paymentId, holdId, err: String(err?.message || err) });
-
-      // Cleanup: marcar FAILED + liberar held
+      // Cleanup: payment FAILED + liberar held + expirar hold
       const c = await pool.connect();
       try {
         await c.query("BEGIN");
 
         await c.query(
-          `UPDATE payments SET status='FAILED', updated_at=NOW() WHERE id=$1`,
+          `UPDATE payments
+             SET status = 'FAILED', updated_at = NOW()
+           WHERE id = $1`,
           [paymentId]
         );
 
-        const hi = await c.query(`SELECT ticket_type_id, qty FROM hold_items WHERE hold_id=$1`, [holdId]);
+        const hi = await c.query(`SELECT event_id, ticket_type_id, qty FROM hold_items WHERE hold_id = $1`, [holdId]);
         for (const row of hi.rows) {
           await c.query(
             `UPDATE ticket_types
-                SET held = GREATEST(held - $3, 0)
-              WHERE event_id=$1 AND id=$2`,
-            [eventId, String(row.ticket_type_id), Number(row.qty)]
+               SET held = GREATEST(held - $3, 0)
+             WHERE event_id = $1 AND id = $2`,
+            [String(row.event_id), String(row.ticket_type_id), Number(row.qty)]
           );
         }
 
-        await c.query(`UPDATE holds SET status='EXPIRED' WHERE id=$1`, [holdId]);
-
+        await c.query(`UPDATE holds SET status = 'EXPIRED' WHERE id = $1`, [holdId]);
         await c.query("COMMIT");
       } catch {
         try {
@@ -266,11 +223,37 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json(
-        { ok: false, provider: "flow", error: err?.message || "flow_error" },
+        { ok: false, provider: "flow", error: "flow_create_failed", detail: err?.message ?? String(err) },
         { status: 502 }
       );
     }
+
+    const checkoutUrl = `${flowRes.url}?token=${encodeURIComponent(flowRes.token)}`;
+
+    // Guardar token en DB
+    const c2 = await pool.connect();
+    try {
+      await c2.query(
+        `UPDATE payments
+           SET provider_ref = $2, status = 'PENDING', updated_at = NOW()
+         WHERE id = $1`,
+        [paymentId, flowRes.token]
+      );
+    } finally {
+      c2.release();
+    }
+
+    console.log("[flow:create][out]", { reqId, paymentId, holdId, total, checkout: true });
+
+    return NextResponse.json({
+      ok: true,
+      provider: "flow",
+      paymentId,
+      checkoutUrl,
+      token: flowRes.token,
+    });
   } catch (err: any) {
+    console.error("[flow:create][err]", { reqId, err: err?.message ?? String(err) });
     return NextResponse.json(
       { ok: false, error: "internal_error", detail: err?.message ?? String(err) },
       { status: 500 }

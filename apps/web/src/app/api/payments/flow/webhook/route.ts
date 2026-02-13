@@ -1,155 +1,168 @@
+// apps/web/src/app/api/payments/flow/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { flowGetStatus } from "@/lib/flow";
-import { pool, withTx } from "@/lib/db";
+import { withTx } from "@/lib/db";
+import { flowGetStatus, flowVerifyWebhookSignature } from "@/lib/flow";
 import { finalizePaidHoldToOrderPgTx } from "@/lib/checkout.pg.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/**
- * Webhook Flow:
- * - Flow llama a urlConfirmation (POST)
- * - Usualmente manda token, y a veces también commerceOrder.
- * - Nosotros resolvemos payment por provider_ref (=token) o por commerceOrder (=paymentId)
- * - Consultamos getStatus en Flow para confirmar estado real
- * - Si está pagado: marcamos PAID y emitimos tickets (idempotente)
- */
-function pickString(v: any) {
-  return typeof v === "string" ? v.trim() : "";
+function asRecord(sp: URLSearchParams) {
+  const out: Record<string, string> = {};
+  for (const [k, v] of sp.entries()) out[k] = String(v ?? "");
+  return out;
 }
 
-function json(status: number, payload: any) {
-  return NextResponse.json(payload, {
-    status,
-    headers: { "Cache-Control": "no-store" },
-  });
+async function readParams(req: NextRequest) {
+  // Flow normalmente manda POST x-www-form-urlencoded: token=...
+  // pero por si acaso, soportamos GET ?token=
+  if (req.method === "GET") {
+    return asRecord(req.nextUrl.searchParams);
+  }
+
+  const raw = await req.text();
+  const sp = new URLSearchParams(raw);
+  return asRecord(sp);
+}
+
+function flowStatusToPaymentStatus(n: number) {
+  // 1 pending, 2 paid, 3 rejected, 4 cancelled
+  if (n === 2) return "PAID";
+  if (n === 1) return "PENDING";
+  if (n === 4) return "CANCELED";
+  if (n === 3) return "FAILED";
+  return "PENDING";
 }
 
 export async function POST(req: NextRequest) {
-  const reqId = `flow_webhook_${Math.random().toString(16).slice(2, 10)}`;
+  return handle(req);
+}
 
+export async function GET(req: NextRequest) {
+  // Si Flow te pega GET (tests raros), igual lo aceptamos
+  return handle(req);
+}
+
+async function handle(req: NextRequest) {
   try {
-    // Flow manda x-www-form-urlencoded normalmente, pero a veces JSON.
-    const contentType = req.headers.get("content-type") || "";
-    let token = "";
-    let commerceOrder = "";
+    const params = await readParams(req);
+    const token = String(params.token || "").trim();
+    const sig = String(params.s || "").trim();
 
-    if (contentType.includes("application/x-www-form-urlencoded")) {
-      const form = await req.formData();
-      token = pickString(form.get("token"));
-      commerceOrder = pickString(form.get("commerceOrder"));
-    } else {
-      const body = await req.json().catch(() => ({} as any));
-      token = pickString(body?.token);
-      commerceOrder = pickString(body?.commerceOrder);
-    }
-
-    console.log("[flow:webhook][in]", { reqId, hasToken: !!token, hasCommerceOrder: !!commerceOrder });
-
-    if (!token && !commerceOrder) {
-      return json(400, { ok: false, error: "missing_token_or_commerceOrder" });
-    }
-
-    // 1) Confirmar estado real en Flow
-    //    Si tenemos token, getStatus funciona directo.
-    //    Si NO hay token, no podemos consultar estado (Flow getStatus requiere token).
     if (!token) {
-      // sin token no podemos validar => evitamos emitir tickets a ciegas
-      return json(400, { ok: false, error: "missing_token" });
+      return NextResponse.json({ ok: false, error: "missing_token" }, { status: 400 });
     }
 
+    // Si viene firma => validarla. Si no viene, no bloqueamos (muchos flows mandan solo token).
+    if (sig) {
+      const okSig = flowVerifyWebhookSignature(params);
+      if (!okSig) {
+        return NextResponse.json({ ok: false, error: "invalid_signature" }, { status: 401 });
+      }
+    }
+
+    // Traer estado real desde Flow
     const st = await flowGetStatus(token);
+    const paymentId = String(st?.commerceOrder || "").trim();
+    const nextStatus = flowStatusToPaymentStatus(Number(st?.status || 0));
 
-    // status Flow:
-    // 1 pending, 2 paid, 3 rejected, 4 cancelled
-    const flowStatus = Number(st?.status || 0);
-    const isPaid = flowStatus === 2;
-
-    // 2) Resolver paymentId + datos desde DB
-    //    provider_ref guarda el token (según tu create/route.ts)
-    const paymentIdFromFlow = pickString(st?.commerceOrder) || commerceOrder;
-
-    if (!paymentIdFromFlow) {
-      return json(400, { ok: false, error: "missing_commerceOrder_after_status" });
+    if (!paymentId) {
+      return NextResponse.json({ ok: false, error: "missing_paymentId_from_flow" }, { status: 400 });
     }
 
-    const result = await withTx(async (client) => {
+    await withTx(async (client) => {
       const pRes = await client.query(
         `
-        SELECT
-          id, hold_id, order_id, status, provider, provider_ref,
-          buyer_name, buyer_email, event_title
+        SELECT id, hold_id, status, provider, provider_ref,
+               buyer_name, buyer_email, event_title
         FROM payments
         WHERE id=$1
-           OR provider_ref=$2
         LIMIT 1
         FOR UPDATE
         `,
-        [paymentIdFromFlow, token]
+        [paymentId]
       );
 
       if (pRes.rowCount === 0) {
-        // No existe el pago en DB (o token no coincide)
-        return { ok: false as const, status: 404 as const, payload: { error: "payment_not_found" } };
+        // No lo encontramos => no reventamos el webhook (pero dejamos registro)
+        console.warn("[flow:webhook] payment not found", { paymentId });
+        return;
       }
 
       const payment = pRes.rows[0];
-      const paymentId = String(payment.id);
-      const holdId = String(payment.hold_id || "");
-      const buyerEmail = String(payment.buyer_email || "");
-      const buyerName = String(payment.buyer_name || "");
-      const eventTitle = String(payment.event_title || "");
+      const current = String(payment.status || "").toUpperCase();
 
-      // Guardamos estados Flow “tal cual” a tu estado interno:
-      // paid => PAID
-      // rejected/cancel => FAILED
-      // pending => PENDING
-      const nextStatus =
-        flowStatus === 2 ? "PAID" : flowStatus === 1 ? "PENDING" : flowStatus === 3 ? "FAILED" : "CANCELED";
+      // si no es flow, salimos
+      if (String(payment.provider || "") !== "flow") return;
 
-      // Si el pago ya estaba PAID, no hacemos más (idempotencia)
-      const currentStatus = String(payment.status || "").toUpperCase();
-      if (currentStatus !== nextStatus) {
-        await client.query(
-          `UPDATE payments SET status=$2, updated_at=NOW() WHERE id=$1`,
-          [paymentId, nextStatus]
-        );
+      // actualiza provider_ref si no estaba
+      if (!payment.provider_ref) {
+        await client.query(`UPDATE payments SET provider_ref=$2, updated_at=NOW() WHERE id=$1`, [paymentId, token]);
       }
 
-      if (!isPaid) {
-        return {
-          ok: true as const,
-          status: 200 as const,
-          payload: { ok: true, provider: "flow", paymentId, flowStatus, status: nextStatus },
-        };
-      }
+      // si ya está PAID, idempotencia
+      if (current === "PAID") return;
 
-      // ✅ Si está pagado: emitir tickets (idempotente)
-      // Necesitamos mínimos para finalize (igual que en status/route.ts)
-      if (holdId && buyerEmail.includes("@") && buyerName.length >= 2 && eventTitle) {
-        try {
-          await finalizePaidHoldToOrderPgTx(client, {
-            holdId,
-            eventTitle,
-            buyerName,
-            buyerEmail,
-            paymentId,
-          });
-        } catch {
-          // silencio: ya pudo emitirse por otra request / carrera
+      // Actualizar status
+      await client.query(`UPDATE payments SET status=$2, updated_at=NOW() WHERE id=$1`, [paymentId, nextStatus]);
+
+      // Si pagado => emitir/crear orden+tickets
+      if (nextStatus === "PAID") {
+        const holdId = String(payment.hold_id || "");
+        const buyerEmail = String(payment.buyer_email || "");
+        const buyerName = String(payment.buyer_name || "");
+        const eventTitle = String(payment.event_title || "");
+
+        if (holdId && buyerEmail && buyerName && eventTitle) {
+          try {
+            await finalizePaidHoldToOrderPgTx(client, {
+              holdId,
+              eventTitle,
+              buyerName,
+              buyerEmail,
+              paymentId,
+            });
+          } catch (e) {
+            // si ya se finalizó por otra carrera (status endpoint / doble webhook), no rompemos
+            console.warn("[flow:webhook] finalize skipped/failed (likely idempotent race)", {
+              paymentId,
+              msg: (e as any)?.message ?? String(e),
+            });
+          }
         }
+        return;
       }
 
-      return {
-        ok: true as const,
-        status: 200 as const,
-        payload: { ok: true, provider: "flow", paymentId, flowStatus, status: "PAID" },
-      };
+      // Si FALLA / CANCELED => liberar held y expirar hold
+      if (nextStatus === "FAILED" || nextStatus === "CANCELED") {
+        const holdId = String(payment.hold_id || "");
+        if (!holdId) return;
+
+        const hi = await client.query(
+          `SELECT event_id, ticket_type_id, qty
+             FROM hold_items
+            WHERE hold_id=$1`,
+          [holdId]
+        );
+
+        for (const row of hi.rows) {
+          await client.query(
+            `UPDATE ticket_types
+               SET held = GREATEST(held - $3, 0)
+             WHERE event_id = $1 AND id = $2`,
+            [String(row.event_id), String(row.ticket_type_id), Number(row.qty)]
+          );
+        }
+
+        await client.query(`UPDATE holds SET status='EXPIRED' WHERE id=$1`, [holdId]);
+      }
     });
 
-    return json(result.status, result.payload);
-  } catch (e: any) {
-    console.log("[flow:webhook][err]", { err: String(e?.message || e) });
-    return json(500, { ok: false, error: "internal_error", detail: String(e?.message || e) });
+    // Flow suele aceptar 200 OK. Respuesta simple.
+    return new NextResponse("OK", { status: 200 });
+  } catch (err: any) {
+    console.error("[flow:webhook][err]", err?.message ?? String(err));
+    // Igual 200 para evitar retries infinitos por errores internos puntuales
+    return new NextResponse("OK", { status: 200 });
   }
 }

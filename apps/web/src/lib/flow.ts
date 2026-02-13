@@ -1,3 +1,4 @@
+// apps/web/src/lib/flow.ts
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type FlowStatus = {
@@ -20,13 +21,14 @@ function mustEnv(name: string) {
 }
 
 export function flowBaseUrl() {
-  // prod: https://www.flow.cl/api
-  // sandbox: https://sandbox.flow.cl/api
-  return process.env.FLOW_BASE_URL || "https://www.flow.cl/api";
+  // Tu env FLOW_BASE_URL puede ser:
+  // - prod:    https://www.flow.cl/api  (clásico)
+  // - sandbox: https://sandbox.flow.cl/api
+  // En tu código venías usando https://api.flow.cl (alias).
+  return process.env.FLOW_BASE_URL || "https://api.flow.cl";
 }
 
 export function flowSign(params: Record<string, string>) {
-  // Firma: ordenar keys y concatenar key+value, HMAC-SHA256(secretKey), hex
   const secretKey = mustEnv("FLOW_SECRET_KEY");
   const keys = Object.keys(params).sort();
   let toSign = "";
@@ -34,26 +36,52 @@ export function flowSign(params: Record<string, string>) {
   return createHmac("sha256", secretKey).update(toSign).digest("hex");
 }
 
-/**
- * Verificación “best-effort” para webhooks.
- * Flow en muchos casos manda solo `token` al urlConfirmation; si NO viene firma, retornamos true.
- * Si viene un campo `s`, verificamos contra nuestra firma local.
- */
-export function flowVerifyWebhookSignature(params: Record<string, string>) {
-  const sig = (params.s || "").trim();
-  if (!sig) return true;
-
-  const { s: _ignored, ...rest } = params;
-  const expected = flowSign(rest);
-
+function safeEqHex(a: string, b: string) {
+  const aa = String(a || "").trim().toLowerCase();
+  const bb = String(b || "").trim().toLowerCase();
+  if (!aa || !bb || aa.length !== bb.length) return false;
   try {
-    const a = Buffer.from(sig, "hex");
-    const b = Buffer.from(expected, "hex");
-    if (a.length !== b.length) return false;
-    return timingSafeEqual(a, b);
+    const ba = Buffer.from(aa, "hex");
+    const bb2 = Buffer.from(bb, "hex");
+    if (ba.length !== bb2.length) return false;
+    return timingSafeEqual(ba, bb2);
   } catch {
     return false;
   }
+}
+
+/**
+ * Verificación de firma para webhook/confirmación.
+ * Flow puede mandarte:
+ * - token + s
+ * - o token (sin s) en algunos setups.
+ *
+ * Aquí: si viene "s" => validamos.
+ * Intentamos 2 variantes por compatibilidad:
+ *  A) firmar exactamente los params recibidos (sin s)
+ *  B) si no venía apiKey, probamos agregando apiKey desde env
+ */
+export function flowVerifyWebhookSignature(received: Record<string, string>) {
+  const provided = String(received?.s || "").trim();
+  if (!provided) return false;
+
+  const params: Record<string, string> = { ...received };
+  delete params.s;
+
+  // Variante A
+  const expectedA = flowSign(params);
+  if (safeEqHex(provided, expectedA)) return true;
+
+  // Variante B: si no venía apiKey, lo agregamos
+  if (!params.apiKey) {
+    const apiKey = process.env.FLOW_API_KEY;
+    if (apiKey) {
+      const expectedB = flowSign({ apiKey, ...params });
+      if (safeEqHex(provided, expectedB)) return true;
+    }
+  }
+
+  return false;
 }
 
 export async function flowCreatePayment(args: {
