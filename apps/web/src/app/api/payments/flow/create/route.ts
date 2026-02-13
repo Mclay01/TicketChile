@@ -46,11 +46,12 @@ export async function POST(req: NextRequest) {
 
     const itemsRaw = Array.isArray(body?.items) ? body.items : [];
     const items: HoldItem[] = itemsRaw
-      .map((x: any) => ({
+      .map((x: any): HoldItem => ({
         ticketTypeId: pickString(x?.ticketTypeId),
         qty: Math.floor(Number(x?.qty)),
       }))
-      .filter((x) => x.ticketTypeId && Number.isFinite(x.qty) && x.qty > 0);
+      .filter((x: HoldItem) => x.ticketTypeId && Number.isFinite(x.qty) && x.qty > 0);
+
 
     console.log("[flow:create][in]", {
       reqId,
