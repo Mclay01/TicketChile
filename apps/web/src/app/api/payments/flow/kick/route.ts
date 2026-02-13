@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac } from "node:crypto";
+import { flowGetStatus } from "@/lib/flow";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const FLOW_API_BASE = "https://api.flow.cl";
-
-function mustEnv(name: string) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing env: ${name}`);
-  return v;
-}
 
 function getOrigin(req: NextRequest) {
   return (
@@ -21,33 +13,40 @@ function getOrigin(req: NextRequest) {
   );
 }
 
-function flowSign(params: Record<string, string>, secretKey: string) {
-  const keys = Object.keys(params).sort();
-  let toSign = "";
-  for (const k of keys) toSign += k + params[k];
-  return createHmac("sha256", secretKey).update(toSign).digest("hex");
-}
-
-async function flowGetStatus(token: string, apiKey: string, secretKey: string) {
-  const base = { apiKey, token };
-  const s = flowSign(base, secretKey);
-  const qs = new URLSearchParams({ ...base, s });
-  const r = await fetch(`${FLOW_API_BASE}/payment/getStatus?${qs.toString()}`, { method: "GET" });
-  const j = await r.json().catch(() => null);
-  if (!r.ok) throw new Error(j?.message || j?.error || `Flow getStatus HTTP ${r.status}`);
-  return j as any;
+function pickString(v: any) {
+  return typeof v === "string" ? v.trim() : "";
 }
 
 async function readToken(req: NextRequest) {
-  // Flow vuelve por POST form; pero a veces puedes testear por GET ?token=
-  const fromQuery = (req.nextUrl.searchParams.get("token") || "").trim();
+  // Flow normalmente vuelve con POST form-data / x-www-form-urlencoded
+  // pero a veces se prueba con GET ?token=
+  const fromQuery = pickString(req.nextUrl.searchParams.get("token"));
   if (fromQuery) return fromQuery;
 
+  const ct = req.headers.get("content-type") || "";
+
   if (req.method === "POST") {
-    const raw = await req.text();
-    const sp = new URLSearchParams(raw);
-    const t = (sp.get("token") || "").trim();
-    if (t) return t;
+    if (ct.includes("application/x-www-form-urlencoded")) {
+      const raw = await req.text();
+      const sp = new URLSearchParams(raw);
+      return pickString(sp.get("token"));
+    }
+
+    // fallback: formData
+    try {
+      const fd = await req.formData();
+      return pickString(fd.get("token"));
+    } catch {
+      // ignore
+    }
+
+    // fallback: json
+    try {
+      const j = await req.json().catch(() => ({} as any));
+      return pickString(j?.token);
+    } catch {
+      // ignore
+    }
   }
 
   return "";
@@ -62,30 +61,35 @@ export async function POST(req: NextRequest) {
 }
 
 async function handle(req: NextRequest) {
-  try {
-    const FLOW_API_KEY = mustEnv("FLOW_API_KEY");
-    const FLOW_SECRET_KEY = mustEnv("FLOW_SECRET_KEY");
+  const origin = getOrigin(req);
 
+  try {
     const token = await readToken(req);
-    const origin = getOrigin(req);
 
     if (!token) {
       return NextResponse.redirect(new URL(`/checkout?canceled=1&reason=missing_token`, origin));
     }
 
-    const st = await flowGetStatus(token, FLOW_API_KEY, FLOW_SECRET_KEY);
-    const paymentId = String(st?.commerceOrder || "").trim();
+    const st = await flowGetStatus(token);
+    const paymentId = pickString(st?.commerceOrder);
 
     if (!paymentId) {
       return NextResponse.redirect(new URL(`/checkout?canceled=1&reason=missing_payment`, origin));
     }
 
-    // Redirige a tu confirm (tu UI ya hace polling)
+    // status Flow: 1 pending, 2 paid, 3 rejected, 4 cancelled
+    const flowStatus = Number(st?.status || 0);
+    if (flowStatus === 3 || flowStatus === 4) {
+      return NextResponse.redirect(
+        new URL(`/checkout?canceled=1&reason=flow_${flowStatus}`, origin)
+      );
+    }
+
+    // Deja que tu UI haga polling a /api/payments/status
     return NextResponse.redirect(
       new URL(`/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}`, origin)
     );
   } catch (err: any) {
-    const origin = getOrigin(req);
     return NextResponse.redirect(
       new URL(`/checkout?canceled=1&reason=${encodeURIComponent(err?.message || "flow_error")}`, origin)
     );

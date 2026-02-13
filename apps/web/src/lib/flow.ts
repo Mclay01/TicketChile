@@ -1,5 +1,4 @@
-// apps/web/src/lib/flow.ts
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type FlowStatus = {
   flowOrder: number;
@@ -26,16 +25,35 @@ export function flowBaseUrl() {
   return process.env.FLOW_BASE_URL || "https://www.flow.cl/api";
 }
 
-/**
- * Firma: ordenar keys y concatenar key+value, HMAC-SHA256(secretKey), hex
- * (exactamente como documenta Flow)
- */
 export function flowSign(params: Record<string, string>) {
+  // Firma: ordenar keys y concatenar key+value, HMAC-SHA256(secretKey), hex
   const secretKey = mustEnv("FLOW_SECRET_KEY");
   const keys = Object.keys(params).sort();
   let toSign = "";
   for (const k of keys) toSign += k + params[k];
   return createHmac("sha256", secretKey).update(toSign).digest("hex");
+}
+
+/**
+ * Verificación “best-effort” para webhooks.
+ * Flow en muchos casos manda solo `token` al urlConfirmation; si NO viene firma, retornamos true.
+ * Si viene un campo `s`, verificamos contra nuestra firma local.
+ */
+export function flowVerifyWebhookSignature(params: Record<string, string>) {
+  const sig = (params.s || "").trim();
+  if (!sig) return true;
+
+  const { s: _ignored, ...rest } = params;
+  const expected = flowSign(rest);
+
+  try {
+    const a = Buffer.from(sig, "hex");
+    const b = Buffer.from(expected, "hex");
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
 }
 
 export async function flowCreatePayment(args: {
@@ -95,7 +113,6 @@ export async function flowCreatePayment(args: {
 
   if (!url || !token) throw new Error("Flow create: respuesta inválida (sin url/token).");
 
-  // Para redirigir: url + "?token=" + token
   return { url, token, flowOrder };
 }
 
