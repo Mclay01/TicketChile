@@ -56,7 +56,7 @@ function ticketTypesSlugExists(): Promise<boolean> {
       LIMIT 1
       `
     );
-    return q.rowCount > 0;
+    return (q.rowCount ?? 0) > 0;
   })();
 
   return global.__ticketchile_ticketTypesSlugExists;
