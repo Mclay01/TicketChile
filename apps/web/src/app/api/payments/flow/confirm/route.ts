@@ -1,26 +1,12 @@
+// apps/web/src/app/api/payments/flow/confirm/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
 import { createHmac, randomUUID } from "node:crypto";
+import { pool as dbPool } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const FLOW_API_BASE = "https://api.flow.cl";
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __pgPoolFlow2: Pool | undefined;
-}
-
-function getDbPool() {
-  if (global.__pgPoolFlow2) return global.__pgPoolFlow2;
-
-  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  if (!connectionString) throw new Error("Missing DATABASE_URL (or POSTGRES_URL).");
-
-  global.__pgPoolFlow2 = new Pool({ connectionString });
-  return global.__pgPoolFlow2;
-}
 
 function mustEnv(name: string) {
   const v = process.env[name];
@@ -160,9 +146,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "missing_token" }, { status: 400 });
     }
 
-    const pool = getDbPool();
-    const client = await pool.connect();
-
+    const client = await dbPool.connect();
     try {
       // Dedupe de webhook (si llega repetido)
       await client.query("BEGIN");
@@ -189,7 +173,7 @@ export async function POST(req: NextRequest) {
 
     const localStatus = mapFlowStatusToLocal(flowStatus);
 
-    const c2 = await pool.connect();
+    const c2 = await dbPool.connect();
     try {
       await c2.query("BEGIN");
 
