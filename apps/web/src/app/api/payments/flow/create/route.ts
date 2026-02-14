@@ -43,7 +43,6 @@ export async function POST(req: NextRequest) {
     const buyerName = pickString(body?.buyerName);
     const buyerEmail = pickString(body?.buyerEmail).toLowerCase();
 
-    // 👇 ticketTypeKey puede ser id o slug (solución definitiva al ticket_type_not_found típico)
     const itemsRaw = Array.isArray(body?.items) ? body.items : [];
     const items: HoldItem[] = itemsRaw
       .map((x: any): HoldItem => ({
@@ -85,8 +84,9 @@ export async function POST(req: NextRequest) {
       }
       eventTitle = String(ev.rows[0].title || "");
 
-      // Ticket types: buscamos por id O por slug (según lo que mande el front)
+      // Ticket types por id O slug
       const keys = items.map((x) => x.ticketTypeKey);
+
       const tt = await client.query(
         `SELECT id, slug, name, price_clp, capacity, sold, held
            FROM ticket_types
@@ -102,9 +102,7 @@ export async function POST(req: NextRequest) {
       }
 
       const missing: string[] = [];
-      for (const k of keys) {
-        if (!byKey.has(k)) missing.push(k);
-      }
+      for (const k of keys) if (!byKey.has(k)) missing.push(k);
 
       if (missing.length > 0) {
         const avail = await client.query(
@@ -117,17 +115,12 @@ export async function POST(req: NextRequest) {
 
         await client.query("ROLLBACK");
         return NextResponse.json(
-          {
-            ok: false,
-            error: "ticket_type_not_found",
-            missing,
-            available: avail.rows,
-          },
+          { ok: false, error: "ticket_type_not_found", missing, available: avail.rows },
           { status: 400 }
         );
       }
 
-      // Total server-side (IGNORA monto cliente)
+      // Total server-side
       total = 0;
       for (const it of items) {
         const row = byKey.get(it.ticketTypeKey);
@@ -149,10 +142,9 @@ export async function POST(req: NextRequest) {
         [holdId, eventId, expiresAt]
       );
 
-      // Reservar held + guardar hold_items
+      // Reservar held + hold_items
       for (const it of items) {
         const row = byKey.get(it.ticketTypeKey);
-
         const ticketTypeId = String(row.id);
         const ticketTypeName = String(row.name);
 
@@ -202,13 +194,11 @@ export async function POST(req: NextRequest) {
       client.release();
     }
 
-    // Llamada a Flow (fuera TX)
+    // Flow call (fuera TX)
     const origin = getOrigin(req);
 
-    // ✅ Aquí estaba el bug silencioso: tu confirm route está en /confirm, no /webhook
+    // ✅ confirm endpoint real
     const urlConfirmation = `${origin}/api/payments/flow/confirm`;
-
-    // Si tu /api/payments/flow/kick existe, déjalo. Si no existe, cambia a una página real.
     const urlReturn = `${origin}/api/payments/flow/kick`;
 
     let flowRes: { url: string; token: string; flowOrder: number };
@@ -224,7 +214,7 @@ export async function POST(req: NextRequest) {
         optional: { eventId, holdId, paymentId },
       });
     } catch (err: any) {
-      // Cleanup: payment FAILED + liberar held + expirar hold
+      // cleanup
       const c = await pool.connect();
       try {
         await c.query("BEGIN");
@@ -259,7 +249,7 @@ export async function POST(req: NextRequest) {
 
     const checkoutUrl = `${flowRes.url}?token=${encodeURIComponent(flowRes.token)}`;
 
-    // Guardar token en DB
+    // guardar token
     const c2 = await pool.connect();
     try {
       await c2.query(

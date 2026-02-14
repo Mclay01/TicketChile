@@ -1,7 +1,7 @@
 // apps/web/src/app/api/payments/flow/confirm/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, randomUUID } from "node:crypto";
-import { pool, withTx } from "@/lib/db";
+import { withTx } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +33,6 @@ async function flowGetStatus(token: string, apiKey: string, secretKey: string) {
 }
 
 function mapFlowStatusToLocal(flowStatus: number) {
-  // Flow: 1 pendiente, 2 pagada, 3 rechazada, 4 anulada
   if (flowStatus === 2) return "PAID";
   if (flowStatus === 1) return "PENDING";
   if (flowStatus === 3) return "FAILED";
@@ -42,7 +41,6 @@ function mapFlowStatusToLocal(flowStatus: number) {
 }
 
 async function finalizePaidPayment(client: any, paymentId: string) {
-  // Lock payment
   const p = await client.query(`SELECT * FROM payments WHERE id = $1 FOR UPDATE`, [paymentId]);
   if (p.rowCount === 0) throw new Error("payment_not_found");
   const pay = p.rows[0];
@@ -51,7 +49,6 @@ async function finalizePaidPayment(client: any, paymentId: string) {
     return { orderId: String(pay.order_id) };
   }
 
-  // Hold lock
   const h = await client.query(`SELECT id, status FROM holds WHERE id = $1 FOR UPDATE`, [String(pay.hold_id)]);
   if (h.rowCount === 0) throw new Error("hold_not_found");
 
@@ -65,7 +62,6 @@ async function finalizePaidPayment(client: any, paymentId: string) {
 
   const orderId = `ord_${randomUUID()}`;
 
-  // Order
   await client.query(
     `INSERT INTO orders (id, hold_id, event_id, event_title, buyer_name, buyer_email, owner_email)
      VALUES ($1,$2,$3,$4,$5,$6,$7)`,
@@ -80,7 +76,6 @@ async function finalizePaidPayment(client: any, paymentId: string) {
     ]
   );
 
-  // Tickets + mover held -> sold
   for (const row of items.rows) {
     const qty = Number(row.qty);
 
@@ -140,12 +135,9 @@ export async function POST(req: NextRequest) {
     const sp = new URLSearchParams(raw);
     const token = (sp.get("token") || "").trim();
 
-    if (!token) {
-      // Flow igual espera respuesta rápida; pero acá sí es un request inválido.
-      return NextResponse.json({ ok: false, error: "missing_token" }, { status: 400 });
-    }
+    if (!token) return NextResponse.json({ ok: false, error: "missing_token" }, { status: 400 });
 
-    // ✅ Dedupe real: si ya llegó este token, respondemos OK y no reprocesamos.
+    // dedupe: si ya llegó, OK y listo
     const inserted = await withTx(async (c) => {
       const r = await c.query(
         `INSERT INTO webhook_events (provider, event_id)
@@ -157,18 +149,13 @@ export async function POST(req: NextRequest) {
       return r.rowCount === 1;
     });
 
-    if (!inserted) {
-      return new NextResponse("OK", { status: 200 });
-    }
+    if (!inserted) return new NextResponse("OK", { status: 200 });
 
-    // Consultar estado en Flow
     const st = await flowGetStatus(token, FLOW_API_KEY, FLOW_SECRET_KEY);
     const paymentId = String(st?.commerceOrder || "").trim();
     const flowStatus = Number(st?.status);
 
-    if (!paymentId) {
-      return new NextResponse("OK", { status: 200 });
-    }
+    if (!paymentId) return new NextResponse("OK", { status: 200 });
 
     const localStatus = mapFlowStatusToLocal(flowStatus);
 
@@ -193,7 +180,6 @@ export async function POST(req: NextRequest) {
     return new NextResponse("OK", { status: 200 });
   } catch (err: any) {
     console.error("[flow:confirm] error", err?.message || err);
-    // Flow no debe reintentar infinito: respondemos OK igual.
     return new NextResponse("OK", { status: 200 });
   }
 }

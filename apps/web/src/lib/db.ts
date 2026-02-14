@@ -10,22 +10,19 @@ declare global {
 
 /**
  * ✅ Regla definitiva:
- * - Si existe el prefijo del proyecto (TICKETCHILE_DB_POSTGRES_URL*), se usa ese.
- * - Si además existe DATABASE_URL/POSTGRES_URL, NO hacemos drama (pueden ser iguales).
- * - Fallbacks para Vercel/Neon estándar por si cambias integración.
+ * - Si existe TICKETCHILE_DB_POSTGRES_URL* se usa eso.
+ * - Si además existe DATABASE_URL/POSTGRES_URL, NO se rompe (aunque sean iguales).
+ * - Fallbacks Vercel/Neon estándar por si cambias integración.
  */
 function mustConnString() {
   const candidates = [
-    // Preferidos (tu integración real)
     process.env.TICKETCHILE_DB_POSTGRES_URL,
     process.env.TICKETCHILE_DB_POSTGRES_URL_NON_POOLING,
 
-    // Vercel/Neon estándar (por si algún día cambias naming)
     process.env.POSTGRES_URL,
     process.env.POSTGRES_URL_NON_POOLING,
     process.env.POSTGRES_PRISMA_URL,
 
-    // Legacy
     process.env.DATABASE_URL,
   ].filter((x): x is string => !!x && String(x).trim().length > 0);
 
@@ -40,7 +37,7 @@ function mustConnString() {
 }
 
 /**
- * Evita warnings del parser y centraliza SSL config en el Pool.
+ * Evita warnings y controla SSL por config del Pool.
  */
 function stripSslMode(cs: string) {
   try {
@@ -89,10 +86,7 @@ export const pool: Pool = (() => {
   const raw = mustConnString();
   const connectionString = stripSslMode(raw);
 
-  // En prod: SSL normalmente sí o sí
   const useSSL = envBool("DATABASE_SSL", process.env.NODE_ENV === "production");
-
-  // Por compatibilidad: deja override por env si algún día te falla el CA chain
   const rejectUnauthorized = envBool("DATABASE_SSL_REJECT_UNAUTHORIZED", true);
 
   const max = envInt("DATABASE_POOL_MAX", 5);
@@ -106,9 +100,6 @@ export const pool: Pool = (() => {
   return global.__pgPool;
 })();
 
-/**
- * Helper transaccional
- */
 export async function withTx<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
   try {
