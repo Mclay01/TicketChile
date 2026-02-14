@@ -1,12 +1,13 @@
 // apps/web/src/app/api/payments/flow/confirm/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, randomUUID } from "node:crypto";
-import { pool as dbPool } from "@/lib/db";
+import { pool } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const FLOW_API_BASE = "https://api.flow.cl";
+// Flow usa recursos tipo /payment/getStatus (base típica: https://www.flow.cl/api) :contentReference[oaicite:0]{index=0}
+const FLOW_BASE_URL = process.env.FLOW_BASE_URL || "https://www.flow.cl/api";
 
 function mustEnv(name: string) {
   const v = process.env[name];
@@ -14,6 +15,7 @@ function mustEnv(name: string) {
   return v;
 }
 
+// Firma Flow: ordenar keys, concatenar key+value, HMAC-SHA256 :contentReference[oaicite:1]{index=1}
 function flowSign(params: Record<string, string>, secretKey: string) {
   const keys = Object.keys(params).sort();
   let toSign = "";
@@ -24,15 +26,28 @@ function flowSign(params: Record<string, string>, secretKey: string) {
 async function flowGetStatus(token: string, apiKey: string, secretKey: string) {
   const base = { apiKey, token };
   const s = flowSign(base, secretKey);
-  const qs = new URLSearchParams({ ...base, s });
-  const r = await fetch(`${FLOW_API_BASE}/payment/getStatus?${qs.toString()}`, { method: "GET" });
-  const j = await r.json().catch(() => null);
-  if (!r.ok) throw new Error(j?.message || j?.error || `Flow getStatus HTTP ${r.status}`);
+
+  const url = new URL(`${FLOW_BASE_URL}/payment/getStatus`);
+  url.searchParams.set("apiKey", apiKey);
+  url.searchParams.set("token", token);
+  url.searchParams.set("s", s);
+
+  const r = await fetch(url.toString(), { method: "GET" });
+  const text = await r.text();
+
+  let j: any = null;
+  try {
+    j = JSON.parse(text);
+  } catch {}
+
+  if (!r.ok) {
+    throw new Error(j?.message || j?.error || `Flow getStatus HTTP ${r.status} | ${text}`);
+  }
   return j as any;
 }
 
+// Flow status: 1 pendiente, 2 pagada, 3 rechazada, 4 anulada :contentReference[oaicite:2]{index=2}
 function mapFlowStatusToLocal(flowStatus: number) {
-  // Flow: 1 pendiente, 2 pagada, 3 rechazada, 4 anulada
   if (flowStatus === 2) return "PAID";
   if (flowStatus === 1) return "PENDING";
   if (flowStatus === 3) return "FAILED";
@@ -46,6 +61,7 @@ async function finalizePaidPayment(client: any, paymentId: string) {
   if (p.rowCount === 0) throw new Error("payment_not_found");
   const pay = p.rows[0];
 
+  // Idempotencia: si ya está PAID y tiene order_id, no duplicamos nada
   if (String(pay.status).toUpperCase() === "PAID" && pay.order_id) {
     return { orderId: String(pay.order_id) };
   }
@@ -133,32 +149,35 @@ async function finalizePaidPayment(client: any, paymentId: string) {
 }
 
 export async function POST(req: NextRequest) {
+  const reqId = `flow_confirm_${randomUUID().slice(0, 8)}`;
+
   try {
     const FLOW_API_KEY = mustEnv("FLOW_API_KEY");
     const FLOW_SECRET_KEY = mustEnv("FLOW_SECRET_KEY");
 
-    // Flow manda x-www-form-urlencoded con token
+    // Flow manda x-www-form-urlencoded con "token" en body :contentReference[oaicite:3]{index=3}
     const raw = await req.text();
     const sp = new URLSearchParams(raw);
     const token = (sp.get("token") || "").trim();
 
-    if (!token) {
-      return NextResponse.json({ ok: false, error: "missing_token" }, { status: 400 });
-    }
+    // Flow pide 200 sí o sí (y rápido) :contentReference[oaicite:4]{index=4}
+    if (!token) return new NextResponse("OK", { status: 200 });
 
-    const client = await dbPool.connect();
+    // (Opcional) registrar evento recibido, pero NO bloqueamos el flujo si llega repetido
     try {
-      // Dedupe de webhook (si llega repetido)
-      await client.query("BEGIN");
-      await client.query(
-        `INSERT INTO webhook_events (provider, event_id)
-         VALUES ('flow', $1)
-         ON CONFLICT DO NOTHING`,
-        [token]
-      );
-      await client.query("COMMIT");
-    } finally {
-      client.release();
+      const c0 = await pool.connect();
+      try {
+        await c0.query(
+          `INSERT INTO webhook_events (provider, event_id)
+           VALUES ('flow', $1)
+           ON CONFLICT DO NOTHING`,
+          [token]
+        );
+      } finally {
+        c0.release();
+      }
+    } catch (e: any) {
+      console.error("[flow:confirm][webhook_events]", reqId, e?.message ?? e);
     }
 
     // Consultar estado en Flow
@@ -166,19 +185,15 @@ export async function POST(req: NextRequest) {
     const paymentId = String(st?.commerceOrder || "").trim();
     const flowStatus = Number(st?.status);
 
-    if (!paymentId) {
-      // Igual respondemos 200 para que Flow no te reintente infinito
-      return new NextResponse("OK", { status: 200 });
-    }
+    if (!paymentId) return new NextResponse("OK", { status: 200 });
 
     const localStatus = mapFlowStatusToLocal(flowStatus);
 
-    const c2 = await dbPool.connect();
+    const client = await pool.connect();
     try {
-      await c2.query("BEGIN");
+      await client.query("BEGIN");
 
-      // Update payment básico (por id o por token)
-      await c2.query(
+      const upd = await client.query(
         `UPDATE payments
            SET provider_ref = COALESCE(provider_ref, $2),
                status = CASE
@@ -186,27 +201,34 @@ export async function POST(req: NextRequest) {
                  ELSE $3
                END,
                updated_at = NOW()
-         WHERE id = $1`,
+         WHERE id = $1
+         RETURNING id`,
         [paymentId, token, localStatus]
       );
 
-      if (localStatus === "PAID") {
-        await finalizePaidPayment(c2, paymentId);
+      // Si no existe el payment en tu DB, no hacemos nada (pero devolvemos 200)
+      if (upd.rowCount === 0) {
+        await client.query("COMMIT");
+        return new NextResponse("OK", { status: 200 });
       }
 
-      await c2.query("COMMIT");
-    } catch (e) {
-      await c2.query("ROLLBACK");
-      throw e;
+      if (localStatus === "PAID") {
+        await finalizePaidPayment(client, paymentId);
+      }
+
+      await client.query("COMMIT");
+    } catch (e: any) {
+      try {
+        await client.query("ROLLBACK");
+      } catch {}
+      console.error("[flow:confirm][tx-error]", reqId, e?.message ?? e);
     } finally {
-      c2.release();
+      client.release();
     }
 
-    // Flow espera 200 rápido
     return new NextResponse("OK", { status: 200 });
   } catch (err: any) {
-    // Importante: igual 200 para evitar reintentos brutales si ya procesaste parcialmente.
-    console.error("[flow:confirm] error", err?.message || err);
+    console.error("[flow:confirm][err]", reqId, err?.message ?? err);
     return new NextResponse("OK", { status: 200 });
   }
 }

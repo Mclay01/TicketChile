@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
 
     // Llamada a Flow (fuera TX)
     const origin = getOrigin(req);
-    const urlConfirmation = `${origin}/api/payments/flow/webhook`;
+    const urlConfirmation = `${origin}/api/payments/flow/confirm`;
     const urlReturn = `${origin}/api/payments/flow/kick`;
 
     let flowRes: { url: string; token: string; flowOrder: number };
