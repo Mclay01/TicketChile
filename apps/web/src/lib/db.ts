@@ -9,27 +9,30 @@ declare global {
 }
 
 /**
- * Resuelve connection string con prioridad clara:
- * 1) DATABASE_URL (tu variable estándar, la que ya creaste)
- * 2) TICKETCHILE_DB_POSTGRES_URL / _NON_POOLING (Neon prefijado)
- * 3) POSTGRES_URL (legacy)
- *
- * Importante: NO tiramos error si existen varias. Elegimos una y listo.
+ * ✅ Regla definitiva:
+ * - Si existe el prefijo del proyecto (TICKETCHILE_DB_POSTGRES_URL*), se usa ese.
+ * - Si además existe DATABASE_URL/POSTGRES_URL, NO hacemos drama (pueden ser iguales).
+ * - Fallbacks para Vercel/Neon estándar por si cambias integración.
  */
 function mustConnString() {
-  const databaseUrl = process.env.DATABASE_URL;
+  const candidates = [
+    // Preferidos (tu integración real)
+    process.env.TICKETCHILE_DB_POSTGRES_URL,
+    process.env.TICKETCHILE_DB_POSTGRES_URL_NON_POOLING,
 
-  const prefixed =
-    process.env.TICKETCHILE_DB_POSTGRES_URL ||
-    process.env.TICKETCHILE_DB_POSTGRES_URL_NON_POOLING;
+    // Vercel/Neon estándar (por si algún día cambias naming)
+    process.env.POSTGRES_URL,
+    process.env.POSTGRES_URL_NON_POOLING,
+    process.env.POSTGRES_PRISMA_URL,
 
-  const legacy = process.env.POSTGRES_URL;
+    // Legacy
+    process.env.DATABASE_URL,
+  ].filter((x): x is string => !!x && String(x).trim().length > 0);
 
-  const cs = databaseUrl || prefixed || legacy;
-
+  const cs = candidates[0];
   if (!cs) {
     throw new Error(
-      "Missing DB connection string. Set DATABASE_URL (recommended) or TICKETCHILE_DB_POSTGRES_URL or POSTGRES_URL."
+      "Missing DB connection string. Set TICKETCHILE_DB_POSTGRES_URL (preferred) or POSTGRES_URL/DATABASE_URL."
     );
   }
 
@@ -37,9 +40,7 @@ function mustConnString() {
 }
 
 /**
- * Mata el warning de pg-connection-string:
- * - Si tu URL trae sslmode=require|prefer|verify-ca => lo eliminamos del query
- * - Controlamos SSL por config (ssl: {...})
+ * Evita warnings del parser y centraliza SSL config en el Pool.
  */
 function stripSslMode(cs: string) {
   try {
@@ -88,36 +89,25 @@ export const pool: Pool = (() => {
   const raw = mustConnString();
   const connectionString = stripSslMode(raw);
 
-  // En prod normalmente sí o sí SSL.
-  // Puedes forzarlo con DATABASE_SSL=true/false
+  // En prod: SSL normalmente sí o sí
   const useSSL = envBool("DATABASE_SSL", process.env.NODE_ENV === "production");
+
+  // Por compatibilidad: deja override por env si algún día te falla el CA chain
+  const rejectUnauthorized = envBool("DATABASE_SSL_REJECT_UNAUTHORIZED", true);
+
   const max = envInt("DATABASE_POOL_MAX", 5);
 
   global.__pgPool = new Pool({
     connectionString,
     max,
-
-    // Neon/Vercel serverless: rejectUnauthorized: true suele romper por CA chain.
-    // Si tú quieres estrictamente true, setealo vía env (ver abajo).
-    ssl: useSSL
-      ? {
-          rejectUnauthorized: envBool(
-            "DATABASE_SSL_REJECT_UNAUTHORIZED",
-            false
-          ),
-        }
-      : undefined,
+    ssl: useSSL ? { rejectUnauthorized } : undefined,
   });
 
   return global.__pgPool;
 })();
 
 /**
- * Helper transaccional:
- * - BEGIN
- * - fn(client)
- * - COMMIT / ROLLBACK
- * - release()
+ * Helper transaccional
  */
 export async function withTx<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();

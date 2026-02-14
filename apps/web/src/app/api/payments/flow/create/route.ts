@@ -28,13 +28,12 @@ function getOrigin(req: NextRequest) {
   );
 }
 
-type HoldItem = { ticketTypeId: string; qty: number };
+type HoldItem = { ticketTypeKey: string; qty: number };
 
 export async function POST(req: NextRequest) {
   const reqId = `flow_create_${randomUUID().slice(0, 8)}`;
 
   try {
-    // obliga a tener env (para que falle claro si falta)
     mustEnv("FLOW_API_KEY");
     mustEnv("FLOW_SECRET_KEY");
 
@@ -44,14 +43,14 @@ export async function POST(req: NextRequest) {
     const buyerName = pickString(body?.buyerName);
     const buyerEmail = pickString(body?.buyerEmail).toLowerCase();
 
+    // 👇 ticketTypeKey puede ser id o slug (solución definitiva al ticket_type_not_found típico)
     const itemsRaw = Array.isArray(body?.items) ? body.items : [];
     const items: HoldItem[] = itemsRaw
       .map((x: any): HoldItem => ({
-        ticketTypeId: pickString(x?.ticketTypeId),
+        ticketTypeKey: pickString(x?.ticketTypeId || x?.ticketTypeKey || x?.ticketTypeSlug),
         qty: Math.floor(Number(x?.qty)),
       }))
-      .filter((x: HoldItem) => x.ticketTypeId && Number.isFinite(x.qty) && x.qty > 0);
-
+      .filter((x: HoldItem) => x.ticketTypeKey && Number.isFinite(x.qty) && x.qty > 0);
 
     console.log("[flow:create][in]", {
       reqId,
@@ -59,6 +58,7 @@ export async function POST(req: NextRequest) {
       buyerNameLen: buyerName.length,
       buyerEmail: buyerEmail ? buyerEmail.replace(/(.{2}).+(@.+)/, "$1***$2") : "",
       itemsCount: items.length,
+      itemKeys: items.map((i) => i.ticketTypeKey),
     });
 
     if (!eventId) return NextResponse.json({ ok: false, error: "eventId_missing" }, { status: 400 });
@@ -85,27 +85,52 @@ export async function POST(req: NextRequest) {
       }
       eventTitle = String(ev.rows[0].title || "");
 
-      // Ticket types
-      const ids = items.map((x) => x.ticketTypeId);
+      // Ticket types: buscamos por id O por slug (según lo que mande el front)
+      const keys = items.map((x) => x.ticketTypeKey);
       const tt = await client.query(
-        `SELECT id, name, price_clp, capacity, sold, held
-         FROM ticket_types
-         WHERE event_id = $1 AND id = ANY($2::text[])`,
-        [eventId, ids]
+        `SELECT id, slug, name, price_clp, capacity, sold, held
+           FROM ticket_types
+          WHERE event_id = $1
+            AND (id = ANY($2::text[]) OR slug = ANY($2::text[]))`,
+        [eventId, keys]
       );
 
-      if (tt.rowCount !== ids.length) {
-        await client.query("ROLLBACK");
-        return NextResponse.json({ ok: false, error: "ticket_type_not_found" }, { status: 400 });
+      const byKey = new Map<string, any>();
+      for (const row of tt.rows) {
+        byKey.set(String(row.id), row);
+        if (row.slug) byKey.set(String(row.slug), row);
       }
 
-      const byId = new Map<string, any>();
-      for (const row of tt.rows) byId.set(String(row.id), row);
+      const missing: string[] = [];
+      for (const k of keys) {
+        if (!byKey.has(k)) missing.push(k);
+      }
+
+      if (missing.length > 0) {
+        const avail = await client.query(
+          `SELECT id, slug, name, price_clp
+             FROM ticket_types
+            WHERE event_id = $1
+            ORDER BY name`,
+          [eventId]
+        );
+
+        await client.query("ROLLBACK");
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "ticket_type_not_found",
+            missing,
+            available: avail.rows,
+          },
+          { status: 400 }
+        );
+      }
 
       // Total server-side (IGNORA monto cliente)
       total = 0;
       for (const it of items) {
-        const row = byId.get(it.ticketTypeId);
+        const row = byKey.get(it.ticketTypeKey);
         total += Number(row.price_clp) * it.qty;
       }
 
@@ -124,8 +149,13 @@ export async function POST(req: NextRequest) {
         [holdId, eventId, expiresAt]
       );
 
-      // Reservar held
+      // Reservar held + guardar hold_items
       for (const it of items) {
+        const row = byKey.get(it.ticketTypeKey);
+
+        const ticketTypeId = String(row.id);
+        const ticketTypeName = String(row.name);
+
         const u = await client.query(
           `UPDATE ticket_types
              SET held = held + $3
@@ -133,19 +163,18 @@ export async function POST(req: NextRequest) {
              AND id = $2
              AND (sold + held + $3) <= capacity
            RETURNING id`,
-          [eventId, it.ticketTypeId, it.qty]
+          [eventId, ticketTypeId, it.qty]
         );
         if (u.rowCount === 0) {
           await client.query("ROLLBACK");
           return NextResponse.json({ ok: false, error: "capacity_exceeded" }, { status: 409 });
         }
 
-        const row = byId.get(it.ticketTypeId);
         await client.query(
           `INSERT INTO hold_items
             (hold_id, event_id, ticket_type_id, ticket_type_name, unit_price_clp, qty)
            VALUES ($1, $2, $3, $4, $5, $6)`,
-          [holdId, eventId, it.ticketTypeId, String(row.name), Number(row.price_clp), it.qty]
+          [holdId, eventId, ticketTypeId, ticketTypeName, Number(row.price_clp), it.qty]
         );
       }
 
@@ -175,7 +204,11 @@ export async function POST(req: NextRequest) {
 
     // Llamada a Flow (fuera TX)
     const origin = getOrigin(req);
+
+    // ✅ Aquí estaba el bug silencioso: tu confirm route está en /confirm, no /webhook
     const urlConfirmation = `${origin}/api/payments/flow/confirm`;
+
+    // Si tu /api/payments/flow/kick existe, déjalo. Si no existe, cambia a una página real.
     const urlReturn = `${origin}/api/payments/flow/kick`;
 
     let flowRes: { url: string; token: string; flowOrder: number };
@@ -183,7 +216,7 @@ export async function POST(req: NextRequest) {
       flowRes = await flowCreatePayment({
         commerceOrder: paymentId,
         subject: `Compra tickets - ${eventTitle}`,
-        amount: total, // ✅ SIEMPRE el total real
+        amount: total,
         email: buyerEmail,
         urlReturn,
         urlConfirmation,
@@ -196,12 +229,7 @@ export async function POST(req: NextRequest) {
       try {
         await c.query("BEGIN");
 
-        await c.query(
-          `UPDATE payments
-             SET status = 'FAILED', updated_at = NOW()
-           WHERE id = $1`,
-          [paymentId]
-        );
+        await c.query(`UPDATE payments SET status = 'FAILED', updated_at = NOW() WHERE id = $1`, [paymentId]);
 
         const hi = await c.query(`SELECT event_id, ticket_type_id, qty FROM hold_items WHERE hold_id = $1`, [holdId]);
         for (const row of hi.rows) {
@@ -255,9 +283,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("[flow:create][err]", { reqId, err: err?.message ?? String(err) });
-    return NextResponse.json(
-      { ok: false, error: "internal_error", detail: err?.message ?? String(err) },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: "internal_error", detail: err?.message ?? String(err) }, { status: 500 });
   }
 }
