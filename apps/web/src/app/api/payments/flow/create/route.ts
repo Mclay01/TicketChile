@@ -30,6 +30,38 @@ function getOrigin(req: NextRequest) {
 
 type HoldItem = { ticketTypeKey: string; qty: number };
 
+/**
+ * Detecta si existe public.ticket_types.slug (cacheado).
+ * - Evita que el SQL reviente en prod si el schema no lo tiene.
+ * - Si en el futuro agregas slug, el código vuelve a soportarlo automáticamente.
+ *
+ * Nota: usamos una key global con nombre “único” para evitar choques.
+ */
+declare global {
+  // eslint-disable-next-line no-var
+  var __ticketchile_ticketTypesSlugExists: Promise<boolean> | undefined;
+}
+
+function ticketTypesSlugExists(): Promise<boolean> {
+  if (global.__ticketchile_ticketTypesSlugExists) return global.__ticketchile_ticketTypesSlugExists;
+
+  global.__ticketchile_ticketTypesSlugExists = (async () => {
+    const q = await pool.query(
+      `
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'ticket_types'
+        AND column_name = 'slug'
+      LIMIT 1
+      `
+    );
+    return q.rowCount > 0;
+  })();
+
+  return global.__ticketchile_ticketTypesSlugExists;
+}
+
 export async function POST(req: NextRequest) {
   const reqId = `flow_create_${randomUUID().slice(0, 8)}`;
 
@@ -84,34 +116,51 @@ export async function POST(req: NextRequest) {
       }
       eventTitle = String(ev.rows[0].title || "");
 
-      // Ticket types por id O slug
       const keys = items.map((x) => x.ticketTypeKey);
+      const hasSlug = await ticketTypesSlugExists();
 
-      const tt = await client.query(
-        `SELECT id, slug, name, price_clp, capacity, sold, held
-           FROM ticket_types
-          WHERE event_id = $1
-            AND (id = ANY($2::text[]) OR slug = ANY($2::text[]))`,
-        [eventId, keys]
-      );
+      // Ticket types: por id (y por slug si existe la columna)
+      const tt = hasSlug
+        ? await client.query(
+            `SELECT id, slug, name, price_clp, capacity, sold, held
+               FROM ticket_types
+              WHERE event_id = $1
+                AND (id = ANY($2::text[]) OR slug = ANY($2::text[]))`,
+            [eventId, keys]
+          )
+        : await client.query(
+            `SELECT id, name, price_clp, capacity, sold, held
+               FROM ticket_types
+              WHERE event_id = $1
+                AND id = ANY($2::text[])`,
+            [eventId, keys]
+          );
 
       const byKey = new Map<string, any>();
       for (const row of tt.rows) {
         byKey.set(String(row.id), row);
-        if (row.slug) byKey.set(String(row.slug), row);
+        if (hasSlug && (row as any).slug) byKey.set(String((row as any).slug), row);
       }
 
       const missing: string[] = [];
       for (const k of keys) if (!byKey.has(k)) missing.push(k);
 
       if (missing.length > 0) {
-        const avail = await client.query(
-          `SELECT id, slug, name, price_clp
-             FROM ticket_types
-            WHERE event_id = $1
-            ORDER BY name`,
-          [eventId]
-        );
+        const avail = hasSlug
+          ? await client.query(
+              `SELECT id, slug, name, price_clp
+                 FROM ticket_types
+                WHERE event_id = $1
+                ORDER BY name`,
+              [eventId]
+            )
+          : await client.query(
+              `SELECT id, name, price_clp
+                 FROM ticket_types
+                WHERE event_id = $1
+                ORDER BY name`,
+              [eventId]
+            );
 
         await client.query("ROLLBACK");
         return NextResponse.json(
@@ -197,7 +246,6 @@ export async function POST(req: NextRequest) {
     // Flow call (fuera TX)
     const origin = getOrigin(req);
 
-    // ✅ confirm endpoint real
     const urlConfirmation = `${origin}/api/payments/flow/confirm`;
     const urlReturn = `${origin}/api/payments/flow/kick`;
 
@@ -273,6 +321,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("[flow:create][err]", { reqId, err: err?.message ?? String(err) });
-    return NextResponse.json({ ok: false, error: "internal_error", detail: err?.message ?? String(err) }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "internal_error", detail: err?.message ?? String(err) },
+      { status: 500 }
+    );
   }
 }
