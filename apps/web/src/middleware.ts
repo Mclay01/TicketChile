@@ -1,3 +1,4 @@
+// proxy.ts
 import { NextResponse, type NextRequest } from "next/server";
 
 const COOKIE_NAME = "tc_org";
@@ -32,7 +33,7 @@ function isProtectedDemoApi(pathname: string) {
   );
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
 
   // Deja pasar login + SSO
