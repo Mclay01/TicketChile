@@ -14,6 +14,7 @@ import {
   Landmark,
   BadgeCheck,
 } from "lucide-react";
+import type { Event } from "@/lib/events";
 import {
   getEventById,
   parseCartString,
@@ -157,7 +158,28 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const event = getEventById(eventId);
+  // ✅ FIX: getEventById ahora es async -> resolvemos con estado + efecto
+  const [event, setEvent] = useState<Event | null>(null);
+  const [eventLoading, setEventLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    setEventLoading(true);
+    setEvent(null);
+
+    (async () => {
+      try {
+        const e = await getEventById(eventId);
+        if (mounted) setEvent(e ?? null);
+      } finally {
+        if (mounted) setEventLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [eventId]);
 
   const cartString = searchParams?.get("cart") || "";
   const cart = parseCartString(cartString);
@@ -424,6 +446,19 @@ export default function CheckoutClient({ eventId }: { eventId: string }) {
       setIsProcessing(false);
     }
   };
+
+  // ✅ Mientras resuelve el evento (por ser async)
+  if (eventLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950 flex items-center justify-center p-4">
+        <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 backdrop-blur-sm border border-slate-700/50 rounded-3xl p-8 max-w-md text-center">
+          <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
+          <h1 className="text-xl font-bold text-white mb-2">Cargando checkout…</h1>
+          <p className="text-slate-400 text-sm">Traiendo datos del evento.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!event) {
     return (
