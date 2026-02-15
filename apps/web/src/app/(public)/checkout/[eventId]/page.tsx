@@ -25,7 +25,8 @@ function formatTimeOnly(dateISO: string) {
 export default async function CheckoutPage({ params }: Props) {
   const { eventId } = await params;
 
-  const event = getEventById(eventId);
+  // ✅ getEventById ahora es async -> necesitas await
+  const event = await getEventById(eventId);
   if (!event) return notFound();
 
   return (

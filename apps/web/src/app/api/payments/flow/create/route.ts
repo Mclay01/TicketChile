@@ -30,6 +30,9 @@ function getOrigin(req: NextRequest) {
 
 type HoldItem = { ticketTypeKey: string; qty: number };
 
+/**
+ * Detecta si existe public.ticket_types.slug (cacheado).
+ */
 declare global {
   // eslint-disable-next-line no-var
   var __ticketchile_ticketTypesSlugExists: Promise<boolean> | undefined;
@@ -55,16 +58,56 @@ function ticketTypesSlugExists(): Promise<boolean> {
   return global.__ticketchile_ticketTypesSlugExists;
 }
 
-// ✅ normaliza keys tipo "tt_general" -> ["tt_general","general"]
-function expandTicketTypeKeys(keys: string[]) {
+/**
+ * Normaliza strings para comparar "slug-like":
+ * - lower
+ * - trim
+ * - espacios -> _
+ * - quita caracteres raros
+ */
+function toKeyLike(s: string) {
+  return String(s || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
+}
+
+/**
+ * Genera variantes razonables para encontrar un ticket type aunque el front mande keys distintas.
+ * Ej:
+ *  - "tt_general" => ["tt_general","general"]
+ *  - "general"    => ["general","tt_general"]
+ *  - "General"    => ["general","tt_general"]
+ */
+function keyVariants(k: string) {
+  const raw = String(k || "").trim();
   const set = new Set<string>();
-  for (const k of keys) {
-    const kk = String(k || "").trim();
-    if (!kk) continue;
-    set.add(kk);
-    const noPrefix = kk.replace(/^tt_/, "");
-    if (noPrefix && noPrefix !== kk) set.add(noPrefix);
+  if (!raw) return [];
+
+  set.add(raw);
+  set.add(raw.toLowerCase());
+
+  // sin prefijo tt_
+  const noPrefix = raw.replace(/^tt_/i, "");
+  if (noPrefix && noPrefix !== raw) {
+    set.add(noPrefix);
+    set.add(noPrefix.toLowerCase());
   }
+
+  // versión key-like
+  const keyLike = toKeyLike(raw);
+  if (keyLike) set.add(keyLike);
+
+  const keyLikeNoPrefix = toKeyLike(noPrefix);
+  if (keyLikeNoPrefix) {
+    set.add(keyLikeNoPrefix);
+    set.add(`tt_${keyLikeNoPrefix}`);
+  }
+
+  // si viene "general" -> agrega "tt_general"
+  if (!/^tt_/i.test(raw) && keyLike) set.add(`tt_${keyLike}`);
+
   return Array.from(set);
 }
 
@@ -122,72 +165,101 @@ export async function POST(req: NextRequest) {
       }
       eventTitle = String(ev.rows[0].title || "");
 
-      const rawKeys = items.map((x) => x.ticketTypeKey);
-      const keys = expandTicketTypeKeys(rawKeys);
       const hasSlug = await ticketTypesSlugExists();
 
+      // Traemos TODOS los ticket types del evento (son pocos) y resolvemos en JS.
       const tt = hasSlug
         ? await client.query(
             `SELECT id, slug, name, price_clp, capacity, sold, held
                FROM ticket_types
-              WHERE event_id = $1
-                AND (id = ANY($2::text[]) OR slug = ANY($2::text[]))`,
-            [eventId, keys]
+              WHERE event_id = $1`,
+            [eventId]
           )
         : await client.query(
             `SELECT id, name, price_clp, capacity, sold, held
                FROM ticket_types
-              WHERE event_id = $1
-                AND id = ANY($2::text[])`,
-            [eventId, keys]
+              WHERE event_id = $1`,
+            [eventId]
           );
 
       const byKey = new Map<string, any>();
+
       for (const row of tt.rows) {
-        byKey.set(String(row.id), row);
-        if (hasSlug && (row as any).slug) byKey.set(String((row as any).slug), row);
+        const id = String(row.id);
+        const name = String(row.name || "");
+        const nameKey = toKeyLike(name); // "General" -> "general"
+
+        // match por id exacto
+        byKey.set(id, row);
+        byKey.set(id.toLowerCase(), row);
+
+        // match por name normalizado
+        if (nameKey) {
+          byKey.set(nameKey, row);
+          byKey.set(`tt_${nameKey}`, row);
+        }
+
+        // match por slug si existe
+        if (hasSlug) {
+          const slug = String((row as any).slug || "").trim();
+          if (slug) {
+            byKey.set(slug, row);
+            byKey.set(slug.toLowerCase(), row);
+            const slugKey = toKeyLike(slug);
+            if (slugKey) {
+              byKey.set(slugKey, row);
+              byKey.set(`tt_${slugKey}`, row);
+            }
+          }
+        }
       }
 
-      // ✅ valida missing sobre las keys originales del request (no las expandidas)
+      // Resolver cada item del request
+      const resolved: Array<{ reqKey: string; row: any; qty: number }> = [];
       const missing: string[] = [];
-      for (const k of rawKeys) {
-        const a = k;
-        const b = k.replace(/^tt_/, "");
-        if (!byKey.has(a) && !byKey.has(b)) missing.push(k);
+
+      for (const it of items) {
+        const variants = keyVariants(it.ticketTypeKey);
+        let row: any | undefined;
+
+        for (const v of variants) {
+          row = byKey.get(v);
+          if (row) break;
+        }
+
+        if (!row) {
+          missing.push(it.ticketTypeKey);
+          continue;
+        }
+
+        resolved.push({ reqKey: it.ticketTypeKey, row, qty: it.qty });
       }
 
       if (missing.length > 0) {
-        const avail = hasSlug
-          ? await client.query(
-              `SELECT id, slug, name, price_clp
-                 FROM ticket_types
-                WHERE event_id = $1
-                ORDER BY name`,
-              [eventId]
-            )
-          : await client.query(
-              `SELECT id, name, price_clp
-                 FROM ticket_types
-                WHERE event_id = $1
-                ORDER BY name`,
-              [eventId]
-            );
+        const available = tt.rows.map((r) => ({
+          id: String(r.id),
+          ...(hasSlug ? { slug: String((r as any).slug || "") } : {}),
+          name: String(r.name || ""),
+          price_clp: Number(r.price_clp),
+        }));
 
         await client.query("ROLLBACK");
-        console.warn("[flow:create] ticket types missing", { reqId, missing, availableCount: avail.rowCount ?? 0 });
+        console.warn("[flow:create] ticket types missing", {
+          reqId,
+          missing,
+          availableCount: available.length,
+        });
 
         return NextResponse.json(
-          { ok: false, error: "ticket_type_not_found", missing, available: avail.rows },
+          { ok: false, error: "ticket_type_not_found", missing, available },
           { status: 400 }
         );
       }
 
-      // Total server-side (resuelve por key original o sin prefijo)
+      // Total server-side
       total = 0;
-      for (const it of items) {
-        const k = it.ticketTypeKey;
-        const row = byKey.get(k) ?? byKey.get(k.replace(/^tt_/, ""));
-        total += Number(row.price_clp) * it.qty;
+      for (const x of resolved) {
+        total += Number(x.row.price_clp) * x.qty;
       }
 
       if (!Number.isFinite(total) || total <= 0) {
@@ -206,11 +278,9 @@ export async function POST(req: NextRequest) {
       );
 
       // Reservar held + hold_items
-      for (const it of items) {
-        const k = it.ticketTypeKey;
-        const row = byKey.get(k) ?? byKey.get(k.replace(/^tt_/, ""));
-        const ticketTypeId = String(row.id);
-        const ticketTypeName = String(row.name);
+      for (const x of resolved) {
+        const ticketTypeId = String(x.row.id);
+        const ticketTypeName = String(x.row.name);
 
         const u = await client.query(
           `UPDATE ticket_types
@@ -219,8 +289,9 @@ export async function POST(req: NextRequest) {
              AND id = $2
              AND (sold + held + $3) <= capacity
            RETURNING id`,
-          [eventId, ticketTypeId, it.qty]
+          [eventId, ticketTypeId, x.qty]
         );
+
         if (u.rowCount === 0) {
           await client.query("ROLLBACK");
           return NextResponse.json({ ok: false, error: "capacity_exceeded" }, { status: 409 });
@@ -230,7 +301,7 @@ export async function POST(req: NextRequest) {
           `INSERT INTO hold_items
             (hold_id, event_id, ticket_type_id, ticket_type_name, unit_price_clp, qty)
            VALUES ($1, $2, $3, $4, $5, $6)`,
-          [holdId, eventId, ticketTypeId, ticketTypeName, Number(row.price_clp), it.qty]
+          [holdId, eventId, ticketTypeId, ticketTypeName, Number(x.row.price_clp), x.qty]
         );
       }
 
@@ -260,7 +331,6 @@ export async function POST(req: NextRequest) {
 
     // Flow call (fuera TX)
     const origin = getOrigin(req);
-
     const urlConfirmation = `${origin}/api/payments/flow/confirm`;
     const urlReturn = `${origin}/api/payments/flow/kick`;
 

@@ -1,3 +1,5 @@
+// src/lib/events.ts
+
 export type TicketType = {
   id: string;
   name: string;
@@ -31,6 +33,11 @@ export type Event = {
   ticketTypes: TicketType[];
 };
 
+/**
+ * ⚠️ IMPORTANTE
+ * EVENTS queda solo como fallback/demo. En prod, la venta real debe venir desde DB/API
+ * para que los IDs (tt_001, tt_002, etc) calcen con Postgres y no con hardcode.
+ */
 export const EVENTS: Event[] = [
   {
     id: "evt_001",
@@ -88,12 +95,134 @@ Acceso por QR. +18.`,
   },
 ];
 
-export function getEventBySlug(slug: string): Event | undefined {
-  return EVENTS.find((e) => e.slug === slug);
+/* -----------------------------------------
+   Helpers internos para resolver por API
+------------------------------------------ */
+
+function pickString(v: any) {
+  return typeof v === "string" ? v.trim() : "";
 }
 
-export function getEventById(id: string): Event | undefined {
-  return EVENTS.find((e) => e.id === id);
+function normalizeTicketType(raw: any): TicketType {
+  // Soporta payloads típicos desde DB:
+  // - id, name, price_clp, priceCLP
+  // - max_per_order, maxPerOrder
+  // - capacity, sold, held
+  const id = pickString(raw?.id);
+  const name = pickString(raw?.name);
+  const priceCLP = Number(raw?.priceCLP ?? raw?.price_clp ?? raw?.price ?? 0);
+
+  const tt: TicketType = {
+    id,
+    name,
+    priceCLP: Number.isFinite(priceCLP) ? priceCLP : 0,
+  };
+
+  const maxPerOrder = raw?.maxPerOrder ?? raw?.max_per_order;
+  const capacity = raw?.capacity;
+  const sold = raw?.sold;
+  const held = raw?.held;
+
+  if (maxPerOrder !== undefined && maxPerOrder !== null) tt.maxPerOrder = Number(maxPerOrder);
+  if (capacity !== undefined && capacity !== null) tt.capacity = Number(capacity);
+  if (sold !== undefined && sold !== null) tt.sold = Number(sold);
+  if (held !== undefined && held !== null) tt.held = Number(held);
+
+  return tt;
+}
+
+function normalizeEvent(raw: any): Event | undefined {
+  const id = pickString(raw?.id);
+  const slug = pickString(raw?.slug);
+  const title = pickString(raw?.title);
+  const city = pickString(raw?.city);
+  const venue = pickString(raw?.venue);
+  const dateISO = pickString(raw?.dateISO ?? raw?.date_iso ?? raw?.date);
+  const image = pickString(raw?.image);
+
+  const description = pickString(raw?.description ?? "");
+  const heroDesktop = pickString(raw?.hero?.desktop);
+  const heroMobile = pickString(raw?.hero?.mobile);
+
+  const ticketTypesRaw = Array.isArray(raw?.ticketTypes ?? raw?.ticket_types)
+    ? (raw.ticketTypes ?? raw.ticket_types)
+    : [];
+
+  const ticketTypes = ticketTypesRaw.map(normalizeTicketType).filter((t: TicketType) => t.id && t.name);
+
+  if (!id || !slug || !title || !city || !venue || !dateISO || !image) return undefined;
+  if (!Array.isArray(ticketTypes) || ticketTypes.length === 0) return undefined;
+
+  const ev: Event = {
+    id,
+    slug,
+    title,
+    city,
+    venue,
+    dateISO,
+    image,
+    description,
+    ticketTypes,
+  };
+
+  if (heroDesktop && heroMobile) ev.hero = { desktop: heroDesktop, mobile: heroMobile };
+
+  return ev;
+}
+
+async function fetchEventFromApi(path: string): Promise<Event | undefined> {
+  // Funciona en server y en client (misma origin)
+  try {
+    const r = await fetch(path, { cache: "no-store" });
+    if (!r.ok) return undefined;
+    const data = await r.json().catch(() => null);
+    if (!data) return undefined;
+    return normalizeEvent(data);
+  } catch {
+    return undefined;
+  }
+}
+
+/* -----------------------------------------
+   Public API (modificada)
+------------------------------------------ */
+
+/**
+ * ✅ Antes era sync y siempre devolvía el hardcode (EVENTS).
+ * Ahora: intenta primero API (DB), y si no existe, cae al hardcode.
+ *
+ * OJO: si ya estabas importando getEventBySlug/getEventById en server components,
+ * lo normal es que puedas usar "await getEventBySlug(...)" sin problema.
+ */
+export async function getEventBySlug(slug: string): Promise<Event | undefined> {
+  const s = pickString(slug);
+  if (!s) return undefined;
+
+  // 1) Intento real (DB/API) — endpoints que vas a crear/usar
+  // Si aún no existen, no rompe: cae al fallback.
+  const fromApi =
+    (await fetchEventFromApi(`/api/events/by-slug/${encodeURIComponent(s)}`)) ||
+    (await fetchEventFromApi(`/api/events?slug=${encodeURIComponent(s)}`));
+
+  if (fromApi) return fromApi;
+
+  // 2) Fallback demo
+  return EVENTS.find((e) => e.slug === s);
+}
+
+export async function getEventById(id: string): Promise<Event | undefined> {
+  const s = pickString(id);
+  if (!s) return undefined;
+
+  // 1) Intento real (DB/API)
+  const fromApi =
+    (await fetchEventFromApi(`/api/events/${encodeURIComponent(s)}`)) ||
+    (await fetchEventFromApi(`/api/events?id=${encodeURIComponent(s)}`));
+
+  if (fromApi) return fromApi;
+
+  // 2) Fallback demo
+  return EVENTS.find((e) => e.id === s);
 }
 
 // formatea SOLO número (sin $) porque tu UI pone "$" afuera
