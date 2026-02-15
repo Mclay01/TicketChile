@@ -1,11 +1,11 @@
-// proxy.ts
+// apps/web/src/proxy.ts
 import { NextResponse, type NextRequest } from "next/server";
 
 const COOKIE_NAME = "tc_org";
 
 function isAuthed(req: NextRequest) {
   const expected = process.env.ORGANIZER_KEY;
-  if (!expected) return true; // si no hay clave configurada, no bloqueamos (dev-friendly)
+  if (!expected) return true; // dev-friendly
   const got = req.cookies.get(COOKIE_NAME)?.value;
   return got === expected;
 }
@@ -23,7 +23,6 @@ function isOrganizerSsoPath(pathname: string) {
 }
 
 function isProtectedDemoApi(pathname: string) {
-  // Solo protegemos lo “admin” (scanner/exports/resets). Lo público queda abierto.
   return (
     pathname.startsWith("/api/demo/event-stats") ||
     pathname.startsWith("/api/demo/event-checkins") ||
@@ -36,7 +35,6 @@ function isProtectedDemoApi(pathname: string) {
 export function proxy(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
 
-  // Deja pasar login + SSO
   if (
     isOrganizerLoginPath(pathname) ||
     pathname.startsWith("/api/organizador/login") ||
@@ -51,19 +49,19 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/api/organizador/logout");
 
   if (!needsAuth) return NextResponse.next();
-
   if (isAuthed(req)) return NextResponse.next();
 
-  // Si es API -> 401 JSON
   if (pathname.startsWith("/api/")) {
     return NextResponse.json({ ok: false, error: "No autorizado (organizador)." }, { status: 401 });
   }
 
-  // Si es página -> redirect a login, guardando “from”
   const loginUrl = req.nextUrl.clone();
   loginUrl.pathname = "/organizador/login";
   loginUrl.search = "";
-  loginUrl.searchParams.set("from", pathname + (searchParams.toString() ? `?${searchParams}` : ""));
+  loginUrl.searchParams.set(
+    "from",
+    pathname + (searchParams.toString() ? `?${searchParams}` : "")
+  );
   return NextResponse.redirect(loginUrl);
 }
 
