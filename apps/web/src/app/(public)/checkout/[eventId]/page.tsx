@@ -49,7 +49,6 @@ export default async function CheckoutPage({ params }: Props) {
         </div>
       </div>
 
-      {/* SOLO comprador + total + pagar */}
       <CheckoutBuyerForm event={event} />
     </div>
   );

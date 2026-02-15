@@ -35,7 +35,6 @@ export default async function EventoDetallePage({ params }: Props) {
 
   return (
     <div className="bg-transparent text-white">
-      {/* ✅ HERO full-bleed pegado al header */}
       <HeroBanner
         href={undefined}
         desktopSrc={desktopSrc}
@@ -46,9 +45,7 @@ export default async function EventoDetallePage({ params }: Props) {
         height={{ base: 230, md: 360, lg: 420 }}
       />
 
-      {/* ✅ Contenido centrado (ya lo centra el layout con max-w + px) */}
       <div className="space-y-6 py-10">
-        {/* Back */}
         <div>
           <Link
             href="/eventos"
@@ -58,7 +55,6 @@ export default async function EventoDetallePage({ params }: Props) {
           </Link>
         </div>
 
-        {/* Info principal */}
         <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(0,0,0,0.55),rgba(255,255,255,0.06))] shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-sm">
           <div className="p-6 md:p-7">
             <div className="flex flex-wrap items-center gap-2">
@@ -105,7 +101,6 @@ export default async function EventoDetallePage({ params }: Props) {
           </div>
         </section>
 
-        {/* 2 columnas */}
         <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
           <section
             id="info"
