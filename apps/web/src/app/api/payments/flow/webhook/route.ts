@@ -29,7 +29,7 @@ function flowStatusToPaymentStatus(n: number) {
   // 1 pending, 2 paid, 3 rejected, 4 cancelled
   if (n === 2) return "PAID";
   if (n === 1) return "PENDING";
-  if (n === 4) return "CANCELED";
+  if (n === 4) return "CANCELLED";
   if (n === 3) return "FAILED";
   return "PENDING";
 }
@@ -134,7 +134,7 @@ async function handle(req: NextRequest) {
       }
 
       // Si FALLA / CANCELED => liberar held y expirar hold
-      if (nextStatus === "FAILED" || nextStatus === "CANCELED") {
+      if (nextStatus === "FAILED" || nextStatus === "CANCELLED") {
         const holdId = String(payment.hold_id || "");
         if (!holdId) return;
 

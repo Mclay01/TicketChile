@@ -30,13 +30,6 @@ function getOrigin(req: NextRequest) {
 
 type HoldItem = { ticketTypeKey: string; qty: number };
 
-/**
- * Detecta si existe public.ticket_types.slug (cacheado).
- * - Evita que el SQL reviente en prod si el schema no lo tiene.
- * - Si en el futuro agregas slug, el código vuelve a soportarlo automáticamente.
- *
- * Nota: usamos una key global con nombre “único” para evitar choques.
- */
 declare global {
   // eslint-disable-next-line no-var
   var __ticketchile_ticketTypesSlugExists: Promise<boolean> | undefined;
@@ -60,6 +53,19 @@ function ticketTypesSlugExists(): Promise<boolean> {
   })();
 
   return global.__ticketchile_ticketTypesSlugExists;
+}
+
+// ✅ normaliza keys tipo "tt_general" -> ["tt_general","general"]
+function expandTicketTypeKeys(keys: string[]) {
+  const set = new Set<string>();
+  for (const k of keys) {
+    const kk = String(k || "").trim();
+    if (!kk) continue;
+    set.add(kk);
+    const noPrefix = kk.replace(/^tt_/, "");
+    if (noPrefix && noPrefix !== kk) set.add(noPrefix);
+  }
+  return Array.from(set);
 }
 
 export async function POST(req: NextRequest) {
@@ -116,10 +122,10 @@ export async function POST(req: NextRequest) {
       }
       eventTitle = String(ev.rows[0].title || "");
 
-      const keys = items.map((x) => x.ticketTypeKey);
+      const rawKeys = items.map((x) => x.ticketTypeKey);
+      const keys = expandTicketTypeKeys(rawKeys);
       const hasSlug = await ticketTypesSlugExists();
 
-      // Ticket types: por id (y por slug si existe la columna)
       const tt = hasSlug
         ? await client.query(
             `SELECT id, slug, name, price_clp, capacity, sold, held
@@ -142,8 +148,13 @@ export async function POST(req: NextRequest) {
         if (hasSlug && (row as any).slug) byKey.set(String((row as any).slug), row);
       }
 
+      // ✅ valida missing sobre las keys originales del request (no las expandidas)
       const missing: string[] = [];
-      for (const k of keys) if (!byKey.has(k)) missing.push(k);
+      for (const k of rawKeys) {
+        const a = k;
+        const b = k.replace(/^tt_/, "");
+        if (!byKey.has(a) && !byKey.has(b)) missing.push(k);
+      }
 
       if (missing.length > 0) {
         const avail = hasSlug
@@ -163,16 +174,19 @@ export async function POST(req: NextRequest) {
             );
 
         await client.query("ROLLBACK");
+        console.warn("[flow:create] ticket types missing", { reqId, missing, availableCount: avail.rowCount ?? 0 });
+
         return NextResponse.json(
           { ok: false, error: "ticket_type_not_found", missing, available: avail.rows },
           { status: 400 }
         );
       }
 
-      // Total server-side
+      // Total server-side (resuelve por key original o sin prefijo)
       total = 0;
       for (const it of items) {
-        const row = byKey.get(it.ticketTypeKey);
+        const k = it.ticketTypeKey;
+        const row = byKey.get(k) ?? byKey.get(k.replace(/^tt_/, ""));
         total += Number(row.price_clp) * it.qty;
       }
 
@@ -193,7 +207,8 @@ export async function POST(req: NextRequest) {
 
       // Reservar held + hold_items
       for (const it of items) {
-        const row = byKey.get(it.ticketTypeKey);
+        const k = it.ticketTypeKey;
+        const row = byKey.get(k) ?? byKey.get(k.replace(/^tt_/, ""));
         const ticketTypeId = String(row.id);
         const ticketTypeName = String(row.name);
 
@@ -321,9 +336,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("[flow:create][err]", { reqId, err: err?.message ?? String(err) });
-    return NextResponse.json(
-      { ok: false, error: "internal_error", detail: err?.message ?? String(err) },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: "internal_error", detail: err?.message ?? String(err) }, { status: 500 });
   }
 }
