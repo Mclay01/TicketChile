@@ -39,14 +39,22 @@ CREATE INDEX IF NOT EXISTS email_verification_tokens_expires_idx
 -- =========================
 
 CREATE TABLE IF NOT EXISTS events (
-  id          text PRIMARY KEY,
-  slug        text UNIQUE NOT NULL,
-  title       text NOT NULL,
-  city        text NOT NULL,
-  venue       text NOT NULL,
-  date_iso    timestamptz NOT NULL,
-  description text NOT NULL,
-  created_at  timestamptz NOT NULL DEFAULT NOW()
+  id           text PRIMARY KEY,
+  slug         text UNIQUE NOT NULL,
+  title        text NOT NULL,
+  city         text NOT NULL,
+  venue        text NOT NULL,
+  date_iso     timestamptz NOT NULL,
+
+  -- NUEVO: imagen vertical/poster para cards/detalle
+  image        text NOT NULL DEFAULT '/events/default.jpg',
+
+  -- NUEVO: banners horizontales (opcionales)
+  hero_desktop text,
+  hero_mobile  text,
+
+  description  text NOT NULL,
+  created_at   timestamptz NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS ticket_types (
