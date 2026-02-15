@@ -19,6 +19,12 @@ function pickString(v: any) {
   return typeof v === "string" ? v.trim() : "";
 }
 
+function toInt(v: any) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.floor(n);
+}
+
 function getOrigin(req: NextRequest) {
   return (
     process.env.NEXT_PUBLIC_APP_URL ||
@@ -59,11 +65,7 @@ function ticketTypesSlugExists(): Promise<boolean> {
 }
 
 /**
- * Normaliza strings para comparar "slug-like":
- * - lower
- * - trim
- * - espacios -> _
- * - quita caracteres raros
+ * Normaliza strings para comparar "slug-like"
  */
 function toKeyLike(s: string) {
   return String(s || "")
@@ -75,10 +77,6 @@ function toKeyLike(s: string) {
 
 /**
  * Genera variantes razonables para encontrar un ticket type aunque el front mande keys distintas.
- * Ej:
- *  - "tt_general" => ["tt_general","general"]
- *  - "general"    => ["general","tt_general"]
- *  - "General"    => ["general","tt_general"]
  */
 function keyVariants(k: string) {
   const raw = String(k || "").trim();
@@ -88,14 +86,12 @@ function keyVariants(k: string) {
   set.add(raw);
   set.add(raw.toLowerCase());
 
-  // sin prefijo tt_
   const noPrefix = raw.replace(/^tt_/i, "");
   if (noPrefix && noPrefix !== raw) {
     set.add(noPrefix);
     set.add(noPrefix.toLowerCase());
   }
 
-  // versión key-like
   const keyLike = toKeyLike(raw);
   if (keyLike) set.add(keyLike);
 
@@ -105,7 +101,6 @@ function keyVariants(k: string) {
     set.add(`tt_${keyLikeNoPrefix}`);
   }
 
-  // si viene "general" -> agrega "tt_general"
   if (!/^tt_/i.test(raw) && keyLike) set.add(`tt_${keyLike}`);
 
   return Array.from(set);
@@ -123,6 +118,7 @@ export async function POST(req: NextRequest) {
     const eventId = pickString(body?.eventId);
     const buyerName = pickString(body?.buyerName);
     const buyerEmail = pickString(body?.buyerEmail).toLowerCase();
+    const clientAmount = toInt(body?.amount); // 👈 viene del client, NO se confía
 
     const itemsRaw = Array.isArray(body?.items) ? body.items : [];
     const items: HoldItem[] = itemsRaw
@@ -134,11 +130,12 @@ export async function POST(req: NextRequest) {
 
     console.log("[flow:create][in]", {
       reqId,
-      eventId: !!eventId,
+      eventId: eventId || null,
       buyerNameLen: buyerName.length,
       buyerEmail: buyerEmail ? buyerEmail.replace(/(.{2}).+(@.+)/, "$1***$2") : "",
       itemsCount: items.length,
       itemKeys: items.map((i) => i.ticketTypeKey),
+      clientAmount,
     });
 
     if (!eventId) return NextResponse.json({ ok: false, error: "eventId_missing" }, { status: 400 });
@@ -157,17 +154,36 @@ export async function POST(req: NextRequest) {
     try {
       await client.query("BEGIN");
 
-      // Event
+      // Event (DB source of truth)
       const ev = await client.query(`SELECT id, title FROM events WHERE id = $1`, [eventId]);
       if (ev.rowCount === 0) {
+        // 👇 Debug útil: qué hay realmente en DB
+        const list = await client.query(`SELECT id, title FROM events ORDER BY created_at DESC NULLS LAST LIMIT 25`);
         await client.query("ROLLBACK");
-        return NextResponse.json({ ok: false, error: "event_not_found" }, { status: 404 });
+
+        console.warn("[flow:create] event_not_found", {
+          reqId,
+          eventId,
+          dbEvents: list.rows?.map((r) => ({ id: String(r.id), title: String(r.title) })) ?? [],
+        });
+
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "event_not_found",
+            eventId,
+            hint:
+              "Este endpoint usa la DB. Si tu UI usa src/lib/events.ts, debes seedear events/ticket_types en DB o migrar la UI a DB.",
+            dbEvents: list.rows?.map((r) => ({ id: String(r.id), title: String(r.title) })) ?? [],
+          },
+          { status: 404 }
+        );
       }
       eventTitle = String(ev.rows[0].title || "");
 
       const hasSlug = await ticketTypesSlugExists();
 
-      // Traemos TODOS los ticket types del evento (son pocos) y resolvemos en JS.
+      // Ticket types del evento (DB)
       const tt = hasSlug
         ? await client.query(
             `SELECT id, slug, name, price_clp, capacity, sold, held
@@ -187,19 +203,16 @@ export async function POST(req: NextRequest) {
       for (const row of tt.rows) {
         const id = String(row.id);
         const name = String(row.name || "");
-        const nameKey = toKeyLike(name); // "General" -> "general"
+        const nameKey = toKeyLike(name);
 
-        // match por id exacto
         byKey.set(id, row);
         byKey.set(id.toLowerCase(), row);
 
-        // match por name normalizado
         if (nameKey) {
           byKey.set(nameKey, row);
           byKey.set(`tt_${nameKey}`, row);
         }
 
-        // match por slug si existe
         if (hasSlug) {
           const slug = String((row as any).slug || "").trim();
           if (slug) {
@@ -244,11 +257,7 @@ export async function POST(req: NextRequest) {
         }));
 
         await client.query("ROLLBACK");
-        console.warn("[flow:create] ticket types missing", {
-          reqId,
-          missing,
-          availableCount: available.length,
-        });
+        console.warn("[flow:create] ticket types missing", { reqId, missing, availableCount: available.length });
 
         return NextResponse.json(
           { ok: false, error: "ticket_type_not_found", missing, available },
@@ -256,7 +265,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Total server-side
+      // Total server-side (DB price_clp)
       total = 0;
       for (const x of resolved) {
         total += Number(x.row.price_clp) * x.qty;
@@ -265,6 +274,25 @@ export async function POST(req: NextRequest) {
       if (!Number.isFinite(total) || total <= 0) {
         await client.query("ROLLBACK");
         return NextResponse.json({ ok: false, error: "amount_invalid" }, { status: 400 });
+      }
+
+      // 👇 Detecta mismatch: UI vs DB
+      if (clientAmount > 0 && clientAmount !== total) {
+        await client.query("ROLLBACK");
+
+        console.warn("[flow:create] amount_mismatch", { reqId, clientAmount, serverAmount: total, eventId });
+
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "amount_mismatch",
+            clientAmount,
+            serverAmount: total,
+            hint:
+              "Tu UI (events.ts) y tu DB (ticket_types.price_clp) no coinciden. Deja una sola fuente de precios.",
+          },
+          { status: 409 }
+        );
       }
 
       // Hold
@@ -403,9 +431,13 @@ export async function POST(req: NextRequest) {
       paymentId,
       checkoutUrl,
       token: flowRes.token,
+      amount: total,
     });
   } catch (err: any) {
     console.error("[flow:create][err]", { reqId, err: err?.message ?? String(err) });
-    return NextResponse.json({ ok: false, error: "internal_error", detail: err?.message ?? String(err) }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "internal_error", detail: err?.message ?? String(err) },
+      { status: 500 }
+    );
   }
 }

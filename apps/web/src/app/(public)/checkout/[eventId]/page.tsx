@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getEventById } from "@/lib/events";
+import { getEventByIdDb } from "@/lib/events.server";
 import CheckoutBuyerForm from "@/components/CheckoutBuyerForm";
 
 type Props = {
@@ -25,8 +25,8 @@ function formatTimeOnly(dateISO: string) {
 export default async function CheckoutPage({ params }: Props) {
   const { eventId } = await params;
 
-  // ✅ getEventById ahora es async -> necesitas await
-  const event = await getEventById(eventId);
+  // ✅ DB manda
+  const event = await getEventByIdDb(eventId);
   if (!event) return notFound();
 
   return (

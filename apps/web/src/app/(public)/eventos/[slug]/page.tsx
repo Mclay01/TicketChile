@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { formatDateLong, getEventBySlug } from "@/lib/events";
+import { formatDateLong } from "@/lib/events";
+import { getEventBySlugDb } from "@/lib/events.server";
 import EventTicketSelector from "@/components/EventTicketSelector";
 import HeroBanner from "@/components/HeroBanner";
 
@@ -24,11 +25,11 @@ function formatTimeOnly(dateISO: string) {
 export default async function EventoDetallePage({ params }: Props) {
   const { slug } = await params;
 
-  // ✅ ahora el evento viene desde DB/API (y cae a fallback si no existe)
-  const event = await getEventBySlug(slug);
+  // ✅ DB manda
+  const event = await getEventBySlugDb(slug);
   if (!event) return notFound();
 
-  // ✅ banners reales por evento
+  // ✅ banners reales por evento (DB) con fallback seguro
   const desktopSrc = event.hero?.desktop ?? "/banners/1400x450/fiesta-verano.jpg";
   const mobileSrc = event.hero?.mobile ?? "/banners/800x400/fiesta-verano.jpg";
 
