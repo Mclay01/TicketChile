@@ -1,7 +1,8 @@
 ﻿import Link from "next/link";
 import EventosFilters from "@/components/EventosFiltersSuspense";
 import EventCard from "@/components/EventCard";
-import { EVENTS, eventPriceFrom } from "@/lib/events";
+import { eventPriceFrom } from "@/lib/events";
+import { listEventsDb } from "@/lib/events.server";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 type Props = { searchParams: Promise<SearchParams> };
@@ -31,13 +32,16 @@ export default async function EventosPage({ searchParams }: Props) {
   const pageParam = parseInt(getString(sp, "page") || "1", 10);
   const pageSize = 9;
 
-  const cities = Array.from(new Set(EVENTS.map((e) => e.city))).sort((a, b) =>
+  // ✅ DB manda
+  const EVENTS_DB = await listEventsDb();
+
+  const cities = Array.from(new Set(EVENTS_DB.map((e) => e.city))).sort((a, b) =>
     a.localeCompare(b, "es")
   );
 
   const qLower = q.toLowerCase();
 
-  let filtered = EVENTS.filter((e) => {
+  let filtered = EVENTS_DB.filter((e) => {
     const matchesCity = city ? e.city === city : true;
     const matchesQuery = q
       ? `${e.title} ${e.city} ${e.venue}`.toLowerCase().includes(qLower)
@@ -51,7 +55,7 @@ export default async function EventosPage({ searchParams }: Props) {
     return new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime();
   });
 
-  const total = EVENTS.length;
+  const total = EVENTS_DB.length;
   const shown = filtered.length;
 
   const totalPages = Math.max(1, Math.ceil(shown / pageSize));
@@ -73,16 +77,13 @@ export default async function EventosPage({ searchParams }: Props) {
   return (
     <div className="-mx-6 -my-10 min-h-[calc(100vh-120px)] bg-transparent">
       <div className="mx-auto max-w-6xl px-6 py-10 space-y-8">
-        {/* Header (como mock) */}
         <div className="space-y-1">
           <h1 className="text-4xl font-bold tracking-tight text-white">Eventos</h1>
           <p className="text-sm text-white/55">Descubre los mejores eventos en Chile</p>
         </div>
 
-        {/* Barra filtros */}
         <EventosFilters cities={cities} />
 
-        {/* Conteo chico */}
         <div className="text-xs text-white/45">
           Mostrando <span className="text-white/75 font-semibold">{shown}</span> de{" "}
           <span className="text-white/75 font-semibold">{total}</span>
@@ -100,14 +101,12 @@ export default async function EventosPage({ searchParams }: Props) {
           </div>
         ) : (
           <>
-            {/* Grid posters */}
             <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {paged.map((e) => (
                 <EventCard key={e.id} event={e} />
               ))}
             </section>
 
-            {/* Paginación */}
             <div className="flex items-center justify-between gap-3 pt-2">
               <Link
                 href={hrefForPage(page - 1)}

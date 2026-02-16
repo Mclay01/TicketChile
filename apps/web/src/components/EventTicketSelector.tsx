@@ -14,7 +14,7 @@ function clamp(n: number, min: number, max: number) {
 
 export default function EventTicketSelector({ event }: { event: Event }) {
   const router = useRouter();
-  const API_PREFIX = process.env.NEXT_PUBLIC_TICKET_API_PREFIX || "/api/demo";
+  const API_PREFIX = process.env.NEXT_PUBLIC_TICKET_API_PREFIX || "/api";
 
   const MAX_PER_TYPE = 10;
 

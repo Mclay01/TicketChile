@@ -16,46 +16,64 @@ declare global {
   var __ticketchile_events_has_hero_desktop: Promise<boolean> | undefined;
   // eslint-disable-next-line no-var
   var __ticketchile_events_has_hero_mobile: Promise<boolean> | undefined;
+
+  // ticket_types
+  // eslint-disable-next-line no-var
+  var __ticketchile_tt_has_max_per_order: Promise<boolean> | undefined;
+  // eslint-disable-next-line no-var
+  var __ticketchile_tt_has_capacity: Promise<boolean> | undefined;
+  // eslint-disable-next-line no-var
+  var __ticketchile_tt_has_sold: Promise<boolean> | undefined;
+  // eslint-disable-next-line no-var
+  var __ticketchile_tt_has_held: Promise<boolean> | undefined;
 }
 
-async function columnExists(columnName: string): Promise<boolean> {
+async function columnExists(table: string, columnName: string): Promise<boolean> {
   const q = await pool.query(
     `
     SELECT 1
     FROM information_schema.columns
     WHERE table_schema='public'
-      AND table_name='events'
-      AND column_name=$1
+      AND table_name=$1
+      AND column_name=$2
     LIMIT 1
     `,
-    [columnName]
+    [table, columnName]
   );
   return (q.rowCount ?? 0) > 0;
 }
 
-function eventsHasImage(): Promise<boolean> {
-  if (!global.__ticketchile_events_has_image) {
-    global.__ticketchile_events_has_image = columnExists("image");
-  }
-  return global.__ticketchile_events_has_image;
+function eventsHasImage() {
+  return (global.__ticketchile_events_has_image ??=
+    columnExists("events", "image"));
+}
+function eventsHasHeroDesktop() {
+  return (global.__ticketchile_events_has_hero_desktop ??=
+    columnExists("events", "hero_desktop"));
+}
+function eventsHasHeroMobile() {
+  return (global.__ticketchile_events_has_hero_mobile ??=
+    columnExists("events", "hero_mobile"));
 }
 
-function eventsHasHeroDesktop(): Promise<boolean> {
-  if (!global.__ticketchile_events_has_hero_desktop) {
-    global.__ticketchile_events_has_hero_desktop = columnExists("hero_desktop");
-  }
-  return global.__ticketchile_events_has_hero_desktop;
+function ttHasMaxPerOrder() {
+  return (global.__ticketchile_tt_has_max_per_order ??=
+    columnExists("ticket_types", "max_per_order"));
 }
-
-function eventsHasHeroMobile(): Promise<boolean> {
-  if (!global.__ticketchile_events_has_hero_mobile) {
-    global.__ticketchile_events_has_hero_mobile = columnExists("hero_mobile");
-  }
-  return global.__ticketchile_events_has_hero_mobile;
+function ttHasCapacity() {
+  return (global.__ticketchile_tt_has_capacity ??=
+    columnExists("ticket_types", "capacity"));
+}
+function ttHasSold() {
+  return (global.__ticketchile_tt_has_sold ??=
+    columnExists("ticket_types", "sold"));
+}
+function ttHasHeld() {
+  return (global.__ticketchile_tt_has_held ??=
+    columnExists("ticket_types", "held"));
 }
 
 function defaultImageFor(slug: string) {
-  // intenta algo “razonable” por convención
   return `/events/${slug}.jpg`;
 }
 function defaultHeroDesktopFor(slug: string) {
@@ -105,9 +123,26 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ slug: stri
 
   const ev = q.rows[0];
 
+  const [hasMaxPerOrder, hasCapacity, hasSold, hasHeld] = await Promise.all([
+    ttHasMaxPerOrder(),
+    ttHasCapacity(),
+    ttHasSold(),
+    ttHasHeld(),
+  ]);
+
+  const ttSelect = [
+    "id",
+    "name",
+    "price_clp",
+    hasMaxPerOrder ? "max_per_order" : "NULL::int AS max_per_order",
+    hasCapacity ? "capacity" : "NULL::int AS capacity",
+    hasSold ? "sold" : "NULL::int AS sold",
+    hasHeld ? "held" : "NULL::int AS held",
+  ].join(", ");
+
   const tts = await pool.query(
     `
-    SELECT id, name, price_clp, max_per_order, capacity, sold, held
+    SELECT ${ttSelect}
     FROM ticket_types
     WHERE event_id = $1
     ORDER BY price_clp ASC
