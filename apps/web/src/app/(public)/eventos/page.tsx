@@ -25,6 +25,9 @@ function clamp(n: number, min: number, max: number) {
 export default async function EventosPage({ searchParams }: Props) {
   const sp = await searchParams;
 
+  // ✅ DB manda, sin mock.
+  const events = await listEventsDb();
+
   const q = getString(sp, "q").trim();
   const city = getString(sp, "city").trim();
   const sort = normalizeSort(getString(sp, "sort").trim() || "date");
@@ -32,16 +35,13 @@ export default async function EventosPage({ searchParams }: Props) {
   const pageParam = parseInt(getString(sp, "page") || "1", 10);
   const pageSize = 9;
 
-  // ✅ DB manda
-  const EVENTS_DB = await listEventsDb();
-
-  const cities = Array.from(new Set(EVENTS_DB.map((e) => e.city))).sort((a, b) =>
-    a.localeCompare(b, "es")
-  );
+  const cities = Array.from(new Set(events.map((e) => e.city)))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, "es"));
 
   const qLower = q.toLowerCase();
 
-  let filtered = EVENTS_DB.filter((e) => {
+  let filtered = events.filter((e) => {
     const matchesCity = city ? e.city === city : true;
     const matchesQuery = q
       ? `${e.title} ${e.city} ${e.venue}`.toLowerCase().includes(qLower)
@@ -55,7 +55,7 @@ export default async function EventosPage({ searchParams }: Props) {
     return new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime();
   });
 
-  const total = EVENTS_DB.length;
+  const total = events.length;
   const shown = filtered.length;
 
   const totalPages = Math.max(1, Math.ceil(shown / pageSize));
