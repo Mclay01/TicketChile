@@ -4,6 +4,9 @@ import EventCard from "@/components/EventCard";
 import { eventPriceFrom } from "@/lib/events";
 import { listEventsDb } from "@/lib/events.server";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 type SearchParams = Record<string, string | string[] | undefined>;
 type Props = { searchParams: Promise<SearchParams> };
 
@@ -25,8 +28,8 @@ function clamp(n: number, min: number, max: number) {
 export default async function EventosPage({ searchParams }: Props) {
   const sp = await searchParams;
 
-  // ✅ DB manda, sin mock.
-  const events = await listEventsDb();
+  // ✅ DB manda SIEMPRE
+  const allEvents = await listEventsDb();
 
   const q = getString(sp, "q").trim();
   const city = getString(sp, "city").trim();
@@ -35,13 +38,13 @@ export default async function EventosPage({ searchParams }: Props) {
   const pageParam = parseInt(getString(sp, "page") || "1", 10);
   const pageSize = 9;
 
-  const cities = Array.from(new Set(events.map((e) => e.city)))
+  const cities = Array.from(new Set(allEvents.map((e) => e.city)))
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b, "es"));
 
   const qLower = q.toLowerCase();
 
-  let filtered = events.filter((e) => {
+  let filtered = allEvents.filter((e) => {
     const matchesCity = city ? e.city === city : true;
     const matchesQuery = q
       ? `${e.title} ${e.city} ${e.venue}`.toLowerCase().includes(qLower)
@@ -55,7 +58,7 @@ export default async function EventosPage({ searchParams }: Props) {
     return new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime();
   });
 
-  const total = events.length;
+  const total = allEvents.length;
   const shown = filtered.length;
 
   const totalPages = Math.max(1, Math.ceil(shown / pageSize));
