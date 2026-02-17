@@ -70,9 +70,10 @@ export async function getEventBySlugDb(slug: string): Promise<Event | undefined>
     const ev = await client.query(
       `
       SELECT id, slug, title, city, venue, date_iso, description,
-             image, hero_desktop, hero_mobile
+            image, hero_desktop, hero_mobile
       FROM events
       WHERE slug = $1
+        AND is_published = true
       LIMIT 1
       `,
       [slug]
@@ -105,9 +106,10 @@ export async function getEventByIdDb(id: string): Promise<Event | undefined> {
     const ev = await client.query(
       `
       SELECT id, slug, title, city, venue, date_iso, description,
-             image, hero_desktop, hero_mobile
+            image, hero_desktop, hero_mobile
       FROM events
       WHERE id = $1
+        AND is_published = true
       LIMIT 1
       `,
       [id]
@@ -143,11 +145,13 @@ export async function listEventsDb(): Promise<Event[]> {
     const r = await client.query(
       `
       SELECT id, slug, title, city, venue, date_iso, description,
-             image, hero_desktop, hero_mobile
+            image, hero_desktop, hero_mobile
       FROM events
+      WHERE is_published = true
       ORDER BY date_iso ASC
       `
     );
+
 
     // Cargamos ticketTypes por evento (N+1). Si quieres pro, lo optimizamos luego con JOIN.
     const out: Event[] = [];
