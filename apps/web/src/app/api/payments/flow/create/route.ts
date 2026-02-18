@@ -26,12 +26,14 @@ function toInt(v: any) {
 }
 
 function getOrigin(req: NextRequest) {
-  return (
+  const env =
     process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_URL ||
-    req.headers.get("origin") ||
-    "http://localhost:3000"
-  );
+    process.env.APP_URL;
+
+  if (env) return env;
+
+  // Solo dev
+  return req.headers.get("origin") || "http://localhost:3000";
 }
 
 type HoldItem = { ticketTypeKey: string; qty: number };
