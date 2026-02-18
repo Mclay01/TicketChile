@@ -1,45 +1,126 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pool } from "@/lib/db";
+import { withTx } from "@/lib/db";
 import { flowGetStatus } from "@/lib/flow";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function mustOrigin(req: NextRequest) {
-  // En PROD: usa SIEMPRE env. Evita localhost.
-  const env = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
-  if (env) return env;
-
-  // Dev fallback
-  return req.headers.get("origin") || req.nextUrl.origin || "http://localhost:3000";
+function getOrigin(req: NextRequest) {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    req.headers.get("origin") ||
+    "http://localhost:3000"
+  );
 }
 
 function pickString(v: any) {
   return typeof v === "string" ? v.trim() : "";
 }
 
-async function readJson(req: NextRequest) {
-  try {
-    return await req.json();
-  } catch {
-    return null;
-  }
+function mapFlowStatusToLocal(flowStatus: number) {
+  if (flowStatus === 2) return "PAID";
+  if (flowStatus === 1) return "PENDING";
+  if (flowStatus === 3) return "FAILED";
+  if (flowStatus === 4) return "CANCELLED";
+  return "PENDING";
 }
 
-async function readToken(req: NextRequest) {
-  // 1) query ?token=
+// ✅ Finaliza igual que tu confirm (misma lógica)
+async function finalizePaidPayment(client: any, paymentId: string) {
+  const { randomUUID } = await import("node:crypto");
+
+  const p = await client.query(`SELECT * FROM payments WHERE id = $1 FOR UPDATE`, [paymentId]);
+  if (p.rowCount === 0) throw new Error("payment_not_found");
+  const pay = p.rows[0];
+
+  if (String(pay.status).toUpperCase() === "PAID" && pay.order_id) {
+    return { orderId: String(pay.order_id) };
+  }
+
+  const h = await client.query(`SELECT id, status FROM holds WHERE id = $1 FOR UPDATE`, [String(pay.hold_id)]);
+  if (h.rowCount === 0) throw new Error("hold_not_found");
+
+  const items = await client.query(
+    `SELECT ticket_type_id, ticket_type_name, unit_price_clp, qty
+       FROM hold_items
+      WHERE hold_id = $1`,
+    [String(pay.hold_id)]
+  );
+  if (items.rowCount === 0) throw new Error("hold_items_empty");
+
+  const orderId = `ord_${randomUUID()}`;
+
+  await client.query(
+    `INSERT INTO orders (id, hold_id, event_id, event_title, buyer_name, buyer_email, owner_email)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [
+      orderId,
+      String(pay.hold_id),
+      String(pay.event_id),
+      String(pay.event_title),
+      String(pay.buyer_name),
+      String(pay.buyer_email),
+      String(pay.owner_email),
+    ]
+  );
+
+  for (const row of items.rows) {
+    const qty = Number(row.qty);
+
+    for (let i = 0; i < qty; i++) {
+      const ticketId = `tkt_${randomUUID()}`;
+      await client.query(
+        `INSERT INTO tickets
+          (id, order_id, event_id, ticket_type_id, ticket_type_name, buyer_email, owner_email, status)
+         VALUES
+          ($1,$2,$3,$4,$5,$6,$7,'VALID')`,
+        [
+          ticketId,
+          orderId,
+          String(pay.event_id),
+          String(row.ticket_type_id),
+          String(row.ticket_type_name),
+          String(pay.buyer_email),
+          String(pay.owner_email),
+        ]
+      );
+    }
+
+    const u = await client.query(
+      `UPDATE ticket_types
+         SET sold = sold + $3,
+             held = held - $3
+       WHERE event_id = $1
+         AND id = $2
+         AND held >= $3
+       RETURNING id`,
+      [String(pay.event_id), String(row.ticket_type_id), qty]
+    );
+    if (u.rowCount === 0) throw new Error("ticket_types_update_failed");
+  }
+
+  await client.query(`UPDATE holds SET status = 'CONSUMED' WHERE id = $1`, [String(pay.hold_id)]);
+
+  await client.query(
+    `UPDATE payments
+       SET status = 'PAID',
+           paid_at = COALESCE(paid_at, NOW()),
+           updated_at = NOW(),
+           order_id = $2
+     WHERE id = $1`,
+    [paymentId, orderId]
+  );
+
+  return { orderId };
+}
+
+async function readTokenFromFormOrQuery(req: NextRequest) {
   const fromQuery = pickString(req.nextUrl.searchParams.get("token"));
   if (fromQuery) return fromQuery;
 
-  // 2) body JSON { token } o { flow_token }
-  if (req.method === "POST") {
-    const j = await readJson(req);
-    const t = pickString(j?.token) || pickString(j?.flow_token);
-    if (t) return t;
-  }
-
-  // 3) form-urlencoded / formData (por si Flow pega return aquí con POST)
   const ct = req.headers.get("content-type") || "";
+
   if (req.method === "POST") {
     if (ct.includes("application/x-www-form-urlencoded")) {
       const raw = await req.text();
@@ -50,105 +131,33 @@ async function readToken(req: NextRequest) {
     try {
       const fd = await req.formData();
       return pickString(fd.get("token"));
-    } catch {
-      // ignore
-    }
+    } catch {}
+
+    return "";
   }
 
   return "";
 }
 
-async function readPaymentId(req: NextRequest) {
-  // 1) query ?payment_id= o ?paymentId=
-  const q1 = pickString(req.nextUrl.searchParams.get("payment_id"));
-  if (q1) return q1;
-
-  const q2 = pickString(req.nextUrl.searchParams.get("paymentId"));
-  if (q2) return q2;
-
-  // 2) body JSON { paymentId } o { payment_id }
-  if (req.method === "POST") {
-    const j = await readJson(req);
-    const p = pickString(j?.paymentId) || pickString(j?.payment_id);
-    if (p) return p;
-  }
-
-  return "";
-}
-
-async function lookupTokenByPaymentId(paymentId: string) {
-  if (!paymentId) return "";
-  const r = await pool.query(
-    `SELECT provider_ref
-       FROM payments
-      WHERE id = $1
-        AND provider = 'flow'
-      LIMIT 1`,
-    [paymentId]
-  );
-  return pickString(r.rows?.[0]?.provider_ref);
-}
-
-async function kickFinalize(origin: string, token: string) {
-  // Llamada interna al confirm para que ejecute finalizePaidPayment + dedupe webhook_events.
-  // OJO: confirm espera x-www-form-urlencoded con "token".
-  const body = new URLSearchParams({ token });
-
-  await fetch(`${origin}/api/payments/flow/confirm`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    cache: "no-store",
-    body,
-  }).catch(() => null);
-}
-
-async function handle(req: NextRequest) {
-  const origin = mustOrigin(req);
-
-  // Puede venir por token, por paymentId, o ambos.
-  const paymentIdFromReq = await readPaymentId(req);
-  let token = await readToken(req);
-
-  // Si no hay token, pero sí paymentId, lo buscamos en DB (provider_ref).
-  if (!token && paymentIdFromReq) {
-    token = await lookupTokenByPaymentId(paymentIdFromReq);
-  }
-
-  if (!token && !paymentIdFromReq) {
-    return NextResponse.redirect(new URL(`/checkout?canceled=1&reason=missing_token`, origin));
-  }
+export async function GET(req: NextRequest) {
+  // ✅ Modo redirect (cuando Flow vuelve al usuario)
+  const origin = getOrigin(req);
 
   try {
-    // 1) Consultar Flow por token si lo tenemos (para obtener commerceOrder = paymentId y status)
-    let paymentId = paymentIdFromReq;
-
-    if (token) {
-      const st = await flowGetStatus(token);
-      const commerceOrder = pickString(st?.commerceOrder);
-      if (commerceOrder) paymentId = commerceOrder;
-
-      const flowStatus = Number(st?.status || 0);
-      // status Flow: 1 pending, 2 paid, 3 rejected, 4 cancelled
-
-      if (flowStatus === 3 || flowStatus === 4) {
-        return NextResponse.redirect(new URL(`/checkout?canceled=1&reason=flow_${flowStatus}`, origin));
-      }
-
-      // Si está pagado → forzamos confirm (emitir tickets) aunque el webhook no haya llegado.
-      if (flowStatus === 2) {
-        await kickFinalize(origin, token);
-      }
+    const token = await readTokenFromFormOrQuery(req);
+    if (!token) {
+      return NextResponse.redirect(new URL(`/checkout?canceled=1&reason=missing_token`, origin));
     }
 
+    const st = await flowGetStatus(token);
+    const paymentId = pickString(st?.commerceOrder);
     if (!paymentId) {
       return NextResponse.redirect(new URL(`/checkout?canceled=1&reason=missing_payment`, origin));
     }
 
-    // 2) Redirect a confirm con flow_token (tu UI lo usa)
-    const url = new URL(`/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}`, origin);
-    if (token) url.searchParams.set("flow_token", token);
-
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(
+      new URL(`/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}&flow_token=${encodeURIComponent(token)}`, origin)
+    );
   } catch (err: any) {
     return NextResponse.redirect(
       new URL(`/checkout?canceled=1&reason=${encodeURIComponent(err?.message || "flow_error")}`, origin)
@@ -156,10 +165,53 @@ async function handle(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
-  return handle(req);
-}
-
 export async function POST(req: NextRequest) {
-  return handle(req);
+  // ✅ Modo “kick real” (usado por tu UI)
+  try {
+    const ct = req.headers.get("content-type") || "";
+    let paymentId = "";
+    let token = "";
+
+    if (ct.includes("application/json")) {
+      const j = await req.json().catch(() => ({} as any));
+      paymentId = pickString(j?.paymentId);
+      token = pickString(j?.token);
+    } else {
+      // fallback form/query
+      token = await readTokenFromFormOrQuery(req);
+    }
+
+    if (!token) return NextResponse.json({ ok: false, error: "missing_token" }, { status: 400 });
+
+    const st = await flowGetStatus(token);
+    const commerceOrder = pickString(st?.commerceOrder);
+    const flowStatus = Number(st?.status || 0);
+
+    // Si no venía paymentId, usa el commerceOrder (que ES tu paymentId)
+    if (!paymentId) paymentId = commerceOrder;
+
+    if (!paymentId) return NextResponse.json({ ok: false, error: "missing_payment" }, { status: 400 });
+
+    const localStatus = mapFlowStatusToLocal(flowStatus);
+
+    await withTx(async (c) => {
+      await c.query(
+        `UPDATE payments
+           SET provider_ref = COALESCE(provider_ref, $2),
+               status = CASE WHEN status = 'PAID' THEN status ELSE $3 END,
+               updated_at = NOW()
+         WHERE id = $1`,
+        [paymentId, token, localStatus]
+      );
+
+      if (localStatus === "PAID") {
+        await finalizePaidPayment(c, paymentId);
+      }
+    });
+
+    return NextResponse.json({ ok: true, paymentId, localStatus }, { status: 200 });
+  } catch (err: any) {
+    // aquí NO devolvemos redirect; la UI espera JSON
+    return NextResponse.json({ ok: false, error: err?.message || String(err) }, { status: 500 });
+  }
 }
