@@ -326,11 +326,17 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
   }
 
   function payloadBase() {
+    const normalizedBuyerEmail = normalizeEmail(buyerEmail);
+
+    // ✅ NUEVO: dueño del ticket (usuario logueado). Si no hay sesión, cae al buyerEmail.
+    const ownerEmail = sessionEmail || normalizedBuyerEmail;
+
     return {
       eventId: event.id,
       items,
       buyerName: buyerName.trim(),
-      buyerEmail: normalizeEmail(buyerEmail),
+      buyerEmail: normalizedBuyerEmail,
+      ownerEmail, // ✅ clave para que "Mis tickets" funcione con el usuario logueado
       buyerPhone: normalizePhoneCL(buyerPhone),
       buyerRut: buyerRut.trim() ? rutFormat(buyerRut.trim()) : "",
       buyerRegion: buyerRegion.trim(),
@@ -532,7 +538,7 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
               <span className="text-white/50">
                 {!useOtherEmail
                   ? `Usando correo de sesión: ${sessionEmail}`
-                  : "Ojo: si compras para otro correo, ese usuario verá los tickets en su cuenta."}
+                  : "Ojo: el correo de arriba recibirá el ticket por email, pero el dueño (Mis tickets) será el usuario logueado."}
               </span>
             </div>
           ) : null}

@@ -26,9 +26,7 @@ function toInt(v: any) {
 }
 
 function getOrigin(req: NextRequest) {
-  const env =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_URL;
+  const env = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
 
   if (env) return env;
 
@@ -120,6 +118,10 @@ export async function POST(req: NextRequest) {
     const eventId = pickString(body?.eventId);
     const buyerName = pickString(body?.buyerName);
     const buyerEmail = pickString(body?.buyerEmail).toLowerCase();
+
+    // ✅ NUEVO: email dueño (usuario logueado)
+    const ownerEmail = pickString(body?.ownerEmail).toLowerCase();
+
     const clientAmount = toInt(body?.amount); // 👈 viene del client, NO se confía
 
     const itemsRaw = Array.isArray(body?.items) ? body.items : [];
@@ -135,6 +137,7 @@ export async function POST(req: NextRequest) {
       eventId: eventId || null,
       buyerNameLen: buyerName.length,
       buyerEmail: buyerEmail ? buyerEmail.replace(/(.{2}).+(@.+)/, "$1***$2") : "",
+      ownerEmail: ownerEmail ? ownerEmail.replace(/(.{2}).+(@.+)/, "$1***$2") : "",
       itemsCount: items.length,
       itemKeys: items.map((i) => i.ticketTypeKey),
       clientAmount,
@@ -145,6 +148,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "buyerName_invalid" }, { status: 400 });
     if (!buyerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail))
       return NextResponse.json({ ok: false, error: "buyerEmail_invalid" }, { status: 400 });
+
+    // ✅ NUEVO: valida ownerEmail
+    if (!ownerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail))
+      return NextResponse.json({ ok: false, error: "ownerEmail_invalid" }, { status: 400 });
+
     if (items.length === 0) return NextResponse.json({ ok: false, error: "items_empty" }, { status: 400 });
 
     let paymentId = "";
@@ -261,10 +269,7 @@ export async function POST(req: NextRequest) {
         await client.query("ROLLBACK");
         console.warn("[flow:create] ticket types missing", { reqId, missing, availableCount: available.length });
 
-        return NextResponse.json(
-          { ok: false, error: "ticket_type_not_found", missing, available },
-          { status: 400 }
-        );
+        return NextResponse.json({ ok: false, error: "ticket_type_not_found", missing, available }, { status: 400 });
       }
 
       // Total server-side (DB price_clp)
@@ -290,8 +295,7 @@ export async function POST(req: NextRequest) {
             error: "amount_mismatch",
             clientAmount,
             serverAmount: total,
-            hint:
-              "Tu UI (events.ts) y tu DB (ticket_types.price_clp) no coinciden. Deja una sola fuente de precios.",
+            hint: "Tu UI (events.ts) y tu DB (ticket_types.price_clp) no coinciden. Deja una sola fuente de precios.",
           },
           { status: 409 }
         );
@@ -346,7 +350,16 @@ export async function POST(req: NextRequest) {
           ($1, $2, 'flow', NULL, $3, $4,
            $5, $6, $7,
            $8, 'CLP', 'CREATED')`,
-        [paymentId, holdId, eventId, eventTitle, buyerName, buyerEmail, buyerEmail, total]
+        [
+          paymentId,
+          holdId,
+          eventId,
+          eventTitle,
+          buyerName,
+          buyerEmail,
+          ownerEmail, // ✅ AQUÍ: dueño real (usuario logueado)
+          total,
+        ]
       );
 
       await client.query("COMMIT");
@@ -437,9 +450,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("[flow:create][err]", { reqId, err: err?.message ?? String(err) });
-    return NextResponse.json(
-      { ok: false, error: "internal_error", detail: err?.message ?? String(err) },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: "internal_error", detail: err?.message ?? String(err) }, { status: 500 });
   }
 }

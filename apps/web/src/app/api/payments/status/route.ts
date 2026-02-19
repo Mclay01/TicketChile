@@ -26,7 +26,7 @@ export async function GET(req: Request) {
       `
       SELECT
         id, hold_id, order_id, status, provider,
-        buyer_name, buyer_email, event_title, amount_clp
+        buyer_name, buyer_email, owner_email, event_title, amount_clp
       FROM payments
       WHERE id=$1
       LIMIT 1
@@ -46,9 +46,7 @@ export async function GET(req: Request) {
     // resolver order_id (si no está)
     let orderId = payment.order_id ? String(payment.order_id) : "";
     if (!orderId && payment.hold_id) {
-      const oRes = await client.query(`SELECT id FROM orders WHERE hold_id=$1 LIMIT 1`, [
-        String(payment.hold_id),
-      ]);
+      const oRes = await client.query(`SELECT id FROM orders WHERE hold_id=$1 LIMIT 1`, [String(payment.hold_id)]);
       orderId = oRes.rows?.[0]?.id ? String(oRes.rows[0].id) : "";
     }
 
@@ -140,6 +138,7 @@ export async function GET(req: Request) {
         status: String(payment.status || ""),
         buyerName: String(payment.buyer_name || ""),
         buyerEmail: String(payment.buyer_email || ""),
+        ownerEmail: String(payment.owner_email || ""), // ✅ NUEVO
         eventTitle: String(payment.event_title || ""),
         amountClp: Number(payment.amount_clp || 0),
       },
