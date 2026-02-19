@@ -25,9 +25,12 @@ function toInt(v: any) {
   return Math.floor(n);
 }
 
+function isEmail(v: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v || "").trim().toLowerCase());
+}
+
 function getOrigin(req: NextRequest) {
   const env = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
-
   if (env) return env;
 
   // Solo dev
@@ -117,10 +120,12 @@ export async function POST(req: NextRequest) {
 
     const eventId = pickString(body?.eventId);
     const buyerName = pickString(body?.buyerName);
+
     const buyerEmail = pickString(body?.buyerEmail).toLowerCase();
 
     // ✅ NUEVO: email dueño (usuario logueado)
-    const ownerEmail = pickString(body?.ownerEmail).toLowerCase();
+    // OJO: lo tratamos como opcional. Si no viene, cae a buyerEmail.
+    const ownerEmailRaw = pickString(body?.ownerEmail).toLowerCase();
 
     const clientAmount = toInt(body?.amount); // 👈 viene del client, NO se confía
 
@@ -131,6 +136,20 @@ export async function POST(req: NextRequest) {
         qty: Math.floor(Number(x?.qty)),
       }))
       .filter((x: HoldItem) => x.ticketTypeKey && Number.isFinite(x.qty) && x.qty > 0);
+
+    // ✅ ownerEmail final:
+    // - si viene y es válido => usarlo
+    // - si no viene => usar buyerEmail
+    // - si viene pero es inválido => error (para no ensuciar datos)
+    let ownerEmail = "";
+    if (ownerEmailRaw) {
+      if (!isEmail(ownerEmailRaw)) {
+        return NextResponse.json({ ok: false, error: "ownerEmail_invalid" }, { status: 400 });
+      }
+      ownerEmail = ownerEmailRaw;
+    } else {
+      ownerEmail = buyerEmail;
+    }
 
     console.log("[flow:create][in]", {
       reqId,
@@ -146,12 +165,8 @@ export async function POST(req: NextRequest) {
     if (!eventId) return NextResponse.json({ ok: false, error: "eventId_missing" }, { status: 400 });
     if (!buyerName || buyerName.length < 2)
       return NextResponse.json({ ok: false, error: "buyerName_invalid" }, { status: 400 });
-    if (!buyerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail))
+    if (!buyerEmail || !isEmail(buyerEmail))
       return NextResponse.json({ ok: false, error: "buyerEmail_invalid" }, { status: 400 });
-
-    // ✅ NUEVO: valida ownerEmail
-    if (!ownerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail))
-      return NextResponse.json({ ok: false, error: "ownerEmail_invalid" }, { status: 400 });
 
     if (items.length === 0) return NextResponse.json({ ok: false, error: "items_empty" }, { status: 400 });
 
@@ -350,16 +365,7 @@ export async function POST(req: NextRequest) {
           ($1, $2, 'flow', NULL, $3, $4,
            $5, $6, $7,
            $8, 'CLP', 'CREATED')`,
-        [
-          paymentId,
-          holdId,
-          eventId,
-          eventTitle,
-          buyerName,
-          buyerEmail,
-          ownerEmail, // ✅ AQUÍ: dueño real (usuario logueado)
-          total,
-        ]
+        [paymentId, holdId, eventId, eventTitle, buyerName, buyerEmail, ownerEmail, total]
       );
 
       await client.query("COMMIT");
@@ -450,6 +456,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("[flow:create][err]", { reqId, err: err?.message ?? String(err) });
-    return NextResponse.json({ ok: false, error: "internal_error", detail: err?.message ?? String(err) }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "internal_error", detail: err?.message ?? String(err) },
+      { status: 500 }
+    );
   }
 }

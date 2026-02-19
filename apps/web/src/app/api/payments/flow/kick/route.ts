@@ -166,31 +166,46 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // ✅ Modo “kick real” (usado por tu UI)
+  const origin = getOrigin(req);
+
   try {
     const ct = req.headers.get("content-type") || "";
+    const accept = req.headers.get("accept") || "";
+    const isBrowser = accept.includes("text/html"); // navegador típicamente pide html
+
     let paymentId = "";
     let token = "";
+    let cameFromJson = false;
 
     if (ct.includes("application/json")) {
+      cameFromJson = true;
       const j = await req.json().catch(() => ({} as any));
       paymentId = pickString(j?.paymentId);
       token = pickString(j?.token);
     } else {
-      // fallback form/query
+      // Flow return (form/query)
       token = await readTokenFromFormOrQuery(req);
     }
 
-    if (!token) return NextResponse.json({ ok: false, error: "missing_token" }, { status: 400 });
+    if (!token) {
+      // si viene desde navegador/Flow, redirige a checkout cancelado
+      if (!cameFromJson || isBrowser) {
+        return NextResponse.redirect(new URL(`/checkout?canceled=1&reason=missing_token`, origin));
+      }
+      return NextResponse.json({ ok: false, error: "missing_token" }, { status: 400 });
+    }
 
     const st = await flowGetStatus(token);
     const commerceOrder = pickString(st?.commerceOrder);
     const flowStatus = Number(st?.status || 0);
 
-    // Si no venía paymentId, usa el commerceOrder (que ES tu paymentId)
     if (!paymentId) paymentId = commerceOrder;
-
-    if (!paymentId) return NextResponse.json({ ok: false, error: "missing_payment" }, { status: 400 });
+    if (!paymentId) {
+      if (!cameFromJson || isBrowser) {
+        return NextResponse.redirect(new URL(`/checkout?canceled=1&reason=missing_payment`, origin));
+      }
+      return NextResponse.json({ ok: false, error: "missing_payment" }, { status: 400 });
+    }
 
     const localStatus = mapFlowStatusToLocal(flowStatus);
 
@@ -209,9 +224,38 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    // ✅ CLAVE: si es Flow Return (no JSON) o browser, REDIRECT a confirm
+    if (!cameFromJson || isBrowser) {
+      // si falló/canceló, manda a checkout cancelado
+      if (localStatus === "FAILED" || localStatus === "CANCELLED") {
+        return NextResponse.redirect(new URL(`/checkout?canceled=1&reason=${localStatus}`, origin));
+      }
+
+      return NextResponse.redirect(
+        new URL(
+          `/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}&flow_token=${encodeURIComponent(token)}`,
+          origin
+        )
+      );
+    }
+
+    // ✅ caso UI kick interno: JSON
     return NextResponse.json({ ok: true, paymentId, localStatus }, { status: 200 });
   } catch (err: any) {
-    // aquí NO devolvemos redirect; la UI espera JSON
+    const ct = req.headers.get("content-type") || "";
+    const accept = req.headers.get("accept") || "";
+    const isBrowser = accept.includes("text/html");
+    const cameFromJson = ct.includes("application/json");
+
+    // navegador => redirect con reason
+    if (!cameFromJson || isBrowser) {
+      return NextResponse.redirect(
+        new URL(`/checkout?canceled=1&reason=${encodeURIComponent(err?.message || "flow_error")}`, origin)
+      );
+    }
+
+    // UI => JSON
     return NextResponse.json({ ok: false, error: err?.message || String(err) }, { status: 500 });
   }
 }
+
