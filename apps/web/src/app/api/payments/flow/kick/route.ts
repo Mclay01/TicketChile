@@ -1,3 +1,4 @@
+// apps/web/src/app/api/payments/flow/kick/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { withTx } from "@/lib/db";
 import { flowGetStatus } from "@/lib/flow";
@@ -171,7 +172,19 @@ export async function POST(req: NextRequest) {
   try {
     const ct = req.headers.get("content-type") || "";
     const accept = req.headers.get("accept") || "";
-    const isBrowser = accept.includes("text/html"); // navegador típicamente pide html
+    const secFetchDest = req.headers.get("sec-fetch-dest") || "";
+    const secFetchMode = req.headers.get("sec-fetch-mode") || "";
+    const secFetchSite = req.headers.get("sec-fetch-site") || "";
+    const userAgent = req.headers.get("user-agent") || "";
+
+    // Navegación real (browser) o redirección externa (Flow suele caer aquí)
+    const isBrowser =
+      accept.includes("text/html") ||
+      secFetchDest === "document" ||
+      secFetchMode === "navigate" ||
+      secFetchSite === "cross-site" ||
+      // fallback: Flow/PSP a veces llega con accept */* (y sin headers sec-fetch)
+      (!!userAgent && !accept.includes("application/json") && accept.includes("*/*"));
 
     let paymentId = "";
     let token = "";
@@ -244,7 +257,18 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     const ct = req.headers.get("content-type") || "";
     const accept = req.headers.get("accept") || "";
-    const isBrowser = accept.includes("text/html");
+    const secFetchDest = req.headers.get("sec-fetch-dest") || "";
+    const secFetchMode = req.headers.get("sec-fetch-mode") || "";
+    const secFetchSite = req.headers.get("sec-fetch-site") || "";
+    const userAgent = req.headers.get("user-agent") || "";
+
+    const isBrowser =
+      accept.includes("text/html") ||
+      secFetchDest === "document" ||
+      secFetchMode === "navigate" ||
+      secFetchSite === "cross-site" ||
+      (!!userAgent && !accept.includes("application/json") && accept.includes("*/*"));
+
     const cameFromJson = ct.includes("application/json");
 
     // navegador => redirect con reason
@@ -258,4 +282,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: err?.message || String(err) }, { status: 500 });
   }
 }
-
