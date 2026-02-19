@@ -132,7 +132,6 @@ export default function CheckoutConfirmClient() {
     flowKickRef.current = true;
 
     try {
-      // Endpoint que debes crear (te lo dejo abajo si no lo tienes):
       // POST /api/payments/flow/kick  body: { paymentId, token }
       await fetch("/api/payments/flow/kick", {
         method: "POST",
@@ -141,7 +140,7 @@ export default function CheckoutConfirmClient() {
         body: JSON.stringify({ paymentId, token: flowToken }),
       }).catch(() => null);
     } catch {
-      // silencioso: si falla, igual seguimos con polling normal
+      // silencioso
     }
   }, [paymentId, flowToken]);
 
@@ -222,9 +221,7 @@ export default function CheckoutConfirmClient() {
     setPolling(true);
 
     (async () => {
-      // ✅ intenta “kick” solo si es Flow (tenemos flow_token)
       await flowKick();
-
       await loadOnce({ silent: false });
       clearTimer();
       timerRef.current = window.setTimeout(poll, POLL_MS);
@@ -317,8 +314,7 @@ export default function CheckoutConfirmClient() {
     if (provider === "webpay") return "Webpay confirmó el pago; estamos emitiendo tus tickets.";
     if (provider === "fintoc") return "Estamos esperando confirmación de la transferencia para emitir tus tickets.";
     if (provider === "transfer") return "Estamos procesando la transferencia para emitir tus tickets.";
-    if (provider === "flow")
-      return "Flow confirmó/está confirmando el pago; estamos emitiendo tus tickets.";
+    if (provider === "flow") return "Flow confirmó/está confirmando el pago; estamos emitiendo tus tickets.";
     return "Estamos procesando tu pago y emitiendo tickets.";
   })();
 
@@ -383,7 +379,6 @@ export default function CheckoutConfirmClient() {
                   </p>
                 ) : null}
 
-                {/* ✅ Ayuda extra: si estamos en Flow y tenemos token, explícito */}
                 {provider === "flow" && flowToken ? (
                   <p className="mt-2 text-xs text-white/50">
                     (Flow token recibido. Si el estado es asíncrono, puede tardar unos segundos en confirmarse.)
@@ -395,7 +390,7 @@ export default function CheckoutConfirmClient() {
             {ready ? (
               <div className="mt-5 grid gap-3 md:grid-cols-2">
                 <button
-                  onClick={() => router.push(`/mis-tickets?email=${encodeURIComponent(data.payment.buyerEmail)}`)}
+                  onClick={() => router.push(`/mis-tickets`)}
                   className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90"
                 >
                   Ver mis tickets
