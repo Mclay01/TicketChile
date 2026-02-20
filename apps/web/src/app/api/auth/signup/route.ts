@@ -15,7 +15,7 @@ function json(status: number, payload: any) {
 }
 
 function isEmail(s: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || "").trim());
 }
 
 // scrypt$<saltHex>$<hashHex>
@@ -38,7 +38,23 @@ function esc(s: string) {
     .replaceAll("'", "&#039;");
 }
 
+async function tableExists(client: any, tableName: string) {
+  const r = await client.query(
+    `
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema='public'
+      AND table_name=$1
+    LIMIT 1
+    `,
+    [tableName]
+  );
+  return (r.rowCount ?? 0) > 0;
+}
+
 export async function POST(req: Request) {
+  const reqId = `signup_${crypto.randomBytes(4).toString("hex")}`;
+
   try {
     const body = await req.json().catch(() => null);
     const email = String(body?.email ?? "").trim().toLowerCase();
@@ -47,36 +63,66 @@ export async function POST(req: Request) {
     if (!email || !isEmail(email)) return json(400, { ok: false, error: "Email inválido." });
     if (password.length < 8) return json(400, { ok: false, error: "Contraseña muy corta (mín. 8)." });
 
-    // 1) Crear usuario + token (en transacción)
     const client = await pool.connect();
+
     let userId = "";
     let plainToken = "";
 
     try {
       await client.query("BEGIN");
 
-      const exists = await client.query(`SELECT 1 FROM users WHERE email=$1 LIMIT 1`, [email]);
+      // ✅ Validación dura de schema (esto evita 500 crípticos)
+      const hasUsers = await tableExists(client, "users");
+      const hasUsuarios = await tableExists(client, "usuarios"); // por si tu schema usa español
+      const hasEmailTokens = await tableExists(client, "email_verification_tokens");
+
+      if (!hasUsers && !hasUsuarios) {
+        await client.query("ROLLBACK");
+        console.error("[auth:signup] missing_users_table", { reqId, hasUsers, hasUsuarios });
+        return json(500, {
+          ok: false,
+          error: "Base de datos sin tabla de usuarios.",
+          detail: "No existe public.users (ni public.usuarios). Debes correr migraciones/SQL en Neon (prod).",
+        });
+      }
+
+      if (!hasEmailTokens) {
+        await client.query("ROLLBACK");
+        console.error("[auth:signup] missing_email_verification_tokens", { reqId });
+        return json(500, {
+          ok: false,
+          error: "Base de datos incompleta.",
+          detail: "No existe public.email_verification_tokens. Debes crearla/correr migraciones en Neon (prod).",
+        });
+      }
+
+      // ✅ Elegimos tabla real (prioridad: users)
+      const usersTable = hasUsers ? "users" : "usuarios";
+
+      // 1) Verificar si existe
+      const exists = await client.query(`SELECT 1 FROM ${usersTable} WHERE email=$1 LIMIT 1`, [email]);
       if ((exists?.rowCount ?? 0) > 0) {
         await client.query("ROLLBACK");
         return json(409, { ok: false, error: "Ese email ya está registrado." });
       }
 
+      // 2) Crear usuario
       userId = `usr_${crypto.randomBytes(10).toString("hex")}`;
       const passwordHash = hashPassword(password);
 
+      // ⚠️ Asumimos columnas: id, email, password_hash, created_at (tal como tu código venía usando).
+      // Si tu tabla "usuarios" tiene otro nombre de columnas, aquí reventará y te lo dirá claramente en logs.
       await client.query(
-        `INSERT INTO users (id, email, password_hash, created_at)
+        `INSERT INTO ${usersTable} (id, email, password_hash, created_at)
          VALUES ($1, $2, $3, NOW())`,
         [userId, email, passwordHash]
       );
 
-      // token plano que va en el link
+      // 3) Token para verificación
       plainToken = crypto.randomBytes(32).toString("hex");
       const tokenHash = sha256Hex(plainToken);
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
 
-      // Tabla actual (según tu \d):
-      // token_hash (PK), user_id (uniq), email, expires_at, created_at
       await client.query(
         `
         INSERT INTO email_verification_tokens (token_hash, user_id, email, expires_at, created_at)
@@ -91,20 +137,35 @@ export async function POST(req: Request) {
       );
 
       await client.query("COMMIT");
-    } catch (e) {
+    } catch (e: any) {
       try {
         await client.query("ROLLBACK");
       } catch {}
+
+      // ✅ Mensaje claro si falta tabla/columna
+      const msg = String(e?.message || e);
+      console.error("[auth:signup] tx_error", { reqId, msg });
+
+      // Postgres: relation/column does not exist => 500 con detalle util
+      if (/relation .* does not exist/i.test(msg) || /column .* does not exist/i.test(msg)) {
+        return json(500, {
+          ok: false,
+          error: "Error de base de datos (schema).",
+          detail: msg,
+          hint: "Tu DB de producción no tiene las tablas/columnas esperadas. Crea users + email_verification_tokens o corre migraciones.",
+        });
+      }
+
       throw e;
     } finally {
       client.release();
     }
 
-    // 2) Enviar correo (si falla, igual dejamos creado el usuario y token)
+    // 4) Enviar correo
     const RESEND_API_KEY = process.env.RESEND_API_KEY?.trim() || "";
     const from = (process.env.EMAIL_FROM || "").trim();
 
-    const base = appBaseUrl(); // usa APP_BASE_URL / envs tuyas
+    const base = appBaseUrl();
     const verifyUrl = `${base}/api/auth/verify-email?token=${encodeURIComponent(plainToken)}`;
 
     let emailSent = false;
@@ -112,7 +173,7 @@ export async function POST(req: Request) {
 
     if (!RESEND_API_KEY || !from) {
       emailSent = false;
-      emailError = "Falta RESEND_API_KEY o EMAIL_FROM en .env.local";
+      emailError = "Falta RESEND_API_KEY o EMAIL_FROM en env.";
     } else {
       try {
         const resend = new Resend(RESEND_API_KEY);
