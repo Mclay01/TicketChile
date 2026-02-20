@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 function isEmail(s: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || "").trim());
 }
 
 export default function SignupClient() {
   const router = useRouter();
+
+  const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [pass2, setPass2] = useState("");
@@ -18,11 +20,16 @@ export default function SignupClient() {
   return (
     <div className="mx-auto max-w-md rounded-2xl border border-white/10 bg-white/5 p-6">
       <h1 className="text-2xl font-semibold">Registrarse</h1>
-      <p className="mt-1 text-sm text-white/70">
-        Crea tu cuenta con email y contraseña.
-      </p>
+      <p className="mt-1 text-sm text-white/70">Crea tu cuenta con email y contraseña.</p>
 
       <div className="mt-6 space-y-3">
+        <input
+          className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none"
+          placeholder="Nombre (mín. 2)"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+        />
+
         <input
           className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none"
           placeholder="Email"
@@ -56,7 +63,11 @@ export default function SignupClient() {
           disabled={loading}
           onClick={async () => {
             setErr(null);
+
+            const n = nombre.trim();
             const e = email.trim().toLowerCase();
+
+            if (n.length < 2) return setErr("Nombre inválido (mín. 2).");
             if (!isEmail(e)) return setErr("Email inválido.");
             if (pass.length < 8) return setErr("Contraseña muy corta (mínimo 8).");
             if (pass !== pass2) return setErr("Las contraseñas no coinciden.");
@@ -66,10 +77,11 @@ export default function SignupClient() {
               const r = await fetch("/api/auth/signup", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: e, password: pass }),
+                body: JSON.stringify({ nombre: n, email: e, password: pass }),
               });
+
               const data = await r.json().catch(() => null);
-              if (!r.ok) throw new Error(data?.error || `Error ${r.status}`);
+              if (!r.ok) throw new Error(data?.error || data?.detail || `Error ${r.status}`);
 
               router.push("/signin?registered=1");
             } catch (ex: any) {
