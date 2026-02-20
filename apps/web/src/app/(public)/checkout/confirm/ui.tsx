@@ -404,13 +404,6 @@ export default function CheckoutConfirmClient() {
                   {sending ? "Enviando…" : "Reenviar al correo"}
                 </button>
 
-                <button
-                  onClick={addGoogleWallet}
-                  className="md:col-span-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/90 hover:bg-white/10"
-                >
-                  Agregar a Google Wallet
-                </button>
-
                 {sendMsg ? <p className="md:col-span-2 text-xs text-white/60">{sendMsg}</p> : null}
               </div>
             ) : null}
