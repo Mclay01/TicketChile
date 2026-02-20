@@ -1,3 +1,4 @@
+// apps/web/src/app/api/auth/signup/route.ts
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import crypto from "node:crypto";
@@ -12,6 +13,14 @@ function json(status: number, payload: any) {
     status,
     headers: { "Cache-Control": "no-store" },
   });
+}
+
+function normalizeEmail(v: any) {
+  return String(v || "").trim().toLowerCase();
+}
+
+function pickString(v: any) {
+  return typeof v === "string" ? v.trim() : "";
 }
 
 function isEmail(s: string) {
@@ -57,11 +66,17 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json().catch(() => null);
-    const email = String(body?.email ?? "").trim().toLowerCase();
+
+    const email = normalizeEmail(body?.email);
     const password = String(body?.password ?? "");
+    const nombreInput = pickString(body?.nombre || body?.name);
+
+    // Si tu UI no manda nombre aún, no te bloqueo el registro:
+    const nombre = nombreInput;
 
     if (!email || !isEmail(email)) return json(400, { ok: false, error: "Email inválido." });
     if (password.length < 8) return json(400, { ok: false, error: "Contraseña muy corta (mín. 8)." });
+    if (nombre.trim().length < 2) return json(400, { ok: false, error: "Nombre inválido (mín. 2)." });
 
     const client = await pool.connect();
 
@@ -71,18 +86,17 @@ export async function POST(req: Request) {
     try {
       await client.query("BEGIN");
 
-      // ✅ Validación dura de schema (esto evita 500 crípticos)
-      const hasUsers = await tableExists(client, "users");
-      const hasUsuarios = await tableExists(client, "usuarios"); // por si tu schema usa español
+      // ✅ Schema checks (mensajes claros, no 500 crípticos)
+      const hasUsuarios = await tableExists(client, "usuarios");
       const hasEmailTokens = await tableExists(client, "email_verification_tokens");
 
-      if (!hasUsers && !hasUsuarios) {
+      if (!hasUsuarios) {
         await client.query("ROLLBACK");
-        console.error("[auth:signup] missing_users_table", { reqId, hasUsers, hasUsuarios });
+        console.error("[auth:signup] missing_usuarios_table", { reqId });
         return json(500, {
           ok: false,
-          error: "Base de datos sin tabla de usuarios.",
-          detail: "No existe public.users (ni public.usuarios). Debes correr migraciones/SQL en Neon (prod).",
+          error: "Base de datos incompleta.",
+          detail: "No existe public.usuarios. Debes correr migraciones/SQL en Neon (prod).",
         });
       }
 
@@ -96,29 +110,27 @@ export async function POST(req: Request) {
         });
       }
 
-      // ✅ Elegimos tabla real (prioridad: users)
-      const usersTable = hasUsers ? "users" : "usuarios";
-
       // 1) Verificar si existe
-      const exists = await client.query(`SELECT 1 FROM ${usersTable} WHERE email=$1 LIMIT 1`, [email]);
+      const exists = await client.query(`SELECT 1 FROM usuarios WHERE email=$1 LIMIT 1`, [email]);
       if ((exists?.rowCount ?? 0) > 0) {
         await client.query("ROLLBACK");
         return json(409, { ok: false, error: "Ese email ya está registrado." });
       }
 
-      // 2) Crear usuario
-      userId = `usr_${crypto.randomBytes(10).toString("hex")}`;
+      // 2) Crear usuario (UUID real)
+      userId = crypto.randomUUID(); // ✅ uuid válido
       const passwordHash = hashPassword(password);
 
-      // ⚠️ Asumimos columnas: id, email, password_hash, created_at (tal como tu código venía usando).
-      // Si tu tabla "usuarios" tiene otro nombre de columnas, aquí reventará y te lo dirá claramente en logs.
+      // usuarios: id(uuid), nombre(text), email(text), password_hash(text), created_at(timestamptz), updated_at(timestamptz)
       await client.query(
-        `INSERT INTO ${usersTable} (id, email, password_hash, created_at)
-         VALUES ($1, $2, $3, NOW())`,
-        [userId, email, passwordHash]
+        `
+        INSERT INTO usuarios (id, nombre, email, password_hash, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, NOW(), NOW())
+        `,
+        [userId, nombre.trim(), email, passwordHash]
       );
 
-      // 3) Token para verificación
+      // 3) Token para verificación (link lleva token plano, DB guarda hash)
       plainToken = crypto.randomBytes(32).toString("hex");
       const tokenHash = sha256Hex(plainToken);
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
@@ -142,30 +154,29 @@ export async function POST(req: Request) {
         await client.query("ROLLBACK");
       } catch {}
 
-      // ✅ Mensaje claro si falta tabla/columna
       const msg = String(e?.message || e);
       console.error("[auth:signup] tx_error", { reqId, msg });
 
-      // Postgres: relation/column does not exist => 500 con detalle util
+      // Postgres helpful errors
       if (/relation .* does not exist/i.test(msg) || /column .* does not exist/i.test(msg)) {
         return json(500, {
           ok: false,
           error: "Error de base de datos (schema).",
           detail: msg,
-          hint: "Tu DB de producción no tiene las tablas/columnas esperadas. Crea users + email_verification_tokens o corre migraciones.",
+          hint: "Tu DB no tiene tablas/columnas esperadas. Revisa migraciones en Neon prod.",
         });
       }
 
-      throw e;
+      return json(500, { ok: false, error: msg });
     } finally {
       client.release();
     }
 
-    // 4) Enviar correo
+    // 4) Enviar correo (si falla: usuario + token ya quedaron creados)
     const RESEND_API_KEY = process.env.RESEND_API_KEY?.trim() || "";
     const from = (process.env.EMAIL_FROM || "").trim();
 
-    const base = appBaseUrl();
+    const base = appBaseUrl(); // usa APP_BASE_URL / envs tuyas
     const verifyUrl = `${base}/api/auth/verify-email?token=${encodeURIComponent(plainToken)}`;
 
     let emailSent = false;
@@ -184,7 +195,7 @@ export async function POST(req: Request) {
           html: `
             <div style="font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.5;color:#111">
               <h2 style="margin:0 0 10px 0">Confirma tu correo</h2>
-              <p style="margin:0 0 14px 0">Hola 👋</p>
+              <p style="margin:0 0 14px 0">Hola ${esc(nombre)} 👋</p>
               <p style="margin:0 0 14px 0">
                 Para activar tu cuenta de <b>Ticketchile</b>, confirma tu email haciendo clic aquí:
               </p>
