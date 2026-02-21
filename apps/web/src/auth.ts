@@ -48,8 +48,13 @@ async function upsertUsuarioByEmail(args: { email: string; nombre?: string }) {
     [email]
   );
 
-  if (r.rowCount > 0) {
-    return { id: String(r.rows[0].id), email: String(r.rows[0].email), nombre: String(r.rows[0].nombre || "") };
+  // ✅ TS fix: rowCount puede ser null
+  if ((r.rowCount ?? 0) > 0) {
+    return {
+      id: String(r.rows[0].id),
+      email: String(r.rows[0].email),
+      nombre: String(r.rows[0].nombre || ""),
+    };
   }
 
   // 2) Crear (UUID real)
@@ -97,7 +102,9 @@ export const authOptions: NextAuthOptions = {
           [email]
         );
 
-        if (r.rowCount === 0) return null;
+        // ✅ TS fix: rowCount puede ser null
+        if ((r.rowCount ?? 0) === 0) return null;
+
         const u = r.rows[0];
 
         // Debe tener password_hash (si es Google-only, es '')
@@ -125,7 +132,11 @@ export const authOptions: NextAuthOptions = {
       const email = String(token?.email || user?.email || "").trim().toLowerCase();
 
       if (isGoogle && email && !(token as any).uid) {
-        const nombre = pickString((profile as any)?.name) || pickString((profile as any)?.given_name) || "Usuario";
+        const nombre =
+          pickString((profile as any)?.name) ||
+          pickString((profile as any)?.given_name) ||
+          "Usuario";
+
         const dbUser = await upsertUsuarioByEmail({ email, nombre });
         if (dbUser?.id) (token as any).uid = dbUser.id;
       }
