@@ -4,13 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 function isEmail(s: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || "").trim());
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || "").trim().toLowerCase());
 }
 
 export default function SignupClient() {
   const router = useRouter();
 
-  const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [pass2, setPass2] = useState("");
@@ -25,16 +24,11 @@ export default function SignupClient() {
       <div className="mt-6 space-y-3">
         <input
           className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none"
-          placeholder="Nombre (mín. 2)"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-        />
-
-        <input
-          className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          inputMode="email"
         />
 
         <input
@@ -43,6 +37,7 @@ export default function SignupClient() {
           type="password"
           value={pass}
           onChange={(e) => setPass(e.target.value)}
+          autoComplete="new-password"
         />
 
         <input
@@ -51,6 +46,7 @@ export default function SignupClient() {
           type="password"
           value={pass2}
           onChange={(e) => setPass2(e.target.value)}
+          autoComplete="new-password"
         />
 
         {err && (
@@ -64,10 +60,8 @@ export default function SignupClient() {
           onClick={async () => {
             setErr(null);
 
-            const n = nombre.trim();
             const e = email.trim().toLowerCase();
 
-            if (n.length < 2) return setErr("Nombre inválido (mín. 2).");
             if (!isEmail(e)) return setErr("Email inválido.");
             if (pass.length < 8) return setErr("Contraseña muy corta (mínimo 8).");
             if (pass !== pass2) return setErr("Las contraseñas no coinciden.");
@@ -77,11 +71,19 @@ export default function SignupClient() {
               const r = await fetch("/api/auth/signup", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ nombre: n, email: e, password: pass }),
+                body: JSON.stringify({ email: e, password: pass }),
               });
 
               const data = await r.json().catch(() => null);
-              if (!r.ok) throw new Error(data?.error || data?.detail || `Error ${r.status}`);
+
+              if (!r.ok) {
+                const msg =
+                  data?.error ||
+                  data?.detail ||
+                  data?.message ||
+                  `Error ${r.status}`;
+                throw new Error(msg);
+              }
 
               router.push("/signin?registered=1");
             } catch (ex: any) {
