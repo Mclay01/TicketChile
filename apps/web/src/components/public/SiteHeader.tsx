@@ -32,13 +32,7 @@ export default function SiteHeader() {
                 Mis tickets
               </Link>
 
-              {/* 👇 Organizador por SSO (setea cookie tc_org y entra) */}
-              <a
-                href={`/api/organizador/sso?from=${encodeURIComponent("/organizador")}`}
-                className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
-              >
-                Organizador
-              </a>
+              {/* ✅ Organizador eliminado del header público (queda como panel interno tuyo) */}
 
               <div className="flex items-center gap-2">
                 <span className="hidden sm:inline max-w-[240px] truncate text-sm text-white/70">

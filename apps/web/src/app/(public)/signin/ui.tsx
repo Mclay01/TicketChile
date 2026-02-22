@@ -5,6 +5,15 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+function isBlockedCallback(path: string) {
+  const p = String(path || "");
+  return (
+    p.startsWith("/organizador") ||
+    p.startsWith("/api/organizador") ||
+    p.startsWith("/api/demo")
+  );
+}
+
 export default function SignInClient() {
   const router = useRouter();
   const sp = useSearchParams();
@@ -21,7 +30,7 @@ export default function SignInClient() {
 
   const callbackUrl = useMemo(() => {
     const raw = sp.get("callbackUrl");
-    if (raw && raw.startsWith("/")) return raw; // evita open-redirect
+    if (raw && raw.startsWith("/") && !isBlockedCallback(raw)) return raw; // evita open-redirect + evita organizador
     return "/mis-tickets";
   }, [sp]);
 
@@ -46,24 +55,20 @@ export default function SignInClient() {
       return;
     }
 
-    // Mantengo tu UX: ir directo a mis-tickets con el email en query (demo)
     router.push(`/mis-tickets?email=${encodeURIComponent(cleanEmail)}`);
   }
 
   async function onGoogle() {
     setBusy(true);
     setMsg(null);
-    // en NextAuth v4, signIn con redirect true (default) es lo normal
-    await signIn("google", { callbackUrl });
+    await signIn("google", { callbackUrl }); // callbackUrl ya viene sanitizado
   }
 
   return (
     <div className="mx-auto max-w-lg">
       <div className="rounded-2xl border border-white/10 bg-black/30 p-6 backdrop-blur">
         <h1 className="text-2xl font-semibold">Iniciar sesión</h1>
-        <p className="mt-1 text-sm text-white/70">
-          Entra con tu cuenta para ver tus tickets.
-        </p>
+        <p className="mt-1 text-sm text-white/70">Entra con tu cuenta para ver tus tickets.</p>
 
         {registered && (
           <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white/80">
