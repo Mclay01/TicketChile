@@ -41,8 +41,8 @@ async function upsertUsuarioByEmail(args: { email: string; nombre?: string }) {
 
   // 1) Buscar
   const r = await pool.query(
-    `SELECT id, email, nombre
-       FROM usuarios
+    `SELECT id, email, password_hash, email_verified_at
+      FROM usuarios
       WHERE email = $1
       LIMIT 1`,
     [email]
@@ -106,7 +106,8 @@ export const authOptions: NextAuthOptions = {
         if ((r.rowCount ?? 0) === 0) return null;
 
         const u = r.rows[0];
-
+        if (!u.email_verified_at) return null;
+        
         // Debe tener password_hash (si es Google-only, es '')
         const stored = String(u.password_hash || "");
         if (!stored) return null;
