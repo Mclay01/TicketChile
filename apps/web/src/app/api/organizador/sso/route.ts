@@ -14,56 +14,58 @@ function safeFrom(v: string | null) {
 
 function baseOriginFromEnv(fallbackOrigin: string) {
   const env = (process.env.NEXTAUTH_URL || "").trim();
-  if (env) return env.replace(/\/+$/, ""); // sin trailing slash
+  if (env) return env.replace(/\/+$/, "");
 
-  // fallback defensivo (si alguien navega con 0.0.0.0, lo reemplazamos)
   if (fallbackOrigin.includes("://0.0.0.0")) {
     return fallbackOrigin.replace("://0.0.0.0", "://localhost");
   }
   return fallbackOrigin;
 }
 
-function isAllowedOrganizerEmail(email?: string | null) {
-  if (!email) return false;
-
-  // Optional allowlist: ORGANIZER_EMAILS="a@b.com,c@d.com"
-  const raw = process.env.ORGANIZER_EMAILS || "";
-  if (!raw.trim()) return true; // si no configuras allowlist, cualquier logueado puede usar SSO
-
-  const allow = raw
+function parseAllowlist(raw: string) {
+  return raw
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
+}
 
+function isAllowedOrganizerEmail(email?: string | null) {
+  if (!email) return false;
+
+  // ✅ FAIL-CLOSED: si no configuras allowlist, NADIE pasa por SSO
+  const raw = String(process.env.ORGANIZER_EMAILS || "").trim();
+  if (!raw) return false;
+
+  const allow = parseAllowlist(raw);
   return allow.includes(String(email).toLowerCase());
 }
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const from = safeFrom(url.searchParams.get("from"));
-
-  // ✅ SIEMPRE usa una base navegable (localhost / dominio real)
   const base = baseOriginFromEnv(url.origin);
 
   const session = await getServerSession(authOptions);
   const email = session?.user?.email ?? null;
 
-  // No hay sesión -> manda a /signin
+  // No hay sesión -> al login público (pero NO le damos callback a /organizador)
   if (!email) {
     const signInUrl = new URL("/signin", base);
-    signInUrl.searchParams.set("callbackUrl", from);
+    // lo mandamos a mis-tickets, no al panel interno
+    signInUrl.searchParams.set("callbackUrl", "/mis-tickets");
     return NextResponse.redirect(signInUrl);
   }
 
-  // Sesión sí, pero no autorizado -> manda a login organizador
+  // Hay sesión pero no está en allowlist -> manda al login interno del organizador
+  // (ahí tú te autenticas con tu método interno)
   if (!isAllowedOrganizerEmail(email)) {
     const loginUrl = new URL("/organizador/login", base);
     loginUrl.searchParams.set("from", from);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Setea cookie para pasar middleware
-  const expected = process.env.ORGANIZER_KEY || "";
+  // ✅ Solo allowlist pasa
+  const expected = String(process.env.ORGANIZER_KEY || "").trim();
   const res = NextResponse.redirect(new URL(from, base));
 
   if (expected) {
@@ -74,7 +76,7 @@ export async function GET(req: Request) {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 días
+      maxAge: 60 * 60 * 24 * 7,
     });
   }
 
