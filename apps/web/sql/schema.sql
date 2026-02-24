@@ -174,3 +174,61 @@ CREATE TABLE IF NOT EXISTS webhook_events (
 CREATE INDEX IF NOT EXISTS idx_ticket_types_event ON ticket_types(event_id);
 CREATE INDEX IF NOT EXISTS idx_holds_active_exp ON holds(status, expires_at);
 CREATE INDEX IF NOT EXISTS idx_tickets_event_status ON tickets(event_id, status);
+
+CREATE TABLE IF NOT EXISTS organizadores (
+  id            uuid PRIMARY KEY,
+  email         text UNIQUE NOT NULL,
+  username      text UNIQUE,
+  password_hash text NOT NULL, -- scrypt$...
+  is_active     boolean NOT NULL DEFAULT true,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS organizadores_email_idx ON organizadores (lower(email));
+CREATE INDEX IF NOT EXISTS organizadores_username_idx ON organizadores (lower(username));
+
+-- =========================
+-- ORGANIZERS (internal auth)
+-- =========================
+
+CREATE TABLE IF NOT EXISTS organizer_accounts (
+  id            text PRIMARY KEY,
+  username      text NOT NULL UNIQUE,
+  password_hash text NOT NULL,
+  display_name  text,
+  is_active     boolean NOT NULL DEFAULT true,
+  created_at    timestamptz NOT NULL DEFAULT NOW(),
+
+  CONSTRAINT organizer_username_nonempty CHECK (length(trim(username)) > 2)
+);
+
+CREATE INDEX IF NOT EXISTS organizer_accounts_username_idx
+  ON organizer_accounts(username);
+
+-- Mapea eventos aprobados -> organizador dueño
+CREATE TABLE IF NOT EXISTS organizer_events (
+  event_id      text PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
+  organizer_id  text NOT NULL REFERENCES organizer_accounts(id) ON DELETE RESTRICT,
+  created_at    timestamptz NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS organizer_events_org_idx
+  ON organizer_events(organizer_id);
+
+-- Submissions de eventos (antes de crearlos como "events" reales)
+CREATE TABLE IF NOT EXISTS organizer_event_submissions (
+  id           text PRIMARY KEY,
+  organizer_id text NOT NULL REFERENCES organizer_accounts(id) ON DELETE RESTRICT,
+  status       text NOT NULL CHECK (status IN ('IN_REVIEW','APPROVED','REJECTED')),
+  payload      jsonb NOT NULL,
+  review_notes text,
+  created_at   timestamptz NOT NULL DEFAULT NOW(),
+  reviewed_at  timestamptz
+);
+
+CREATE INDEX IF NOT EXISTS organizer_event_submissions_org_idx
+  ON organizer_event_submissions(organizer_id);
+
+CREATE INDEX IF NOT EXISTS organizer_event_submissions_status_idx
+  ON organizer_event_submissions(status);

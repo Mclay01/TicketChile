@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 const COOKIE_NAME = "tc_org";
+const ORG_USER_COOKIE = "tc_org_user";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,17 +18,25 @@ function getBaseUrl(req: Request) {
 
 export async function POST(req: Request) {
   const base = getBaseUrl(req);
-
-  // Redirige SIEMPRE al host real que estás usando (localhost / 192.168 / trycloudflare)
   const redirectUrl = new URL("/organizador/login?from=%2Forganizador", base);
-
   const res = NextResponse.redirect(redirectUrl, { status: 303 });
 
-  // Si estabas en https (cloudflared), borra cookie con secure=true también
   const isHttps = redirectUrl.protocol === "https:";
 
+  // borra cookie proxy
   res.cookies.set({
     name: COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production" || isHttps,
+    path: "/",
+    maxAge: 0,
+  });
+
+  // borra cookie organizador
+  res.cookies.set({
+    name: ORG_USER_COOKIE,
     value: "",
     httpOnly: true,
     sameSite: "lax",
