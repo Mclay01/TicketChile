@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { formatCLP, formatDateLong } from "@/lib/events";
 import type { DashboardStats } from "@/lib/organizer.pg.server";
 import {
-  getOrganizerDashboardStatsPgServer,
+  getOrganizerDashboardStatsPgServerByOrganizer,
   listOrganizerEventsPgServer,
   type OrganizerEvent,
 } from "@/lib/organizer.pg.server";
@@ -113,7 +113,7 @@ export default async function OrganizadorUI({ searchParams }: { searchParams?: S
   }
 
   const events: OrganizerEvent[] = await listOrganizerEventsPgServer(organizerId);
-  const statsByEvent = await getOrganizerDashboardStatsPgServer(organizerId);
+  const statsByEvent = await getOrganizerDashboardStatsPgServerByOrganizer(organizerId);
 
   const payFilter = normalizePayFilter(pickOne(searchParams, "pay"));
   const payFilterLabel =
