@@ -1,13 +1,16 @@
--- enums “a lo simple”: TEXT + CHECK (evita líos en migraciones)
+-- =========================================================
+-- ENUMS “A LO SIMPLE” (TEXT + CHECK)
+-- =========================================================
 
--- =========================
--- AUTH (users + email verification)
--- =========================
+
+-- =========================================================
+-- AUTH (public users + email verification)
+-- =========================================================
 
 CREATE TABLE IF NOT EXISTS users (
   id                text PRIMARY KEY,
   email             text NOT NULL UNIQUE,
-  password_hash     text, -- null => usuario solo Google (o aún no setea password)
+  password_hash     text,
   email_verified_at timestamptz,
   created_at        timestamptz NOT NULL DEFAULT NOW(),
 
@@ -16,10 +19,9 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS users_email_idx ON users(email);
 
--- Guarda SOLO el hash sha256(token) en hex. Nunca guardes el token plano.
--- Un usuario = 1 token activo (simple).
+
 CREATE TABLE IF NOT EXISTS email_verification_tokens (
-  token_hash  text PRIMARY KEY, -- sha256(token) hex
+  token_hash  text PRIMARY KEY,
   user_id     text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   email       text NOT NULL,
   expires_at  timestamptz NOT NULL,
@@ -34,9 +36,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS email_verification_tokens_user_uniq
 CREATE INDEX IF NOT EXISTS email_verification_tokens_expires_idx
   ON email_verification_tokens(expires_at);
 
--- =========================
--- CORE APP TABLES
--- =========================
+
+
+-- =========================================================
+-- CORE EVENTS (PUBLIC EVENTS APPROVED)
+-- =========================================================
 
 CREATE TABLE IF NOT EXISTS events (
   id           text PRIMARY KEY,
@@ -46,16 +50,19 @@ CREATE TABLE IF NOT EXISTS events (
   venue        text NOT NULL,
   date_iso     timestamptz NOT NULL,
 
-  -- NUEVO: imagen vertical/poster para cards/detalle
   image        text NOT NULL DEFAULT '/events/default.jpg',
-
-  -- NUEVO: banners horizontales (opcionales)
   hero_desktop text,
   hero_mobile  text,
 
   description  text NOT NULL,
   created_at   timestamptz NOT NULL DEFAULT NOW()
 );
+
+
+
+-- =========================================================
+-- TICKETS
+-- =========================================================
 
 CREATE TABLE IF NOT EXISTS ticket_types (
   id          text NOT NULL,
@@ -71,6 +78,9 @@ CREATE TABLE IF NOT EXISTS ticket_types (
   CONSTRAINT ticket_types_nonneg CHECK (capacity >= 0 AND sold >= 0 AND held >= 0)
 );
 
+CREATE INDEX IF NOT EXISTS idx_ticket_types_event ON ticket_types(event_id);
+
+
 CREATE TABLE IF NOT EXISTS holds (
   id         text PRIMARY KEY,
   event_id   text NOT NULL REFERENCES events(id) ON DELETE CASCADE,
@@ -78,6 +88,9 @@ CREATE TABLE IF NOT EXISTS holds (
   created_at timestamptz NOT NULL DEFAULT NOW(),
   expires_at timestamptz NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_holds_active_exp ON holds(status, expires_at);
+
 
 CREATE TABLE IF NOT EXISTS hold_items (
   hold_id          text NOT NULL REFERENCES holds(id) ON DELETE CASCADE,
@@ -95,18 +108,20 @@ CREATE TABLE IF NOT EXISTS hold_items (
     ON DELETE RESTRICT
 );
 
+
 CREATE TABLE IF NOT EXISTS orders (
   id          text PRIMARY KEY,
   hold_id     text UNIQUE NOT NULL REFERENCES holds(id) ON DELETE RESTRICT,
   event_id    text NOT NULL REFERENCES events(id) ON DELETE RESTRICT,
   event_title text NOT NULL,
   buyer_name  text NOT NULL,
-  buyer_email text NOT NULL,          -- recipient (correo escrito en checkout)
-  owner_email text NOT NULL,          -- session owner (correo de la cuenta logueada)
+  buyer_email text NOT NULL,
+  owner_email text NOT NULL,
   created_at  timestamptz NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS orders_owner_email_idx ON orders(owner_email);
+
 
 CREATE TABLE IF NOT EXISTS tickets (
   id               text PRIMARY KEY,
@@ -114,36 +129,39 @@ CREATE TABLE IF NOT EXISTS tickets (
   event_id         text NOT NULL REFERENCES events(id) ON DELETE RESTRICT,
   ticket_type_id   text NOT NULL,
   ticket_type_name text NOT NULL,
-  buyer_email      text NOT NULL,     -- recipient
-  owner_email      text NOT NULL,     -- session owner
+  buyer_email      text NOT NULL,
+  owner_email      text NOT NULL,
   status           text NOT NULL CHECK (status IN ('VALID','USED','CANCELLED')),
   used_at          timestamptz NULL,
   created_at       timestamptz NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS tickets_owner_email_idx ON tickets(owner_email);
+CREATE INDEX IF NOT EXISTS idx_tickets_event_status ON tickets(event_id, status);
 
--- =========================
--- PAYMENTS + WEBHOOK DEDUPE
--- =========================
+
+
+-- =========================================================
+-- PAYMENTS
+-- =========================================================
 
 CREATE TABLE IF NOT EXISTS payments (
   id           text PRIMARY KEY,
   hold_id      text NOT NULL UNIQUE REFERENCES holds(id) ON DELETE CASCADE,
 
   provider     text NOT NULL,
-  provider_ref text, -- ej: stripe session id / webpay token
+  provider_ref text,
 
-  event_id     text, -- recomendado
+  event_id     text,
   event_title  text NOT NULL,
   buyer_name   text NOT NULL,
-  buyer_email  text NOT NULL,     -- recipient
-  owner_email  text NOT NULL,     -- session owner
+  buyer_email  text NOT NULL,
+  owner_email  text NOT NULL,
 
   amount_clp   int  NOT NULL,
   currency     text NOT NULL DEFAULT 'CLP',
 
-  status       text NOT NULL, -- CREATED | PENDING | PAID | FAILED | CANCELLED
+  status       text NOT NULL CHECK (status IN ('CREATED','PENDING','PAID','FAILED','CANCELLED')),
   created_at   timestamptz NOT NULL DEFAULT NOW(),
   updated_at   timestamptz NOT NULL DEFAULT NOW(),
   paid_at      timestamptz,
@@ -154,12 +172,11 @@ CREATE INDEX IF NOT EXISTS payments_hold_id_idx ON payments(hold_id);
 CREATE INDEX IF NOT EXISTS payments_status_idx ON payments(status);
 CREATE INDEX IF NOT EXISTS payments_owner_email_idx ON payments(owner_email);
 
--- Evita duplicados por proveedor+ref (cuando exista)
 CREATE UNIQUE INDEX IF NOT EXISTS payments_provider_ref_uniq
   ON payments(provider, provider_ref)
   WHERE provider_ref IS NOT NULL;
 
--- Dedupe de webhooks (por provider + event_id)
+
 CREATE TABLE IF NOT EXISTS webhook_events (
   provider   text NOT NULL,
   event_id   text NOT NULL,
@@ -167,32 +184,13 @@ CREATE TABLE IF NOT EXISTS webhook_events (
   PRIMARY KEY (provider, event_id)
 );
 
--- =========================
--- USEFUL INDEXES
--- =========================
 
-CREATE INDEX IF NOT EXISTS idx_ticket_types_event ON ticket_types(event_id);
-CREATE INDEX IF NOT EXISTS idx_holds_active_exp ON holds(status, expires_at);
-CREATE INDEX IF NOT EXISTS idx_tickets_event_status ON tickets(event_id, status);
 
-CREATE TABLE IF NOT EXISTS organizadores (
-  id            uuid PRIMARY KEY,
-  email         text UNIQUE NOT NULL,
-  username      text UNIQUE,
-  password_hash text NOT NULL, -- scrypt$...
-  is_active     boolean NOT NULL DEFAULT true,
-  created_at    timestamptz NOT NULL DEFAULT now(),
-  updated_at    timestamptz NOT NULL DEFAULT now()
-);
+-- =========================================================
+-- ORGANIZERS (INTERNAL AUTH SYSTEM)
+-- =========================================================
 
-CREATE INDEX IF NOT EXISTS organizadores_email_idx ON organizadores (lower(email));
-CREATE INDEX IF NOT EXISTS organizadores_username_idx ON organizadores (lower(username));
-
--- =========================
--- ORGANIZERS (internal auth)
--- =========================
-
-CREATE TABLE IF NOT EXISTS organizer_accounts (
+CREATE TABLE IF NOT EXISTS organizer_users (
   id            text PRIMARY KEY,
   username      text NOT NULL UNIQUE,
   password_hash text NOT NULL,
@@ -203,23 +201,34 @@ CREATE TABLE IF NOT EXISTS organizer_accounts (
   CONSTRAINT organizer_username_nonempty CHECK (length(trim(username)) > 2)
 );
 
-CREATE INDEX IF NOT EXISTS organizer_accounts_username_idx
-  ON organizer_accounts(username);
+CREATE INDEX IF NOT EXISTS organizer_users_username_idx
+  ON organizer_users(username);
 
--- Mapea eventos aprobados -> organizador dueño
-CREATE TABLE IF NOT EXISTS organizer_events (
-  event_id      text PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
-  organizer_id  text NOT NULL REFERENCES organizer_accounts(id) ON DELETE RESTRICT,
-  created_at    timestamptz NOT NULL DEFAULT NOW()
+
+CREATE TABLE IF NOT EXISTS organizer_sessions (
+  id           text PRIMARY KEY,
+  organizer_id text NOT NULL REFERENCES organizer_users(id) ON DELETE CASCADE,
+  created_at   timestamptz NOT NULL DEFAULT NOW(),
+  expires_at   timestamptz NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS organizer_events_org_idx
-  ON organizer_events(organizer_id);
+CREATE INDEX IF NOT EXISTS organizer_sessions_org_idx
+  ON organizer_sessions(organizer_id);
 
--- Submissions de eventos (antes de crearlos como "events" reales)
+CREATE INDEX IF NOT EXISTS organizer_sessions_exp_idx
+  ON organizer_sessions(expires_at);
+
+
+
+-- =========================================================
+-- ORGANIZER EVENT FLOW
+-- =========================================================
+
+-- 1️⃣ Evento enviado por organizador (pendiente revisión)
+
 CREATE TABLE IF NOT EXISTS organizer_event_submissions (
   id           text PRIMARY KEY,
-  organizer_id text NOT NULL REFERENCES organizer_accounts(id) ON DELETE RESTRICT,
+  organizer_id text NOT NULL REFERENCES organizer_users(id) ON DELETE CASCADE,
   status       text NOT NULL CHECK (status IN ('IN_REVIEW','APPROVED','REJECTED')),
   payload      jsonb NOT NULL,
   review_notes text,
@@ -232,3 +241,15 @@ CREATE INDEX IF NOT EXISTS organizer_event_submissions_org_idx
 
 CREATE INDEX IF NOT EXISTS organizer_event_submissions_status_idx
   ON organizer_event_submissions(status);
+
+
+-- 2️⃣ Mapea evento aprobado -> organizador dueño
+
+CREATE TABLE IF NOT EXISTS organizer_events (
+  event_id      text PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
+  organizer_id  text NOT NULL REFERENCES organizer_users(id) ON DELETE RESTRICT,
+  created_at    timestamptz NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS organizer_events_org_idx
+  ON organizer_events(organizer_id);

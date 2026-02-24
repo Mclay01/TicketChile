@@ -1,3 +1,4 @@
+// apps/web/src/app/(organizer)/organizador/login/page.tsx
 import Link from "next/link";
 
 type Props = { searchParams: Promise<{ from?: string; reason?: string }> };
@@ -22,10 +23,12 @@ export default async function OrganizadorLoginPage({ searchParams }: Props) {
         </div>
 
         {reason ? (
-          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-200">
-            {reason === "no_session"
-              ? "Debes iniciar sesión como organizador."
-              : "Acceso no válido."}
+          <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-white/80">
+            {reason === "bad_login"
+              ? "Usuario/contraseña inválidos."
+              : reason === "bad_key"
+              ? "Clave backstage incorrecta."
+              : "No autorizado."}
           </div>
         ) : null}
 
