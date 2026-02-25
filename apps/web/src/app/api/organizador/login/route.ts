@@ -7,22 +7,63 @@ export const dynamic = "force-dynamic";
 
 const COOKIE_NAME = "organizer_session";
 
-// Para que funcione en ticketchile.com y www.ticketchile.com
 function cookieDomainFromHost(host: string | null) {
   const h = String(host || "").toLowerCase();
   if (h.endsWith(".ticketchile.com") || h === "ticketchile.com") return ".ticketchile.com";
-  // fallback: en local no uses domain
-  return undefined;
+  return undefined; // local / otros dominios
+}
+
+async function readBody(req: NextRequest): Promise<Record<string, any>> {
+  const ct = String(req.headers.get("content-type") || "").toLowerCase();
+
+  // JSON
+  if (ct.includes("application/json")) {
+    return (await req.json().catch(() => ({}))) as any;
+  }
+
+  // Form / urlencoded / multipart
+  if (ct.includes("application/x-www-form-urlencoded") || ct.includes("multipart/form-data")) {
+    const fd = await req.formData().catch(() => null);
+    if (!fd) return {};
+    const obj: Record<string, any> = {};
+    for (const [k, v] of fd.entries()) obj[k] = v;
+    return obj;
+  }
+
+  // Fallback: intenta JSON igual
+  return (await req.json().catch(() => ({}))) as any;
+}
+
+function pickString(obj: Record<string, any>, keys: string[]) {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return "";
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const username = String(body?.username ?? "").trim().toLowerCase();
-    const password = String(body?.password ?? "").trim();
+    const body = await readBody(req);
+
+    // Acepta múltiples nombres para no depender de la UI
+    const usernameRaw = pickString(body, ["username", "user", "email", "usuario"]);
+    const passwordRaw = pickString(body, ["password", "pass", "clave", "contrasena", "contraseña"]);
+
+    const username = usernameRaw.toLowerCase();
+    const password = passwordRaw;
 
     if (!username || !password) {
-      return NextResponse.json({ ok: false, error: "Faltan credenciales." }, { status: 400 });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Faltan credenciales.",
+          debug: {
+            receivedKeys: Object.keys(body || {}),
+          },
+        },
+        { status: 400 }
+      );
     }
 
     const user = await findOrganizerByUsername(username);
@@ -48,7 +89,7 @@ export async function POST(req: NextRequest) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 días
+      maxAge: 60 * 60 * 24 * 7,
       ...(domain ? { domain } : {}),
     });
 
