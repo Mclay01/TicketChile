@@ -1,103 +1,62 @@
 // apps/web/src/app/api/organizador/login/route.ts
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createOrganizerSession, findOrganizerByUsername, verifyPassword } from "@/lib/organizer-auth.pg.server";
-
-const COOKIE_BACKSTAGE = "tc_org";
-const COOKIE_SESSION = "tc_org_sess";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
+const COOKIE_NAME = "organizer_session";
+
+// Para que funcione en ticketchile.com y www.ticketchile.com
+function cookieDomainFromHost(host: string | null) {
+  const h = String(host || "").toLowerCase();
+  if (h.endsWith(".ticketchile.com") || h === "ticketchile.com") return ".ticketchile.com";
+  // fallback: en local no uses domain
+  return undefined;
 }
 
-export async function POST(req: Request) {
-  const expectedKey = String(process.env.ORGANIZER_KEY || "").trim();
-  if (!expectedKey) {
-    return NextResponse.json({ ok: false, error: "ORGANIZER_KEY no está configurado" }, { status: 500 });
-  }
-
-  const ct = req.headers.get("content-type") || "";
-  let key = "";
-  let from = "/organizador";
-  let username = "";
-  let password = "";
-
+export async function POST(req: NextRequest) {
   try {
-    if (ct.includes("application/json")) {
-      const body = await req.json().catch(() => ({}));
-      key = String(body?.key || "");
-      from = String(body?.from || from);
-      username = String(body?.username || "");
-      password = String(body?.password || "");
-    } else {
-      const fd = await req.formData();
-      key = String(fd.get("key") || "");
-      from = String(fd.get("from") || from);
-      username = String(fd.get("username") || "");
-      password = String(fd.get("password") || "");
+    const body = await req.json().catch(() => ({}));
+    const username = String(body?.username ?? "").trim().toLowerCase();
+    const password = String(body?.password ?? "").trim();
+
+    if (!username || !password) {
+      return NextResponse.json({ ok: false, error: "Faltan credenciales." }, { status: 400 });
     }
-  } catch {
-    // ignore
-  }
 
-  key = key.trim();
-  if (key !== expectedKey) {
-    await sleep(450);
-    const res = new NextResponse(null, {
-      status: 303,
-      headers: { Location: "/organizador/login?reason=bad_key" },
+    const user = await findOrganizerByUsername(username);
+    if (!user) {
+      return NextResponse.json({ ok: false, error: "Usuario/contraseña inválidos." }, { status: 401 });
+    }
+
+    const ok = verifyPassword(password, String(user.password_hash || ""));
+    if (!ok) {
+      return NextResponse.json({ ok: false, error: "Usuario/contraseña inválidos." }, { status: 401 });
+    }
+
+    const sid = await createOrganizerSession(String(user.id));
+
+    const res = NextResponse.json({ ok: true });
+
+    const domain = cookieDomainFromHost(req.headers.get("host"));
+
+    res.cookies.set({
+      name: COOKIE_NAME,
+      value: sid,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 7 días
+      ...(domain ? { domain } : {}),
     });
+
     return res;
+  } catch (e: any) {
+    return NextResponse.json(
+      { ok: false, error: e?.message || "Error interno en login organizador." },
+      { status: 500 }
+    );
   }
-
-  if (!from.startsWith("/organizador")) from = "/organizador";
-
-  const u = username.trim().toLowerCase();
-  const p = password;
-
-  const row = await findOrganizerByUsername(u);
-  if (!row || !verifyPassword(p, row.password_hash)) {
-    await sleep(450);
-    const res = new NextResponse(null, {
-      status: 303,
-      headers: { Location: "/organizador/login?reason=bad_login" },
-    });
-    return res;
-  }
-
-  const sid = await createOrganizerSession(row.id);
-
-  const res = new NextResponse(null, {
-    status: 303,
-    headers: { Location: from },
-  });
-
-  const xfProto = req.headers.get("x-forwarded-proto");
-  const isHttps = xfProto === "https";
-
-  // cookie backstage (pasa proxy)
-  res.cookies.set({
-    name: COOKIE_BACKSTAGE,
-    value: expectedKey,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production" || isHttps,
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-
-  // cookie sesión organizador (identidad real)
-  res.cookies.set({
-    name: COOKIE_SESSION,
-    value: sid,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production" || isHttps,
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-
-  return res;
 }
