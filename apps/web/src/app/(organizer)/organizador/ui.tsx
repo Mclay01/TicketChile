@@ -7,7 +7,7 @@ import {
   listOrganizerEventsPgServer,
   type OrganizerEvent,
 } from "@/lib/organizer.pg.server";
-import { verifyOrganizerIdCookieValue } from "@/lib/organizerAuth.server";
+import { getOrganizerFromSession } from "@/lib/organizer-auth.pg.server";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 type PayFilter = "ALL" | "OPEN" | "PAID" | "FAILED";
@@ -93,8 +93,17 @@ function PayFilterPill({
 
 export default async function OrganizadorUI({ searchParams }: { searchParams?: SearchParams }) {
   const ck = await cookies();
-  const rawOrg = ck.get("tc_org_user")?.value ?? null;
-  const organizerId = verifyOrganizerIdCookieValue(rawOrg);
+
+  // ✅ Sesión DB (organizer_sessions)
+  // Soporta varios nombres por compatibilidad. Ajusta si tu login usa otro.
+  const sid =
+    ck.get("tc_org_sess")?.value ??
+    ck.get("organizer_session")?.value ??
+    ck.get("tc_org_session")?.value ??
+    null;
+
+  const organizer = sid ? await getOrganizerFromSession(sid) : null;
+  const organizerId = organizer?.id ?? null;
 
   if (!organizerId) {
     return (
