@@ -13,6 +13,7 @@ type FormState = {
   phone: string;
   channel: "email" | "whatsapp";
   password: string;
+  password2: string;
 };
 
 export default function OrganizerRegisterPage() {
@@ -31,6 +32,7 @@ export default function OrganizerRegisterPage() {
     phone: "",
     channel: "email",
     password: "",
+    password2: "",
   });
 
   const steps = useMemo(
@@ -43,6 +45,7 @@ export default function OrganizerRegisterPage() {
       { key: "channel", title: "¿Dónde quieres recibir el código?" },
       { key: "phone", title: "Teléfono (WhatsApp)" },
       { key: "password", title: "Crea tu contraseña" },
+      { key: "password2", title: "Confirma tu contraseña" },
     ],
     []
   );
@@ -56,8 +59,18 @@ export default function OrganizerRegisterPage() {
     if (step === 3) return v.displayName.trim().length >= 2;
     if (step === 4) return v.email.includes("@");
     if (step === 5) return true;
+
+    // phone solo si eligió whatsapp
     if (step === 6) return v.channel === "email" ? true : v.phone.trim().length >= 8;
+
     if (step === 7) return v.password.trim().length >= 8;
+
+    if (step === 8) {
+      const p1 = v.password.trim();
+      const p2 = v.password2.trim();
+      return p2.length >= 8 && p1 === p2;
+    }
+
     return true;
   }
 
@@ -76,7 +89,7 @@ export default function OrganizerRegisterPage() {
     setErr(null);
     setBusy(true);
     try {
-      // si eligió email, no pedimos phone
+      // no mandamos password2 "porque sí", solo para validar backend (si quieres, lo mandamos igual)
       const payload = { ...v };
       if (payload.channel === "email") payload.phone = "";
 
@@ -88,7 +101,6 @@ export default function OrganizerRegisterPage() {
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j?.ok) throw new Error(j?.error || "No se pudo registrar.");
 
-      // va a verificar con código
       router.push(`/organizador/verificar?organizerId=${encodeURIComponent(j.organizerId)}`);
     } catch (e: any) {
       setErr(e?.message || "Error.");
@@ -96,6 +108,12 @@ export default function OrganizerRegisterPage() {
       setBusy(false);
     }
   }
+
+  const passwordMismatch =
+    step === 8 &&
+    v.password2.length > 0 &&
+    v.password.trim().length >= 1 &&
+    v.password2.trim() !== v.password.trim();
 
   return (
     <main className="min-h-[80vh] flex items-center justify-center px-4">
@@ -120,6 +138,7 @@ export default function OrganizerRegisterPage() {
                     v.orgType === "persona" ? "bg-white text-black" : "bg-white/5"
                   }`}
                   onClick={() => setV((x) => ({ ...x, orgType: "persona" }))}
+                  type="button"
                 >
                   Persona
                 </button>
@@ -128,6 +147,7 @@ export default function OrganizerRegisterPage() {
                     v.orgType === "empresa" ? "bg-white text-black" : "bg-white/5"
                   }`}
                   onClick={() => setV((x) => ({ ...x, orgType: "empresa" }))}
+                  type="button"
                 >
                   Empresa
                 </button>
@@ -222,6 +242,24 @@ export default function OrganizerRegisterPage() {
                 type="password"
                 autoComplete="new-password"
               />
+            ) : null}
+
+            {step === 8 ? (
+              <>
+                <input
+                  className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+                  value={v.password2}
+                  onChange={(e) => setV((x) => ({ ...x, password2: e.target.value }))}
+                  placeholder="Repite tu contraseña"
+                  type="password"
+                  autoComplete="new-password"
+                />
+                {passwordMismatch ? (
+                  <div className="mt-2 text-xs text-red-400">Las contraseñas no coinciden.</div>
+                ) : (
+                  <div className="mt-2 text-xs text-white/50">Deben ser iguales.</div>
+                )}
+              </>
             ) : null}
           </div>
 

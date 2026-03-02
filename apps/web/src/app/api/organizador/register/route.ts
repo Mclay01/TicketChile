@@ -34,23 +34,6 @@ async function readBody(req: NextRequest): Promise<Record<string, any>> {
   return (await req.json().catch(() => ({}))) as any;
 }
 
-/**
- * Envío de código:
- * - Email: implementado vía endpoint /api/tickets/resend (si ya lo tienes) o lo conectas a Resend
- * - WhatsApp: solo si configuras proveedor (Twilio/Meta). Si no, se bloquea para no mentir.
- */
-async function sendCode(params: { channel: "email" | "whatsapp"; destination: string; code: string }) {
-  if (params.channel === "email") {
-    // ✅ TODO: reemplaza por tu envío real (Resend recomendado).
-    // Por ahora: si ya tienes un sistema de email en tickets.email.ts, conéctalo aquí.
-    return;
-  }
-
-  // WhatsApp (solo si está configurado)
-  const hasWhatsapp = Boolean(process.env.WHATSAPP_PROVIDER && process.env.WHATSAPP_API_KEY);
-  if (!hasWhatsapp) throw new Error("WhatsApp no está configurado aún. Usa Email por ahora.");
-}
-
 export async function POST(req: NextRequest) {
   const body = await readBody(req);
 
@@ -67,10 +50,17 @@ export async function POST(req: NextRequest) {
   const username = pickString(body, ["username", "user"]).toLowerCase() || email; // default = email
   const password = pickString(body, ["password", "pass"]);
 
+  // ✅ confirmación (si viene)
+  const password2 = pickString(body, ["password2", "confirmPassword", "passwordConfirm"]);
+
   const channel = (channelRaw === "whatsapp" ? "whatsapp" : "email") as "email" | "whatsapp";
 
   if (!legalName || !rut || !email || !password) {
     return NextResponse.json({ ok: false, error: "Faltan campos requeridos." }, { status: 400 });
+  }
+
+  if (password2 && password !== password2) {
+    return NextResponse.json({ ok: false, error: "Las contraseñas no coinciden." }, { status: 400 });
   }
 
   const destination = channel === "whatsapp" ? phone : email;
@@ -97,6 +87,7 @@ export async function POST(req: NextRequest) {
       `,
       [username, email, phone || null]
     );
+
     if (dupe.rowCount) {
       await client.query("ROLLBACK");
       return NextResponse.json({ ok: false, error: "Ya existe un organizador con esos datos." }, { status: 409 });
@@ -115,12 +106,9 @@ export async function POST(req: NextRequest) {
       [id, username, displayName || legalName, password_hash, email, phone || null]
     );
 
-    // guardamos “metadata” del formulario dentro de display_name por ahora?
-    // ✅ mejor: crea tabla organizer_profiles. Pero para partir: mantenemos simple.
-    // Si quieres, lo hacemos prolijo después.
-
     const code = code6();
     const vid = "orgver_" + randomBytes(12).toString("hex");
+
     await client.query(
       `
       INSERT INTO organizer_verifications (id, organizer_id, channel, destination, code, expires_at, used)
@@ -131,14 +119,23 @@ export async function POST(req: NextRequest) {
 
     await client.query("COMMIT");
 
-    // enviar código (fuera de TX)
-    await sendCode({ channel, destination, code });
+    // ✅ enviar código (fuera de TX)
+    if (channel === "email") {
+      const { sendOrganizerVerificationEmail } = await import("@/lib/email.server");
+      await sendOrganizerVerificationEmail({
+        to: destination,
+        code,
+      });
+    } else {
+      throw new Error("WhatsApp aún no está habilitado.");
+    }
 
     return NextResponse.json({ ok: true, organizerId: id, channel });
   } catch (e: any) {
     try {
       await client.query("ROLLBACK");
     } catch {}
+
     return NextResponse.json({ ok: false, error: e?.message || "Error registrando organizador." }, { status: 500 });
   } finally {
     client.release();
