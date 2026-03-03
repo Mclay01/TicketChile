@@ -1,25 +1,23 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
+import { pool } from "@/lib/db";
+import { createOrganizerSession } from "@/lib/organizer-auth.pg.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const COOKIE_NAME = "tc_org";
+const COOKIE_SESS = "tc_org_sess";
 
 function safeFrom(v: string | null) {
   if (!v) return "/organizador";
   return v.startsWith("/organizador") ? v : "/organizador";
 }
 
-function baseOriginFromEnv(fallbackOrigin: string) {
-  const env = (process.env.NEXTAUTH_URL || "").trim();
-  if (env) return env.replace(/\/+$/, "");
-
-  if (fallbackOrigin.includes("://0.0.0.0")) {
-    return fallbackOrigin.replace("://0.0.0.0", "://localhost");
-  }
-  return fallbackOrigin;
+function cookieDomainFromHost(host: string | null) {
+  const h = String(host || "").toLowerCase();
+  if (h.endsWith(".ticketchile.com") || h === "ticketchile.com") return ".ticketchile.com";
+  return undefined;
 }
 
 function parseAllowlist(raw: string) {
@@ -43,42 +41,76 @@ function isAllowedOrganizerEmail(email?: string | null) {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const from = safeFrom(url.searchParams.get("from"));
-  const base = baseOriginFromEnv(url.origin);
 
   const session = await getServerSession(authOptions);
-  const email = session?.user?.email ?? null;
+  const email = (session?.user?.email ?? "").toLowerCase();
 
-  // No hay sesión -> al login público (pero NO le damos callback a /organizador)
+  // No hay sesión NextAuth
   if (!email) {
-    const signInUrl = new URL("/signin", base);
-    // lo mandamos a mis-tickets, no al panel interno
+    const signInUrl = new URL("/signin", url.origin);
     signInUrl.searchParams.set("callbackUrl", "/mis-tickets");
     return NextResponse.redirect(signInUrl);
   }
 
-  // Hay sesión pero no está en allowlist -> manda al login interno del organizador
-  // (ahí tú te autenticas con tu método interno)
+  // No allowlisted => login normal organizador
   if (!isAllowedOrganizerEmail(email)) {
-    const loginUrl = new URL("/organizador/login", base);
+    const loginUrl = new URL("/organizador/login", url.origin);
     loginUrl.searchParams.set("from", from);
     return NextResponse.redirect(loginUrl);
   }
 
-  // ✅ Solo allowlist pasa
-  const expected = String(process.env.ORGANIZER_KEY || "").trim();
-  const res = NextResponse.redirect(new URL(from, base));
+  // ✅ Busca organizer por email
+  const r = await pool.query<{
+    id: string;
+    verified: boolean;
+    approved: boolean;
+  }>(
+    `
+    SELECT id, verified, approved
+    FROM organizer_users
+    WHERE LOWER(email) = LOWER($1)
+    LIMIT 1
+    `,
+    [email]
+  );
 
-  if (expected) {
-    res.cookies.set({
-      name: COOKIE_NAME,
-      value: expected,
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+  const row = r.rows?.[0];
+  if (!row) {
+    const loginUrl = new URL("/organizador/login", url.origin);
+    loginUrl.searchParams.set("reason", "no_account");
+    loginUrl.searchParams.set("from", from);
+    return NextResponse.redirect(loginUrl);
   }
+
+  if (!row.verified) {
+    const loginUrl = new URL("/organizador/login", url.origin);
+    loginUrl.searchParams.set("reason", "unverified");
+    loginUrl.searchParams.set("from", from);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (!row.approved) {
+    const loginUrl = new URL("/organizador/login", url.origin);
+    loginUrl.searchParams.set("reason", "pending");
+    loginUrl.searchParams.set("from", from);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // ✅ Crea sesión real
+  const sid = await createOrganizerSession(row.id);
+  const domain = cookieDomainFromHost(req.headers.get("host"));
+
+  const res = NextResponse.redirect(new URL(from, url.origin));
+  res.cookies.set({
+    name: COOKIE_SESS,
+    value: sid,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+    ...(domain ? { domain } : {}),
+  });
 
   return res;
 }
