@@ -1,20 +1,43 @@
+// apps/web/src/app/(organizer)/organizador/(panel)/layout.tsx
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getOrganizerFromSession } from "@/lib/organizer-auth.pg.server";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function loginUrl(from: string, reason: string) {
+  const sp = new URLSearchParams();
+  if (from) sp.set("from", from);
+  if (reason) sp.set("reason", reason);
+  return `/organizador/login?${sp.toString()}`;
+}
+
 export default async function OrganizerPanelLayout({ children }: { children: React.ReactNode }) {
   const year = new Date().getFullYear();
 
-  const sid = (await cookies()).get("tc_org_sess")?.value || "";
-  if (!sid) redirect("/organizador/login?reason=missing");
+  // En Next 16 cookies() es sync
+  const ck = cookies();
+  const sid = ck.get("tc_org_sess")?.value?.trim() || "";
+
+  // Para volver al panel después de login
+  const from = "/organizador";
+
+  if (!sid || sid.length < 10) {
+    redirect(loginUrl(from, "missing"));
+  }
 
   const org = await getOrganizerFromSession(sid);
-  if (!org) redirect("/organizador/login?reason=invalid");
 
-  // Opción B: bloqueo profesional
-  if (!org.verified) redirect("/organizador/login?reason=unverified");
-  if (!org.approved) redirect("/organizador/login?reason=pending");
+  // Si hay cookie pero no existe sesión en DB => cookie vieja / sesión borrada
+  if (!org) {
+    redirect(loginUrl(from, "invalid"));
+  }
+
+  // ✅ bloqueos correctos (requiere que getOrganizerFromSession devuelva verified/approved)
+  if (!org.verified) redirect(loginUrl(from, "unverified"));
+  if (!org.approved) redirect(loginUrl(from, "pending"));
 
   return (
     <div className="min-h-screen bg-black text-white">

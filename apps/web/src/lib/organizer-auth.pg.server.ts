@@ -1,5 +1,4 @@
 // apps/web/src/lib/organizer-auth.pg.server.ts
-import "server-only";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { pool } from "@/lib/db";
 
