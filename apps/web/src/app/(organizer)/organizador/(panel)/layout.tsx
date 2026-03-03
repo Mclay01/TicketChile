@@ -56,7 +56,7 @@ export default async function OrganizerPanelLayout({ children }: { children: Rea
               Crear evento
             </Link>
 
-            <form action="/api/organizador/logout" method="POST">
+            <form action="/organizador/logout" method="GET">
               <button
                 type="submit"
                 className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"

@@ -165,12 +165,12 @@ export default async function OrganizadorUI({ searchParams }: { searchParams?: S
             Crear evento
           </Link>
 
-          <form action="/api/organizador/logout" method="POST">
+          <form action="/organizador/logout" method="GET">
             <button
               type="submit"
-              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm backdrop-blur hover:bg-white/10"
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
             >
-              Cerrar sesión
+              Cerrar Sesion
             </button>
           </form>
         </div>
