@@ -46,6 +46,10 @@ export function verifyPassword(plain: string, stored: string) {
   }
 }
 
+/**
+ * ✅ OJO: este retorno es usado por /api/organizador/login
+ * Necesita password_hash + verified + approved.
+ */
 export async function findOrganizerByUsername(username: string) {
   const u = username.trim().toLowerCase();
   if (!u) return null;
@@ -55,9 +59,11 @@ export async function findOrganizerByUsername(username: string) {
     username: string;
     display_name: string | null;
     password_hash: string;
+    verified: boolean;
+    approved: boolean;
   }>(
     `
-    SELECT id, username, display_name, password_hash
+    SELECT id, username, display_name, password_hash, verified, approved
     FROM organizer_users
     WHERE username = $1
     LIMIT 1

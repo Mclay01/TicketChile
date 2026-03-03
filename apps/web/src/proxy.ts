@@ -1,8 +1,8 @@
 // apps/web/src/proxy.ts
 import { NextResponse, type NextRequest } from "next/server";
 
-const COOKIE_BACKSTAGE = "tc_org";      // compara con ORGANIZER_KEY (opcional)
-const COOKIE_SESSION = "tc_org_sess";   // sesión organizador (siempre)
+// ✅ Organizer
+const COOKIE_SESSION = "tc_org_sess";
 
 // ✅ Admin
 const COOKIE_ADMIN_SESSION = "tc_admin_sess";
@@ -12,14 +12,6 @@ function hasOrganizerSession(req: NextRequest) {
   return Boolean(sess && sess.trim().length > 10);
 }
 
-function hasValidBackstage(req: NextRequest) {
-  const expected = String(process.env.ORGANIZER_KEY || "").trim();
-  if (!expected) return true; // dev-friendly: si no hay clave global, no bloquea por backstage
-  const got = req.cookies.get(COOKIE_BACKSTAGE)?.value;
-  return got === expected;
-}
-
-// ✅ Admin helpers
 function hasAdminSession(req: NextRequest) {
   const sess = req.cookies.get(COOKIE_ADMIN_SESSION)?.value;
   return Boolean(sess && sess.trim().length > 10);
@@ -29,16 +21,26 @@ function isOrganizerPath(pathname: string) {
   return pathname.startsWith("/organizador");
 }
 
-function isOrganizerLoginPath(pathname: string) {
-  return pathname === "/organizador/login";
+function isOrganizerPublicPage(pathname: string) {
+  return (
+    pathname === "/organizador/login" ||
+    pathname === "/organizador/registro" ||
+    pathname === "/organizador/verificar"
+  );
 }
 
-function isOrganizerApiLogin(pathname: string) {
-  return pathname.startsWith("/api/organizador/login");
+function isOrganizerApi(pathname: string) {
+  return pathname.startsWith("/api/organizador");
 }
 
-function isOrganizerApiLogout(pathname: string) {
-  return pathname.startsWith("/api/organizador/logout");
+function isOrganizerPublicApi(pathname: string) {
+  return (
+    pathname.startsWith("/api/organizador/login") ||
+    pathname.startsWith("/api/organizador/logout") ||
+    pathname.startsWith("/api/organizador/register") ||
+    pathname.startsWith("/api/organizador/verify") ||
+    pathname.startsWith("/api/organizador/resend")
+  );
 }
 
 // ✅ Admin path helpers
@@ -75,18 +77,19 @@ function isProtectedDemoApi(pathname: string) {
 export function proxy(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
 
-  // Deja pasar login/logout organizador
-  if (isOrganizerLoginPath(pathname) || isOrganizerApiLogin(pathname) || isOrganizerApiLogout(pathname)) {
+  // ✅ Organizer allowlist (público)
+  if (isOrganizerPublicPage(pathname) || (isOrganizerApi(pathname) && isOrganizerPublicApi(pathname))) {
     return NextResponse.next();
   }
 
-  // Deja pasar login/logout admin
+  // ✅ Admin allowlist (login/logout)
   if (isAdminLoginPath(pathname) || isAdminApiLogin(pathname) || isAdminApiLogout(pathname)) {
     return NextResponse.next();
   }
 
   const needsAuth =
     isOrganizerPath(pathname) ||
+    isOrganizerApi(pathname) ||
     isProtectedDemoApi(pathname) ||
     isAdminPath(pathname) ||
     isAdminApi(pathname);
@@ -94,9 +97,8 @@ export function proxy(req: NextRequest) {
   if (!needsAuth) return NextResponse.next();
 
   // --- auth organizador ---
-  if (isOrganizerPath(pathname) || isProtectedDemoApi(pathname) || pathname.startsWith("/api/organizador")) {
-    // auth = (backstage OK) + (sesión organizador)
-    const ok = hasValidBackstage(req) && hasOrganizerSession(req);
+  if (isOrganizerPath(pathname) || isOrganizerApi(pathname) || isProtectedDemoApi(pathname)) {
+    const ok = hasOrganizerSession(req);
     if (ok) return NextResponse.next();
 
     if (pathname.startsWith("/api/")) {
@@ -106,11 +108,7 @@ export function proxy(req: NextRequest) {
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = "/organizador/login";
     loginUrl.search = "";
-    loginUrl.searchParams.set(
-      "from",
-      pathname + (searchParams.toString() ? `?${searchParams}` : "")
-    );
-
+    loginUrl.searchParams.set("from", pathname + (searchParams.toString() ? `?${searchParams}` : ""));
     return NextResponse.redirect(loginUrl);
   }
 
@@ -126,11 +124,7 @@ export function proxy(req: NextRequest) {
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = "/admin/login";
     loginUrl.search = "";
-    loginUrl.searchParams.set(
-      "from",
-      pathname + (searchParams.toString() ? `?${searchParams}` : "")
-    );
-
+    loginUrl.searchParams.set("from", pathname + (searchParams.toString() ? `?${searchParams}` : ""));
     return NextResponse.redirect(loginUrl);
   }
 
