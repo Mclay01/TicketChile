@@ -1,8 +1,9 @@
 // apps/web/src/app/api/organizador/eventos/submit/route.ts
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { pool } from "@/lib/db";
 import crypto from "crypto";
-import { requireOrganizerApproved } from "@/lib/organizer-guard.server";
+import { getOrganizerFromSession } from "@/lib/organizer-auth.pg.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,23 +17,33 @@ function pickInt(v: any) {
   return Number.isFinite(n) ? Math.floor(n) : 0;
 }
 
-function reasonToMessage(reason: "missing" | "invalid" | "unverified" | "pending") {
-  if (reason === "missing" || reason === "invalid") return "No autorizado.";
-  if (reason === "unverified") return "Debes verificar tu correo antes de crear eventos.";
-  return "Tu cuenta está pendiente de aprobación por el admin.";
-}
-
 export async function POST(req: Request) {
-  // ✅ Gate real: sesión + DB + verified + approved
-  const gate = await requireOrganizerApproved();
-  if (!gate.ok) {
-    return NextResponse.json(
-      { ok: false, error: reasonToMessage(gate.reason), reason: gate.reason },
-      { status: gate.status }
-    );
+  const ck = await cookies();
+
+  // ✅ ÚNICA fuente de verdad: sesión DB
+  const sid =
+    ck.get("tc_org_sess")?.value ??
+    ck.get("organizer_session")?.value ??
+    ck.get("tc_org_session")?.value ??
+    "";
+
+  const organizer = sid ? await getOrganizerFromSession(sid) : null;
+  const organizerId = organizer?.id ?? null;
+
+  if (!organizerId) {
+    return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
   }
 
-  const organizerId = gate.organizerId;
+  // ✅ Gate: verificado + aprobado (misma regla que login/dashboard)
+  const gate = await pool.query<{ verified: boolean; approved: boolean }>(
+    `SELECT verified, approved FROM organizer_users WHERE id = $1 LIMIT 1`,
+    [organizerId]
+  );
+
+  const row = gate.rows?.[0];
+  if (!row) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
+  if (!row.verified) return NextResponse.json({ ok: false, error: "Debes verificar tu correo primero." }, { status: 403 });
+  if (!row.approved) return NextResponse.json({ ok: false, error: "Tu cuenta está pendiente de aprobación." }, { status: 403 });
 
   const fd = await req.formData();
 
@@ -50,7 +61,6 @@ export async function POST(req: Request) {
     },
   };
 
-  // validaciones mínimas
   if (!payload.title || !payload.city || !payload.venue || !payload.dateISO || !payload.description) {
     return NextResponse.json({ ok: false, error: "Faltan campos requeridos." }, { status: 400 });
   }
@@ -65,6 +75,5 @@ export async function POST(req: Request) {
     [id, organizerId, JSON.stringify(payload)]
   );
 
-  // redirect simple a /organizador (después haremos /organizador/revision)
   return new NextResponse(null, { status: 303, headers: { Location: "/organizador" } });
 }
