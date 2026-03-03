@@ -17,11 +17,10 @@ function loginUrl(from: string, reason: string) {
 export default async function OrganizerPanelLayout({ children }: { children: React.ReactNode }) {
   const year = new Date().getFullYear();
 
-  // En Next 16 cookies() es sync
-  const ck = cookies();
+  // ✅ En tu setup, cookies() tipa como Promise => hay que await
+  const ck = await cookies();
   const sid = ck.get("tc_org_sess")?.value?.trim() || "";
 
-  // Para volver al panel después de login
   const from = "/organizador";
 
   if (!sid || sid.length < 10) {
@@ -30,12 +29,10 @@ export default async function OrganizerPanelLayout({ children }: { children: Rea
 
   const org = await getOrganizerFromSession(sid);
 
-  // Si hay cookie pero no existe sesión en DB => cookie vieja / sesión borrada
   if (!org) {
     redirect(loginUrl(from, "invalid"));
   }
 
-  // ✅ bloqueos correctos (requiere que getOrganizerFromSession devuelva verified/approved)
   if (!org.verified) redirect(loginUrl(from, "unverified"));
   if (!org.approved) redirect(loginUrl(from, "pending"));
 
