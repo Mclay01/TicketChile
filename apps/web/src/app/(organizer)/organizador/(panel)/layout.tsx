@@ -1,4 +1,3 @@
-// apps/web/src/app/(organizer)/organizador/(panel)/layout.tsx
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -17,20 +16,22 @@ function loginUrl(from: string, reason: string) {
 export default async function OrganizerPanelLayout({ children }: { children: React.ReactNode }) {
   const year = new Date().getFullYear();
 
-  // ✅ En tu setup, cookies() tipa como Promise => hay que await
   const ck = await cookies();
   const sid = ck.get("tc_org_sess")?.value?.trim() || "";
 
   const from = "/organizador";
 
+  // si no hay cookie -> login normal
   if (!sid || sid.length < 10) {
     redirect(loginUrl(from, "missing"));
   }
 
   const org = await getOrganizerFromSession(sid);
 
+  // ✅ cookie zombie: existe pero la sesión no está en DB
+  // => primero limpiala (logout) y recién manda al login
   if (!org) {
-    redirect(loginUrl(from, "invalid"));
+    redirect(`/organizador/logout?from=${encodeURIComponent(from)}&reason=invalid`);
   }
 
   if (!org.verified) redirect(loginUrl(from, "unverified"));
