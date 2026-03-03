@@ -4,10 +4,30 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getOrganizerFromSession } from "@/lib/organizer-auth.pg.server";
 
-export default async function OrganizerLayout({ children }: { children: React.ReactNode }) {
+export default async function OrganizerLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const year = new Date().getFullYear();
 
-  // ✅ Guard real: no basta con tener cookie, hay que estar verified+approved
+  const pathname = process.env.NEXT_RUNTIME === "nodejs"
+    ? (await import("next/headers")).headers().get("x-pathname")
+    : null;
+
+  // ⚠️ Si estamos en páginas públicas del organizador, NO proteger
+  // Esto evita el loop infinito
+  const url = headersSafe();
+  const currentPath = url?.get("x-invoke-path") || "";
+
+  if (
+    currentPath.startsWith("/organizador/login") ||
+    currentPath.startsWith("/organizador/registro") ||
+    currentPath.startsWith("/organizador/verificar")
+  ) {
+    return <>{children}</>;
+  }
+
   const sid = (await cookies()).get("tc_org_sess")?.value || "";
   if (!sid) {
     redirect("/organizador/login?reason=missing");
@@ -16,7 +36,6 @@ export default async function OrganizerLayout({ children }: { children: React.Re
   const org = await getOrganizerFromSession(sid);
 
   if (!org) {
-    // sesión inválida o expirada
     redirect("/organizador/login?reason=invalid");
   }
 
@@ -30,11 +49,12 @@ export default async function OrganizerLayout({ children }: { children: React.Re
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header interno */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-black/60 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 md:px-6">
           <Link href="/organizador" className="flex items-center gap-3">
-            <span className="text-sm font-semibold tracking-tight">Ticketchile</span>
+            <span className="text-sm font-semibold tracking-tight">
+              Ticketchile
+            </span>
             <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-white/70">
               Panel organizador
             </span>
@@ -60,13 +80,26 @@ export default async function OrganizerLayout({ children }: { children: React.Re
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
+      <main className="mx-auto max-w-6xl px-6 py-10">
+        {children}
+      </main>
 
       <footer className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-6 py-8 text-sm text-white/60">
-          <span suppressHydrationWarning>© {year} Ticketchile — organizer</span>
+          <span suppressHydrationWarning>
+            © {year} Ticketchile — organizer
+          </span>
         </div>
       </footer>
     </div>
   );
+}
+
+// helper seguro
+function headersSafe() {
+  try {
+    return require("next/headers").headers();
+  } catch {
+    return null;
+  }
 }
