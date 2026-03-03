@@ -1,7 +1,32 @@
+// /app/(organizer)/organizador/layout.tsx
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { getOrganizerFromSession } from "@/lib/organizer-auth.pg.server";
 
-export default function OrganizerLayout({ children }: { children: React.ReactNode }) {
+export default async function OrganizerLayout({ children }: { children: React.ReactNode }) {
   const year = new Date().getFullYear();
+
+  // ✅ Guard real: no basta con tener cookie, hay que estar verified+approved
+  const sid = (await cookies()).get("tc_org_sess")?.value || "";
+  if (!sid) {
+    redirect("/organizador/login?reason=missing");
+  }
+
+  const org = await getOrganizerFromSession(sid);
+
+  if (!org) {
+    // sesión inválida o expirada
+    redirect("/organizador/login?reason=invalid");
+  }
+
+  if (!org.verified) {
+    redirect("/organizador/login?reason=unverified");
+  }
+
+  if (!org.approved) {
+    redirect("/organizador/login?reason=pending");
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">

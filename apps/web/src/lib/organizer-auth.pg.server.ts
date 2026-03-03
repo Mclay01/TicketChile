@@ -1,4 +1,5 @@
 // apps/web/src/lib/organizer-auth.pg.server.ts
+import "server-only";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { pool } from "@/lib/db";
 
@@ -6,6 +7,8 @@ export type OrganizerUser = {
   id: string;
   username: string;
   displayName: string | null;
+  verified: boolean;
+  approved: boolean;
 };
 
 const SCRYPT_N = 16384;
@@ -46,10 +49,6 @@ export function verifyPassword(plain: string, stored: string) {
   }
 }
 
-/**
- * ✅ OJO: este retorno es usado por /api/organizador/login
- * Necesita password_hash + verified + approved.
- */
 export async function findOrganizerByUsername(username: string) {
   const u = username.trim().toLowerCase();
   if (!u) return null;
@@ -96,9 +95,11 @@ export async function getOrganizerFromSession(sessionId: string): Promise<Organi
     id: string;
     username: string;
     display_name: string | null;
+    verified: boolean;
+    approved: boolean;
   }>(
     `
-    SELECT ou.id, ou.username, ou.display_name
+    SELECT ou.id, ou.username, ou.display_name, ou.verified, ou.approved
     FROM organizer_sessions os
     JOIN organizer_users ou ON ou.id = os.organizer_id
     WHERE os.id = $1
@@ -111,7 +112,13 @@ export async function getOrganizerFromSession(sessionId: string): Promise<Organi
   const row = r.rows?.[0];
   if (!row) return null;
 
-  return { id: row.id, username: row.username, displayName: row.display_name };
+  return {
+    id: row.id,
+    username: row.username,
+    displayName: row.display_name,
+    verified: Boolean(row.verified),
+    approved: Boolean(row.approved),
+  };
 }
 
 export async function revokeOrganizerSession(sessionId: string) {

@@ -1,8 +1,8 @@
+// apps/web/src/app/api/organizador/eventos/submit/route.ts
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { pool } from "@/lib/db";
-import { verifyOrganizerIdCookieValue } from "@/lib/organizerAuth.server";
 import crypto from "crypto";
+import { requireOrganizerApproved } from "@/lib/organizer-guard.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,13 +16,23 @@ function pickInt(v: any) {
   return Number.isFinite(n) ? Math.floor(n) : 0;
 }
 
-export async function POST(req: Request) {
-  const ck = await cookies();
-  const organizerId = verifyOrganizerIdCookieValue(ck.get("tc_org_user")?.value);
+function reasonToMessage(reason: "missing" | "invalid" | "unverified" | "pending") {
+  if (reason === "missing" || reason === "invalid") return "No autorizado.";
+  if (reason === "unverified") return "Debes verificar tu correo antes de crear eventos.";
+  return "Tu cuenta está pendiente de aprobación por el admin.";
+}
 
-  if (!organizerId) {
-    return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
+export async function POST(req: Request) {
+  // ✅ Gate real: sesión + DB + verified + approved
+  const gate = await requireOrganizerApproved();
+  if (!gate.ok) {
+    return NextResponse.json(
+      { ok: false, error: reasonToMessage(gate.reason), reason: gate.reason },
+      { status: gate.status }
+    );
   }
+
+  const organizerId = gate.organizerId;
 
   const fd = await req.formData();
 
@@ -42,10 +52,7 @@ export async function POST(req: Request) {
 
   // validaciones mínimas
   if (!payload.title || !payload.city || !payload.venue || !payload.dateISO || !payload.description) {
-    return NextResponse.json(
-      { ok: false, error: "Faltan campos requeridos." },
-      { status: 400 }
-    );
+    return NextResponse.json({ ok: false, error: "Faltan campos requeridos." }, { status: 400 });
   }
 
   const id = "sub_" + crypto.randomBytes(12).toString("hex");
@@ -59,6 +66,5 @@ export async function POST(req: Request) {
   );
 
   // redirect simple a /organizador (después haremos /organizador/revision)
-  const res = new NextResponse(null, { status: 303, headers: { Location: "/organizador" } });
-  return res;
+  return new NextResponse(null, { status: 303, headers: { Location: "/organizador" } });
 }
