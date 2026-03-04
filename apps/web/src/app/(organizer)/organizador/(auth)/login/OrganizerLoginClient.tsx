@@ -1,4 +1,4 @@
-// apps/web/src/app/(organizer)/organizador/login/OrganizerLoginClient.tsx
+// apps/web/src/app/(organizer)/organizador/(auth)/login/OrganizerLoginClient.tsx
 "use client";
 
 import Link from "next/link";
@@ -6,10 +6,11 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function reasonLabel(reason: string) {
-  if (reason === "missing") return "Faltan credenciales.";
-  if (reason === "invalid") return "Usuario/contraseña inválidos.";
+  if (reason === "missing") return "Te falta sesión. Inicia sesión para continuar.";
+  if (reason === "invalid") return "Sesión inválida o expirada. Vuelve a iniciar sesión.";
   if (reason === "unverified") return "Debes verificar tu correo antes de ingresar.";
   if (reason === "pending") return "Tu cuenta está pendiente de aprobación por el admin.";
+  if (reason === "logged_out") return "Sesión cerrada.";
   if (reason === "error") return "Error interno. Intenta de nuevo.";
   return "";
 }
@@ -31,7 +32,6 @@ export default function OrganizerLoginClient() {
   const [err, setErr] = useState<string | null>(null);
 
   const banner = reasonLabel(reason);
-
   const canSubmit = username.trim().length > 0 && password.length > 0 && !busy;
 
   async function onSubmit(e: React.FormEvent) {
@@ -66,55 +66,69 @@ export default function OrganizerLoginClient() {
   }
 
   return (
-    <main className="min-h-[70vh] flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-6">
-        <h1 className="text-xl font-semibold">Organizador — TicketChile</h1>
-        <p className="text-sm text-white/60 mt-1">Acceso privado.</p>
+    <main className="min-h-[72vh] flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight">Panel Organizador</h1>
+          <p className="text-sm text-white/60">Acceso privado a tus eventos, pagos y scanner.</p>
+        </div>
 
         {banner ? (
-          <div className="mt-4 rounded-xl border border-yellow-500/20 bg-yellow-500/10 px-3 py-2 text-sm text-white/80">
+          <div className="mb-4 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
             {banner}
           </div>
         ) : null}
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-3">
-          <input
-            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
-            placeholder="Usuario (o correo)"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-            required
-          />
+        <div className="rounded-xl border border-black/10 bg-white p-6 text-black shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+          <form onSubmit={onSubmit} className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-black/70">Usuario o correo</label>
+              <input
+                className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+                placeholder="Ej: productorax"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                required
+              />
+            </div>
 
-          <input
-            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
-            placeholder="Contraseña"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-          />
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-black/70">Contraseña</label>
+              <input
+                className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+                placeholder="Tu contraseña"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </div>
 
-          {err ? <div className="text-sm text-red-400">{err}</div> : null}
+            {err ? <div className="text-sm text-red-600">{err}</div> : null}
 
-          <button
-            className="w-full rounded-xl bg-white text-black font-medium py-2 disabled:opacity-60"
-            disabled={!canSubmit}
-          >
-            {busy ? "Entrando..." : "Entrar"}
-          </button>
-        </form>
+            <button
+              className="w-full rounded-lg bg-black py-2 text-sm font-semibold text-white disabled:opacity-60"
+              disabled={!canSubmit}
+            >
+              {busy ? "Entrando..." : "Entrar"}
+            </button>
 
-        <div className="mt-4 flex items-center justify-between text-xs text-white/60">
-          <Link href="/organizador/registro" className="hover:text-white">
-            Crear cuenta
-          </Link>
-          <Link href="/eventos" className="hover:text-white">
-            ← volver a eventos
-          </Link>
+            <div className="pt-2 flex items-center justify-between text-xs text-black/60">
+              <Link href="/organizador/registro" className="hover:text-black">
+                Crear cuenta
+              </Link>
+              <Link href="/eventos" className="hover:text-black">
+                ← volver a eventos
+              </Link>
+            </div>
+          </form>
         </div>
+
+        <p className="mt-4 text-[11px] text-white/40">
+          Tip: si te manda a “sesión inválida”, es porque el cookie existe pero la sesión ya no está en DB (cookie zombie).
+        </p>
       </div>
     </main>
   );

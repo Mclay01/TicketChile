@@ -8,27 +8,26 @@ import ResetDemoButton from "./ResetDemoButton";
 
 type StatsByEvent = Record<string, DashboardStats>;
 
-const glassCard =
-  "rounded-2xl border border-white/10 bg-black/30 backdrop-blur";
-const glassSoft =
-  "rounded-xl border border-white/10 bg-black/20 backdrop-blur";
-const pillBase =
-  "inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs text-white/80 backdrop-blur";
+const shellCard =
+  "rounded-xl border border-black/10 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.20)]";
+const innerCard = "rounded-lg border border-black/10 bg-white";
+const chip =
+  "inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1 text-xs text-black/70";
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className={glassSoft + " p-3"}>
-      <p className="text-white/60 text-xs">{label}</p>
-      <p className="font-semibold">{value}</p>
+    <div className={innerCard + " p-3"}>
+      <p className="text-[11px] text-black/50">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-black">{value}</p>
     </div>
   );
 }
 
 function Badge({ label, value }: { label: string; value: number }) {
   return (
-    <span className={pillBase}>
-      <span className="text-white/60">{label}</span>
-      <span className="font-semibold text-white">{value}</span>
+    <span className={chip}>
+      <span className="text-black/45">{label}</span>
+      <span className="font-semibold text-black">{value}</span>
     </span>
   );
 }
@@ -141,15 +140,12 @@ export default function OrganizadorClient({
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">Organizador</h1>
-          <p className="text-sm text-white/70">
-            Stats reales + pagos + scanner + check-ins.
-          </p>
+          <h1 className="text-3xl font-semibold tracking-tight text-white">Organizador</h1>
+          <p className="text-sm text-white/65">Stats reales + pagos + scanner + check-ins.</p>
 
-          <div className="flex flex-wrap items-center gap-2 text-xs text-white/50">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-white/45">
             <span>
               Última sync: <span className="text-white/70">{lastSyncLabel}</span>
             </span>
@@ -164,7 +160,7 @@ export default function OrganizadorClient({
           </div>
 
           {err ? (
-            <div className="mt-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-white/80">
+            <div className="mt-2 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs text-white/85">
               {err}
             </div>
           ) : null}
@@ -174,29 +170,29 @@ export default function OrganizadorClient({
           <button
             type="button"
             onClick={() => refresh("manual")}
-            className="rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm backdrop-blur hover:bg-white/10"
+            className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/85 hover:bg-white/10"
           >
             Refrescar
           </button>
 
           <Link
             href="/eventos"
-            className="rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm backdrop-blur hover:bg-white/10"
+            className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/85 hover:bg-white/10"
           >
             Ver vista pública
           </Link>
 
           <Link
             href="/organizador/pagos"
-            className="rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm backdrop-blur hover:bg-white/10"
+            className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/85 hover:bg-white/10"
           >
             Dashboard pagos
           </Link>
 
-          <form action="/api/organizador/logout" method="POST">
+          <form action="/organizador/logout" method="GET">
             <button
               type="submit"
-              className="rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm backdrop-blur hover:bg-white/10"
+              className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/85 hover:bg-white/10"
             >
               Cerrar sesión
             </button>
@@ -206,10 +202,9 @@ export default function OrganizadorClient({
         </div>
       </header>
 
-      {/* Eventos */}
-      <section className={glassCard + " p-6"}>
-        <h2 className="text-lg font-semibold">Tus eventos</h2>
-        <p className="mt-1 text-sm text-white/60">Selecciona un evento y abre el scanner.</p>
+      <section className={shellCard + " p-6"}>
+        <h2 className="text-lg font-semibold text-black">Tus eventos</h2>
+        <p className="mt-1 text-sm text-black/60">Selecciona un evento y abre el scanner.</p>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           {EVENTS.map((e) => {
@@ -225,30 +220,30 @@ export default function OrganizadorClient({
             const soldPct = percent(sold, capacity);
 
             return (
-              <div key={e.id} className={glassCard + " p-5"}>
+              <div key={e.id} className={shellCard + " p-5"}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs text-white/50">
+                    <p className="text-xs text-black/50">
                       {e.city} • {e.venue}
                     </p>
-                    <p className="mt-2 text-lg font-semibold">{e.title}</p>
-                    <p className="mt-1 text-sm text-white/70">{formatDateLong(e.dateISO)}</p>
+                    <p className="mt-2 text-lg font-semibold text-black">{e.title}</p>
+                    <p className="mt-1 text-sm text-black/60">{formatDateLong(e.dateISO)}</p>
 
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Badge label="Vendidos" value={sold} />
                       <Badge label="Pendientes" value={pending} />
                       <Badge label="Check-ins" value={used} />
-                      <span className={pillBase}>
-                        <span className="text-white/60">% vendido</span>
-                        <span className="font-semibold text-white">{soldPct}%</span>
+                      <span className={chip}>
+                        <span className="text-black/45">% vendido</span>
+                        <span className="font-semibold text-black">{soldPct}%</span>
                       </span>
                     </div>
                   </div>
 
                   <div className="text-right">
-                    <p className="text-xs text-white/50">Desde</p>
-                    <p className="text-lg font-semibold">${formatCLP(eventPriceFrom(e))}</p>
-                    <p className="mt-1 text-[11px] text-white/40">ID: {e.id}</p>
+                    <p className="text-xs text-black/50">Desde</p>
+                    <p className="text-lg font-semibold text-black">${formatCLP(eventPriceFrom(e))}</p>
+                    <p className="mt-1 text-[11px] text-black/40">ID: {e.id}</p>
                   </div>
                 </div>
 
@@ -261,8 +256,8 @@ export default function OrganizadorClient({
                   <StatCard label="Capacidad" value={capacity} />
                 </div>
 
-                <details className={"mt-4 " + glassSoft + " p-4"}>
-                  <summary className="cursor-pointer text-sm text-white/80">
+                <details className="mt-4 rounded-lg border border-black/10 bg-white p-4">
+                  <summary className="cursor-pointer text-sm text-black/80">
                     Ver breakdown por tipo
                   </summary>
 
@@ -270,36 +265,40 @@ export default function OrganizadorClient({
                     {(s?.byType ?? []).map((x) => (
                       <div
                         key={x.ticketTypeId}
-                        className={glassSoft + " flex flex-wrap items-center justify-between gap-2 px-3 py-2"}
+                        className="rounded-lg border border-black/10 bg-white px-3 py-2"
                       >
-                        <span className="text-white/80">{x.ticketTypeName}</span>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-black/85">{x.ticketTypeName}</span>
 
-                        <span className="text-white/60">
-                          {x.remaining <= 0 ? (
-                            <span className="text-white">Agotado</span>
-                          ) : (
-                            <>Quedan {x.remaining}</>
-                          )}{" "}
-                          <span className="text-white/30">•</span> vendidos {x.sold}{" "}
-                          <span className="text-white/30">•</span> pendientes {x.pending}{" "}
-                          <span className="text-white/30">•</span> usados {x.used}
-                        </span>
+                          <span className="text-black/55">
+                            {x.remaining <= 0 ? (
+                              <span className="text-black">Agotado</span>
+                            ) : (
+                              <>Quedan {x.remaining}</>
+                            )}{" "}
+                            <span className="text-black/25">•</span> vendidos {x.sold}{" "}
+                            <span className="text-black/25">•</span> pendientes {x.pending}{" "}
+                            <span className="text-black/25">•</span> usados {x.used}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
 
                   {(s?.recentUsed?.length ?? 0) > 0 ? (
                     <>
-                      <p className="mt-4 text-xs text-white/50">Últimos check-ins</p>
+                      <p className="mt-4 text-xs text-black/50">Últimos check-ins</p>
                       <div className="mt-2 space-y-2 text-xs">
                         {(s?.recentUsed ?? []).map((u) => (
                           <div
                             key={u.ticketId}
-                            className={glassSoft + " flex flex-wrap items-center justify-between gap-2 px-3 py-2"}
+                            className="rounded-lg border border-black/10 bg-white px-3 py-2"
                           >
-                            <span className="text-white/70">{u.ticketTypeName}</span>
-                            <span className="text-white/50">{u.buyerEmail}</span>
-                            <span className="text-white/40">{u.usedAtISO}</span>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-black/75">{u.ticketTypeName}</span>
+                              <span className="text-black/55">{u.buyerEmail}</span>
+                              <span className="text-black/40">{u.usedAtISO}</span>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -310,14 +309,14 @@ export default function OrganizadorClient({
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Link
                     href={`/organizador/eventos/${e.id}/scanner`}
-                    className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
+                    className="inline-flex items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90"
                   >
                     Abrir scanner
                   </Link>
 
                   <Link
                     href={`/eventos/${e.slug}`}
-                    className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm backdrop-blur hover:bg-white/10"
+                    className="inline-flex items-center justify-center rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-medium text-black hover:bg-black/5"
                   >
                     Ver evento público
                   </Link>

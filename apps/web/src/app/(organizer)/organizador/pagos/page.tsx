@@ -1,4 +1,3 @@
-// apps/web/src/app/(organizer)/organizador/pagos/page.tsx
 import Link from "next/link";
 import { EVENTS, formatCLP } from "@/lib/events";
 import { getPaymentsDashboardPgServer } from "@/lib/organizer.pg.server";
@@ -30,18 +29,18 @@ function qs(params: Record<string, string | number | undefined>) {
 
 function Chip({ label, value }: { label: string; value: string }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/70">
-      <span className="text-white/40">{label}</span>
-      <span className="font-semibold text-white/80">{value}</span>
+    <span className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1 text-xs text-black/70">
+      <span className="text-black/40">{label}</span>
+      <span className="font-semibold text-black/80">{value}</span>
     </span>
   );
 }
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
-      <p className="text-[11px] text-white/50">{label}</p>
-      <p className="mt-2 text-lg font-semibold text-white">{value}</p>
+    <div className="rounded-xl border border-black/10 bg-white p-4 shadow-[0_10px_22px_rgba(0,0,0,0.16)]">
+      <p className="text-[11px] text-black/50">{label}</p>
+      <p className="mt-2 text-lg font-semibold text-black">{value}</p>
     </div>
   );
 }
@@ -72,17 +71,15 @@ export default async function OrganizadorPagosPage({
   const to = Math.min(data.total, offset + data.rows.length);
 
   const baseParams = { eventId, status, q, limit };
-
   const hasFilters = !!eventId || status !== "ALL" || !!q;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">Dashboard pagos</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-white">Dashboard pagos</h1>
 
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-white/65">
             {data.total > 0 ? (
               <>
                 Mostrando <span className="text-white">{from}-{to}</span> de{" "}
@@ -93,47 +90,47 @@ export default async function OrganizadorPagosPage({
             )}
           </p>
 
-          {/* Chips resumen filtros */}
-          {hasFilters ? (
-            <div className="flex flex-wrap gap-2 pt-1">
-              {eventId ? <Chip label="eventId" value={eventId} /> : null}
-              {status ? <Chip label="status" value={status} /> : null}
-              {q ? <Chip label="q" value={q} /> : null}
-              <Chip label="limit" value={String(limit)} />
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Chip label="status" value="ALL" />
-              <Chip label="limit" value={String(limit)} />
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {hasFilters ? (
+              <>
+                {eventId ? <Chip label="eventId" value={eventId} /> : null}
+                {status ? <Chip label="status" value={status} /> : null}
+                {q ? <Chip label="q" value={q} /> : null}
+                <Chip label="limit" value={String(limit)} />
+              </>
+            ) : (
+              <>
+                <Chip label="status" value="ALL" />
+                <Chip label="limit" value={String(limit)} />
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Link
             href="/organizador"
-            className="rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm backdrop-blur hover:bg-white/10"
+            className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/85 hover:bg-white/10"
           >
             ← Volver
           </Link>
         </div>
       </header>
 
-      {/* Filtros */}
-      <section className="rounded-2xl border border-white/10 bg-black/30 p-6 backdrop-blur">
+      <section className="rounded-xl border border-black/10 bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-white/90">Filtros</h2>
-            <p className="mt-1 text-sm text-white/60">
+            <h2 className="text-lg font-semibold text-black">Filtros</h2>
+            <p className="mt-1 text-sm text-black/60">
               Filtra por evento, estado o texto (email, nombre, ids).
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2 text-xs text-white/60">
-            <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">
+          <div className="flex flex-wrap gap-2 text-xs text-black/60">
+            <span className="rounded-full border border-black/10 bg-white px-3 py-1">
               Tip: “cs_…” = session de Stripe
             </span>
-            <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">
+            <span className="rounded-full border border-black/10 bg-white px-3 py-1">
               “pay_…” = paymentId interno
             </span>
           </div>
@@ -141,11 +138,11 @@ export default async function OrganizadorPagosPage({
 
         <form method="GET" className="mt-5 grid gap-3 md:grid-cols-12 md:items-end">
           <div className="md:col-span-4">
-            <label className="text-xs text-white/60">Evento</label>
+            <label className="text-xs text-black/60">Evento</label>
             <select
               name="eventId"
               defaultValue={eventId}
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none"
+              className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
             >
               <option value="">Todos</option>
               {EVENTS.map((e) => (
@@ -157,11 +154,11 @@ export default async function OrganizadorPagosPage({
           </div>
 
           <div className="md:col-span-3">
-            <label className="text-xs text-white/60">Estado</label>
+            <label className="text-xs text-black/60">Estado</label>
             <select
               name="status"
               defaultValue={status}
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none"
+              className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
             >
               <option value="ALL">ALL</option>
               <option value="PAID">PAID</option>
@@ -173,12 +170,12 @@ export default async function OrganizadorPagosPage({
           </div>
 
           <div className="md:col-span-4">
-            <label className="text-xs text-white/60">Buscar</label>
+            <label className="text-xs text-black/60">Buscar</label>
             <input
               name="q"
               defaultValue={q}
               placeholder="email, nombre, pay_..., cs_..., hold_..., order..."
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none placeholder:text-white/40"
+              className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none placeholder:text-black/40 focus:ring-2 focus:ring-black/10"
             />
           </div>
 
@@ -187,7 +184,7 @@ export default async function OrganizadorPagosPage({
             <input type="hidden" name="page" value="1" />
             <button
               type="submit"
-              className="w-full rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
+              className="w-full rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90"
             >
               Filtrar
             </button>
@@ -195,7 +192,6 @@ export default async function OrganizadorPagosPage({
         </form>
       </section>
 
-      {/* Totales */}
       <section className="grid gap-3 md:grid-cols-8">
         <StatCard label="PAID" value={data.totals.paid} />
         <StatCard label="PENDING" value={data.totals.pending} />
@@ -204,18 +200,13 @@ export default async function OrganizadorPagosPage({
         <StatCard label="CANCELLED" value={data.totals.cancelled} />
         <StatCard label="Otros" value={data.totals.other} />
         <StatCard label="Recaudado (PAID)" value={`$${formatCLP(data.totals.amountPaidClp)}`} />
-        <StatCard
-          label="Monto Open (CREATED+PENDING)"
-          value={`$${formatCLP(data.totals.amountOpenClp)}`}
-        />
+        <StatCard label="Monto Open (CREATED+PENDING)" value={`$${formatCLP(data.totals.amountOpenClp)}`} />
       </section>
 
-      {/* Tabla */}
       <PaymentsTableClient rows={data.rows} />
 
-      {/* Paginación */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-white/60">
+        <p className="text-sm text-white/65">
           Página <span className="text-white">{page}</span> de{" "}
           <span className="text-white">{totalPages}</span>
         </p>
@@ -224,7 +215,7 @@ export default async function OrganizadorPagosPage({
           <Link
             aria-disabled={page <= 1}
             className={[
-              "rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm backdrop-blur hover:bg-white/10",
+              "rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/85 hover:bg-white/10",
               page <= 1 ? "pointer-events-none opacity-50" : "",
             ].join(" ")}
             href={`/organizador/pagos${qs({ ...baseParams, page: page - 1 })}`}
@@ -235,7 +226,7 @@ export default async function OrganizadorPagosPage({
           <Link
             aria-disabled={page >= totalPages}
             className={[
-              "rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm backdrop-blur hover:bg-white/10",
+              "rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/85 hover:bg-white/10",
               page >= totalPages ? "pointer-events-none opacity-50" : "",
             ].join(" ")}
             href={`/organizador/pagos${qs({ ...baseParams, page: page + 1 })}`}

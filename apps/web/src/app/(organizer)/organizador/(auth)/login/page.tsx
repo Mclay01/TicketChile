@@ -1,4 +1,4 @@
-// apps/web/src/app/(organizer)/organizador/login/page.tsx
+// apps/web/src/app/(organizer)/organizador/(auth)/login/page.tsx
 import { Suspense } from "react";
 import OrganizerLoginClient from "./OrganizerLoginClient";
 

@@ -1,4 +1,4 @@
-// apps/web/src/app/(organizer)/organizador/registro/page.tsx
+// apps/web/src/app/(organizer)/organizador/(auth)/registro/page.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -40,9 +40,9 @@ export default function OrganizerRegisterPage() {
       { key: "orgType", title: "¿Eres persona o empresa?" },
       { key: "legalName", title: "Nombre legal" },
       { key: "rut", title: "RUT" },
-      { key: "displayName", title: "Nombre público (cómo se verá)" },
+      { key: "displayName", title: "Nombre público" },
       { key: "email", title: "Correo" },
-      { key: "channel", title: "¿Dónde quieres recibir el código?" },
+      { key: "channel", title: "Canal de verificación" },
       { key: "phone", title: "Teléfono (WhatsApp)" },
       { key: "password", title: "Crea tu contraseña" },
       { key: "password2", title: "Confirma tu contraseña" },
@@ -59,18 +59,9 @@ export default function OrganizerRegisterPage() {
     if (step === 3) return v.displayName.trim().length >= 2;
     if (step === 4) return v.email.includes("@");
     if (step === 5) return true;
-
-    // phone solo si eligió whatsapp
     if (step === 6) return v.channel === "email" ? true : v.phone.trim().length >= 8;
-
     if (step === 7) return v.password.trim().length >= 8;
-
-    if (step === 8) {
-      const p1 = v.password.trim();
-      const p2 = v.password2.trim();
-      return p2.length >= 8 && p1 === p2;
-    }
-
+    if (step === 8) return v.password2.trim().length >= 8 && v.password2.trim() === v.password.trim();
     return true;
   }
 
@@ -89,7 +80,6 @@ export default function OrganizerRegisterPage() {
     setErr(null);
     setBusy(true);
     try {
-      // no mandamos password2 "porque sí", solo para validar backend (si quieres, lo mandamos igual)
       const payload = { ...v };
       if (payload.channel === "email") payload.phone = "";
 
@@ -98,6 +88,7 @@ export default function OrganizerRegisterPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j?.ok) throw new Error(j?.error || "No se pudo registrar.");
 
@@ -115,37 +106,45 @@ export default function OrganizerRegisterPage() {
     v.password.trim().length >= 1 &&
     v.password2.trim() !== v.password.trim();
 
+  const inputCls =
+    "w-full rounded-lg border border-black/10 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-black/10";
+
+  const pillCls = (active: boolean) =>
+    [
+      "flex-1 rounded-lg border px-3 py-2 text-sm font-medium",
+      active ? "border-black/10 bg-black text-white" : "border-black/10 bg-white text-black hover:bg-black/5",
+    ].join(" ");
+
   return (
     <main className="min-h-[80vh] flex items-center justify-center px-4">
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-black/40 p-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Registro Organizador</h1>
-          <div className="text-xs text-white/60">{progress}%</div>
+      <div className="w-full max-w-lg">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-white">Registro de Organizador</h1>
+          <p className="text-sm text-white/60">Crea tu cuenta. Luego verificas correo y quedas “pendiente de aprobación”.</p>
         </div>
 
-        <div className="mt-3 h-1 w-full bg-white/10 rounded">
-          <div className="h-1 bg-white rounded" style={{ width: `${progress}%` }} />
-        </div>
+        <div className="rounded-xl border border-black/10 bg-white p-6 text-black shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold">{steps[step].title}</div>
+            <div className="text-xs text-black/60">{progress}%</div>
+          </div>
 
-        <div className="mt-6">
-          <div className="text-sm text-white/70">{steps[step].title}</div>
+          <div className="mt-3 h-1 w-full rounded bg-black/10">
+            <div className="h-1 rounded bg-black" style={{ width: `${progress}%` }} />
+          </div>
 
-          <div className="mt-3">
+          <div className="mt-6 space-y-3">
             {step === 0 ? (
               <div className="flex gap-2">
                 <button
-                  className={`flex-1 rounded-xl border border-white/10 px-3 py-2 ${
-                    v.orgType === "persona" ? "bg-white text-black" : "bg-white/5"
-                  }`}
+                  className={pillCls(v.orgType === "persona")}
                   onClick={() => setV((x) => ({ ...x, orgType: "persona" }))}
                   type="button"
                 >
                   Persona
                 </button>
                 <button
-                  className={`flex-1 rounded-xl border border-white/10 px-3 py-2 ${
-                    v.orgType === "empresa" ? "bg-white text-black" : "bg-white/5"
-                  }`}
+                  className={pillCls(v.orgType === "empresa")}
                   onClick={() => setV((x) => ({ ...x, orgType: "empresa" }))}
                   type="button"
                 >
@@ -156,7 +155,7 @@ export default function OrganizerRegisterPage() {
 
             {step === 1 ? (
               <input
-                className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+                className={inputCls}
                 value={v.legalName}
                 onChange={(e) => setV((x) => ({ ...x, legalName: e.target.value }))}
                 placeholder="Ej: Productora X SpA"
@@ -165,7 +164,7 @@ export default function OrganizerRegisterPage() {
 
             {step === 2 ? (
               <input
-                className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+                className={inputCls}
                 value={v.rut}
                 onChange={(e) => setV((x) => ({ ...x, rut: e.target.value }))}
                 placeholder="Ej: 12.345.678-9"
@@ -174,7 +173,7 @@ export default function OrganizerRegisterPage() {
 
             {step === 3 ? (
               <input
-                className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+                className={inputCls}
                 value={v.displayName}
                 onChange={(e) => setV((x) => ({ ...x, displayName: e.target.value }))}
                 placeholder="Ej: TicketChile Lab"
@@ -183,7 +182,7 @@ export default function OrganizerRegisterPage() {
 
             {step === 4 ? (
               <input
-                className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+                className={inputCls}
                 value={v.email}
                 onChange={(e) => setV((x) => ({ ...x, email: e.target.value }))}
                 placeholder="correo@dominio.com"
@@ -194,9 +193,7 @@ export default function OrganizerRegisterPage() {
             {step === 5 ? (
               <div className="space-y-2">
                 <button
-                  className={`w-full rounded-xl border border-white/10 px-3 py-2 ${
-                    v.channel === "email" ? "bg-white text-black" : "bg-white/5"
-                  }`}
+                  className={["w-full rounded-lg border border-black/10 px-3 py-2 text-sm font-medium", v.channel === "email" ? "bg-black text-white" : "bg-white hover:bg-black/5"].join(" ")}
                   onClick={() => setV((x) => ({ ...x, channel: "email" }))}
                   type="button"
                 >
@@ -204,27 +201,25 @@ export default function OrganizerRegisterPage() {
                 </button>
 
                 <button
-                  className={`w-full rounded-xl border border-white/10 px-3 py-2 ${
-                    v.channel === "whatsapp" ? "bg-white text-black" : "bg-white/5"
-                  }`}
+                  className={["w-full rounded-lg border border-black/10 px-3 py-2 text-sm font-medium", v.channel === "whatsapp" ? "bg-black text-white" : "bg-white hover:bg-black/5"].join(" ")}
                   onClick={() => setV((x) => ({ ...x, channel: "whatsapp" }))}
                   type="button"
                 >
                   WhatsApp
                 </button>
 
-                <div className="text-xs text-white/50">
-                  WhatsApp requiere configuración del proveedor. Si no está listo, el sistema te pedirá usar Email.
+                <div className="text-xs text-black/50">
+                  Si WhatsApp no está configurado, el sistema te pedirá usar Email.
                 </div>
               </div>
             ) : null}
 
             {step === 6 ? (
               v.channel === "email" ? (
-                <div className="text-sm text-white/60">No necesitas teléfono si eliges Email.</div>
+                <div className="text-sm text-black/60">No necesitas teléfono si eliges Email.</div>
               ) : (
                 <input
-                  className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+                  className={inputCls}
                   value={v.phone}
                   onChange={(e) => setV((x) => ({ ...x, phone: e.target.value }))}
                   placeholder="+569XXXXXXXX"
@@ -235,7 +230,7 @@ export default function OrganizerRegisterPage() {
 
             {step === 7 ? (
               <input
-                className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+                className={inputCls}
                 value={v.password}
                 onChange={(e) => setV((x) => ({ ...x, password: e.target.value }))}
                 placeholder="Mínimo 8 caracteres"
@@ -247,7 +242,7 @@ export default function OrganizerRegisterPage() {
             {step === 8 ? (
               <>
                 <input
-                  className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+                  className={inputCls}
                   value={v.password2}
                   onChange={(e) => setV((x) => ({ ...x, password2: e.target.value }))}
                   placeholder="Repite tu contraseña"
@@ -255,19 +250,19 @@ export default function OrganizerRegisterPage() {
                   autoComplete="new-password"
                 />
                 {passwordMismatch ? (
-                  <div className="mt-2 text-xs text-red-400">Las contraseñas no coinciden.</div>
+                  <div className="text-xs text-red-600">Las contraseñas no coinciden.</div>
                 ) : (
-                  <div className="mt-2 text-xs text-white/50">Deben ser iguales.</div>
+                  <div className="text-xs text-black/50">Deben ser iguales.</div>
                 )}
               </>
             ) : null}
           </div>
 
-          {err ? <div className="mt-3 text-sm text-red-400">{err}</div> : null}
+          {err ? <div className="mt-4 text-sm text-red-600">{err}</div> : null}
 
           <div className="mt-6 flex items-center justify-between">
             <button
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 disabled:opacity-50"
+              className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-black hover:bg-black/5 disabled:opacity-50"
               onClick={prev}
               disabled={step === 0 || busy}
               type="button"
@@ -277,7 +272,7 @@ export default function OrganizerRegisterPage() {
 
             {step < steps.length - 1 ? (
               <button
-                className="px-4 py-2 rounded-xl bg-white text-black font-medium disabled:opacity-50"
+                className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 onClick={next}
                 disabled={!canGoNext() || busy}
                 type="button"
@@ -286,7 +281,7 @@ export default function OrganizerRegisterPage() {
               </button>
             ) : (
               <button
-                className="px-4 py-2 rounded-xl bg-white text-black font-medium disabled:opacity-50"
+                className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 onClick={submit}
                 disabled={!canGoNext() || busy}
                 type="button"
