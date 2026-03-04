@@ -1,4 +1,3 @@
-// apps/web/src/app/(organizer)/organizador/pagos/PaymentsTableClient.tsx
 "use client";
 
 import Link from "next/link";
@@ -11,12 +10,12 @@ function StatusPill({ status }: { status: string }) {
   const s = String(status || "").toUpperCase();
   const cls =
     s === "PAID"
-      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+      ? "border-emerald-600/20 bg-emerald-50 text-emerald-800"
       : s === "PENDING" || s === "CREATED"
-      ? "border-amber-400/20 bg-amber-400/10 text-amber-200"
+      ? "border-amber-600/20 bg-amber-50 text-amber-800"
       : s === "FAILED" || s === "CANCELLED"
-      ? "border-red-500/20 bg-red-500/10 text-red-200"
-      : "border-white/10 bg-white/5 text-white/70";
+      ? "border-red-600/20 bg-red-50 text-red-800"
+      : "border-black/10 bg-white text-black/60";
 
   return (
     <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] ${cls}`}>
@@ -47,7 +46,7 @@ function SmallBtn({
   title?: string;
 }) {
   const cls =
-    "rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 text-xs backdrop-blur hover:bg-white/10 disabled:opacity-50";
+    "rounded-lg border border-black/10 bg-white px-3 py-1.5 text-xs text-black/80 hover:bg-black/5 disabled:opacity-50";
   if (href) {
     return (
       <Link href={href} className={cls} aria-disabled={disabled} title={title}>
@@ -87,10 +86,7 @@ export default function PaymentsTableClient({ rows }: { rows: PaymentListRow[] }
       const ticketsCount = Number(data?.payment?.ticketsCount ?? 0);
 
       if (done) {
-        setMsgById((m) => ({
-          ...m,
-          [paymentId]: `✅ Tickets emitidos (${ticketsCount}). Refrescando…`,
-        }));
+        setMsgById((m) => ({ ...m, [paymentId]: `✅ Tickets emitidos (${ticketsCount}). Refrescando…` }));
         router.refresh();
         return;
       }
@@ -108,8 +104,8 @@ export default function PaymentsTableClient({ rows }: { rows: PaymentListRow[] }
 
   if (!rows.length) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-black/30 p-6 backdrop-blur">
-        <p className="text-white/80">Nada para mostrar.</p>
+      <div className="rounded-xl border border-black/10 bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
+        <p className="text-black/80">Nada para mostrar.</p>
       </div>
     );
   }
@@ -130,64 +126,61 @@ export default function PaymentsTableClient({ rows }: { rows: PaymentListRow[] }
         return (
           <div
             key={x.paymentId}
-            className="rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur"
+            className="rounded-xl border border-black/10 bg-white p-5 shadow-[0_10px_22px_rgba(0,0,0,0.16)]"
           >
             <div className="flex flex-wrap items-start justify-between gap-4">
-              {/* Left */}
               <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusPill status={x.status} />
-                  <span className="text-xs text-white/40">Pago</span>
-                  <span className="text-xs font-mono text-white/80 break-all">{x.paymentId}</span>
+                  <span className="text-xs text-black/40">Pago</span>
+                  <span className="text-xs font-mono text-black/80 break-all">{x.paymentId}</span>
                   {x.orderId ? (
                     <>
-                      <span className="text-white/20">•</span>
-                      <span className="text-xs text-white/40">ord</span>
-                      <span className="text-xs font-mono text-white/70 break-all">{x.orderId}</span>
+                      <span className="text-black/20">•</span>
+                      <span className="text-xs text-black/40">ord</span>
+                      <span className="text-xs font-mono text-black/70 break-all">{x.orderId}</span>
                     </>
                   ) : null}
                 </div>
 
-                <div className="text-sm text-white/80">
-                  <span className="text-white/50">Cliente:</span>{" "}
+                <div className="text-sm text-black/80">
+                  <span className="text-black/50">Cliente:</span>{" "}
                   <span className="break-all">{x.buyerEmail}</span>{" "}
-                  {x.buyerName ? <span className="text-white/40">({x.buyerName})</span> : null}
+                  {x.buyerName ? <span className="text-black/45">({x.buyerName})</span> : null}
                 </div>
 
-                <div className="text-sm text-white/70">
-                  <span className="text-white/50">Evento:</span> {x.eventTitle}{" "}
-                  {x.eventId ? <span className="text-white/40">({x.eventId})</span> : null}
+                <div className="text-sm text-black/70">
+                  <span className="text-black/50">Evento:</span> {x.eventTitle}{" "}
+                  {x.eventId ? <span className="text-black/40">({x.eventId})</span> : null}
                 </div>
 
-                <div className="text-xs text-white/45">
+                <div className="text-xs text-black/45">
                   created: {fmtDate(x.createdAtISO)} • updated: {fmtDate(x.updatedAtISO)}
                   {x.paidAtISO ? <> • paid: {fmtDate(x.paidAtISO)}</> : null}
                 </div>
 
                 {sessionId ? (
-                  <div className="text-xs text-white/50">
-                    <span className="text-white/40">provider_ref:</span>{" "}
-                    <span className="font-mono break-all text-white/70">{sessionId}</span>
+                  <div className="text-xs text-black/55">
+                    <span className="text-black/40">provider_ref:</span>{" "}
+                    <span className="font-mono break-all text-black/70">{sessionId}</span>
                   </div>
                 ) : null}
 
                 {hint ? (
-                  <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-white/70">
+                  <div className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs text-black/70">
                     {hint}
                   </div>
                 ) : null}
               </div>
 
-              {/* Right */}
               <div className="flex flex-col items-end gap-3">
                 <div className="text-right">
-                  <p className="text-2xl font-semibold text-white">
+                  <p className="text-2xl font-semibold text-black">
                     ${formatCLP(x.amountClp)}{" "}
-                    <span className="text-xs font-normal text-white/50">{x.currency || "CLP"}</span>
+                    <span className="text-xs font-normal text-black/50">{x.currency || "CLP"}</span>
                   </p>
-                  <p className="text-[11px] text-white/40">
-                    {String(x.provider || "").toUpperCase() || "PROVIDER"}{" "}
-                    {sessionId ? "• cs_ listo" : ""}
+                  <p className="text-[11px] text-black/40">
+                    {String(x.provider || "").toUpperCase() || "PROVIDER"} {sessionId ? "• cs_ listo" : ""}
                   </p>
                 </div>
 
@@ -226,10 +219,10 @@ export default function PaymentsTableClient({ rows }: { rows: PaymentListRow[] }
                     disabled={!canReconcile || busyKey === x.paymentId}
                     onClick={() => reconcileStripe(x.paymentId, sessionId)}
                     className={[
-                      "rounded-xl px-3 py-1.5 text-xs font-semibold",
+                      "rounded-lg px-3 py-1.5 text-xs font-semibold",
                       canReconcile
-                        ? "bg-white text-black hover:bg-white/90"
-                        : "bg-white/10 text-white/40 cursor-not-allowed",
+                        ? "bg-black text-white hover:bg-black/90"
+                        : "bg-black/10 text-black/40 cursor-not-allowed",
                     ].join(" ")}
                     title={
                       canReconcile

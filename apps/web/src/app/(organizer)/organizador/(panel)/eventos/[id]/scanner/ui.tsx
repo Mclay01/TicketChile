@@ -46,7 +46,6 @@ function mapStats(s: any): Stats {
 
   const soldCounter = pickNumber(s?.totals?.sold ?? s?.sold);
 
-  // “Disponibles real”
   const remaining = Math.max(capacity - issued - held, 0);
 
   return { capacity, held, pending, used, issued, remaining, soldCounter };
@@ -55,6 +54,11 @@ function mapStats(s: any): Stats {
 function looksLikeTicketId(raw: string) {
   return /^tix_[a-z0-9]+$/i.test(raw);
 }
+
+/** ====== UI atoms (white cards on dark shell) ====== */
+const cardBase = "rounded-xl border border-black/10 bg-white shadow-sm";
+const subText = "text-black/60";
+const hairline = "border-black/10";
 
 function Card({
   title,
@@ -68,12 +72,12 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-black/30 p-6 backdrop-blur">
-      {(title || subtitle || right) ? (
+    <section className={`${cardBase} p-6`}>
+      {title || subtitle || right ? (
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            {title ? <h2 className="text-lg font-semibold text-white/90">{title}</h2> : null}
-            {subtitle ? <p className="mt-1 text-sm text-white/60">{subtitle}</p> : null}
+            {title ? <h2 className="text-lg font-semibold text-black">{title}</h2> : null}
+            {subtitle ? <p className={`mt-1 text-sm ${subText}`}>{subtitle}</p> : null}
           </div>
           {right ? <div className="flex items-center gap-2">{right}</div> : null}
         </div>
@@ -94,33 +98,54 @@ function Kpi({
   hint?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur">
-      <p className="text-sm text-white/60">{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-white">{value}</p>
-      {hint ? <p className="mt-2 text-[11px] text-white/40">{hint}</p> : null}
+    <div className={`${cardBase} p-5`}>
+      <p className={`text-sm ${subText}`}>{label}</p>
+      <p className="mt-2 text-3xl font-semibold text-black">{value}</p>
+      {hint ? <p className="mt-2 text-[11px] text-black/50">{hint}</p> : null}
     </div>
   );
 }
 
-function SecondaryButton({ href, children }: { href: string; children: React.ReactNode }) {
+function GhostButton({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <Link
       href={href}
-      className="rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm backdrop-blur hover:bg-white/10"
+      className="rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm text-white/80 hover:bg-white/15"
     >
       {children}
     </Link>
   );
 }
 
-function SecondaryAnchor({ href, children }: { href: string; children: React.ReactNode }) {
+function GhostAnchor({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <a
       href={href}
-      className="rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm backdrop-blur hover:bg-white/10"
+      className="rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm text-white/80 hover:bg-white/15"
     >
       {children}
     </a>
+  );
+}
+
+function PrimaryBtn({
+  children,
+  onClick,
+  disabled,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90 disabled:opacity-50"
+    >
+      {children}
+    </button>
   );
 }
 
@@ -256,23 +281,24 @@ export default function ScannerUI({
 
   const mismatch = stats ? stats.soldCounter !== stats.issued : false;
 
+  // pill arriba del Card (match blanco)
   const scanMsgClass =
     scanMsg?.type === "ok"
-      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
       : scanMsg?.type === "warn"
-      ? "border-amber-400/20 bg-amber-400/10 text-amber-200"
-      : "border-red-500/20 bg-red-500/10 text-red-200";
+      ? "border-amber-500/30 bg-amber-500/10 text-amber-800"
+      : "border-red-500/30 bg-red-500/10 text-red-700";
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header (sobre fondo oscuro del layout) */}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
-          <Link href="/organizador" className="text-sm text-white/60 hover:text-white">
+          <Link href="/organizador" className="text-sm text-white/70 hover:text-white">
             ← Volver al organizador
           </Link>
 
-          <h1 className="text-3xl font-semibold tracking-tight">Scanner QR</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-white">Scanner QR</h1>
 
           <p className="text-sm text-white/70">
             {eventTitle} <span className="text-white/30">•</span> {eventCity}{" "}
@@ -284,7 +310,7 @@ export default function ScannerUI({
           </p>
 
           {mismatch ? (
-            <div className="mt-2 rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+            <div className="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
               ⚠️ sold(counter)=<span className="font-mono">{stats?.soldCounter}</span> vs emitidos=
               <span className="font-mono">{stats?.issued}</span>. En puerta manda emitidos
               (VALID+USED).
@@ -293,29 +319,25 @@ export default function ScannerUI({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <SecondaryButton href={`/eventos/${eventSlug}`}>Ver evento público</SecondaryButton>
-          <SecondaryAnchor href={exportAllHref}>Export CSV</SecondaryAnchor>
-          <SecondaryAnchor href={exportUsedHref}>CSV (solo usados)</SecondaryAnchor>
+          <GhostButton href={`/eventos/${eventSlug}`}>Ver evento público</GhostButton>
+          <GhostAnchor href={exportAllHref}>Export CSV</GhostAnchor>
+          <GhostAnchor href={exportUsedHref}>CSV (solo usados)</GhostAnchor>
 
-          <button
-            onClick={() => refresh()}
-            className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-60"
-            disabled={loading}
-          >
+          <PrimaryBtn onClick={() => refresh()} disabled={loading}>
             {loading ? "Cargando…" : "Recargar"}
-          </button>
+          </PrimaryBtn>
         </div>
       </header>
 
       {/* Error global */}
       {err ? (
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
           <p className="font-semibold text-white">Error</p>
           <p className="mt-1 text-sm text-white/70">{err}</p>
         </div>
       ) : null}
 
-      {/* KPIs */}
+      {/* KPIs (white cards) */}
       <div className="grid gap-3 md:grid-cols-4">
         <Kpi
           label="Emitidos (VALID+USED)"
@@ -327,20 +349,22 @@ export default function ScannerUI({
         <Kpi label="Disponibles (real)" value={stats?.remaining ?? (loading ? "…" : 0)} />
       </div>
 
-      {/* Scan */}
+      {/* Scan (white card) */}
       <Card
         title="Escaneo"
         subtitle="Escanea el QR o pega manualmente. Si suben contadores, el scanner está vivo (aunque nervioso)."
         right={
           scanMsg ? (
-            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs ${scanMsgClass}`}>
+            <span
+              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs ${scanMsgClass}`}
+            >
               {scanMsg.text}
             </span>
           ) : null
         }
       >
         <div className="space-y-4">
-          {/* OJO: QRScanner mantiene su lógica intacta */}
+          {/* QRScanner intacto */}
           <QRScanner onResult={(text) => void validateScan(text)} />
 
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
@@ -348,46 +372,46 @@ export default function ScannerUI({
               value={manual}
               onChange={(e) => setManual(e.target.value)}
               placeholder="Pega tc1..., URL, JSON o ticketId (tix_...)"
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none placeholder:text-white/40"
+              className={`w-full rounded-lg border ${hairline} bg-white px-4 py-3 text-sm text-black outline-none placeholder:text-black/40`}
             />
 
             <button
               disabled={scanBusy || manual.trim().length === 0}
               onClick={() => void validateScan(manual)}
-              className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-40"
+              className="rounded-lg bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-black/90 disabled:opacity-40"
             >
               {scanBusy ? "Validando…" : "Validar"}
             </button>
           </div>
 
-          {/* Mensaje grande (solo si hay error duro) */}
+          {/* Mensaje grande (solo error duro) */}
           {scanMsg && scanMsg.type === "err" ? (
-            <div className={`rounded-xl border p-3 text-sm ${scanMsgClass}`}>{scanMsg.text}</div>
+            <div className={`rounded-lg border p-3 text-sm ${scanMsgClass}`}>{scanMsg.text}</div>
           ) : null}
         </div>
       </Card>
 
-      {/* Checkins */}
+      {/* Checkins (white card) */}
       <Card title="Últimos check-ins" subtitle="Últimos 30 tickets usados en puerta.">
         <div className="space-y-2">
           {loading ? (
-            <p className="text-sm text-white/60">Cargando…</p>
+            <p className={`text-sm ${subText}`}>Cargando…</p>
           ) : checkins.length === 0 ? (
-            <p className="text-sm text-white/60">Aún no hay check-ins.</p>
+            <p className={`text-sm ${subText}`}>Aún no hay check-ins.</p>
           ) : (
             checkins.slice(0, 30).map((t, idx) => (
               <div
                 key={`${t.id ?? "noid"}-${t.usedAtISO ?? ""}-${idx}`}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/20 px-4 py-3"
+                className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border ${hairline} bg-white px-4 py-3`}
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white/90">{t.ticketTypeName}</p>
-                  <p className="text-xs text-white/60 break-all">{t.buyerEmail}</p>
+                  <p className="text-sm font-semibold text-black">{t.ticketTypeName}</p>
+                  <p className={`text-xs ${subText} break-all`}>{t.buyerEmail}</p>
                 </div>
 
                 <div className="text-right">
-                  <p className="text-xs text-white/50 font-mono break-all">{t.id}</p>
-                  <p className="text-xs text-white/70">
+                  <p className="text-xs font-mono text-black/70 break-all">{t.id}</p>
+                  <p className={`text-xs ${subText}`}>
                     {t.usedAtISO ? new Date(t.usedAtISO).toLocaleString("es-CL") : ""}
                   </p>
                 </div>
