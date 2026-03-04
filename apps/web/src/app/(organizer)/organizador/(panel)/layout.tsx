@@ -38,8 +38,8 @@ export default async function OrganizerPanelLayout({ children }: { children: Rea
   if (!org.approved) redirect(loginUrl(from, "pending"));
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-black/60 backdrop-blur">
+    <div className="min-h-screen bg-zinc-900 text-zinc-900">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-zinc-900/80 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 md:px-6">
           <Link href="/organizador" className="flex items-center gap-3">
             <span className="text-sm font-semibold tracking-tight">Ticketchile</span>
