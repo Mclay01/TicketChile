@@ -72,36 +72,28 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className={`${cardBase} p-6`}>
-      {title || subtitle || right ? (
-        <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="rounded-3xl border border-white/10 bg-black/25 p-6 backdrop-blur-xl">
+      {(title || subtitle || right) ? (
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-4">
           <div>
-            {title ? <h2 className="text-lg font-semibold text-black">{title}</h2> : null}
-            {subtitle ? <p className={`mt-1 text-sm ${subText}`}>{subtitle}</p> : null}
+            {title ? <h2 className="text-lg font-semibold text-white">{title}</h2> : null}
+            {subtitle ? <p className="mt-1 text-sm text-white/55">{subtitle}</p> : null}
           </div>
           {right ? <div className="flex items-center gap-2">{right}</div> : null}
         </div>
       ) : null}
 
-      <div className={title || subtitle || right ? "mt-4" : ""}>{children}</div>
+      <div className={title || subtitle || right ? "pt-5" : ""}>{children}</div>
     </section>
   );
 }
 
-function Kpi({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string | number;
-  hint?: string;
-}) {
+function Kpi({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
-    <div className={`${cardBase} p-5`}>
-      <p className={`text-sm ${subText}`}>{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-black">{value}</p>
-      {hint ? <p className="mt-2 text-[11px] text-black/50">{hint}</p> : null}
+    <div className="rounded-2xl border border-white/10 bg-black/25 p-6 backdrop-blur-xl">
+      <p className="text-xs font-semibold tracking-widest text-white/50">{label.toUpperCase()}</p>
+      <p className="mt-3 text-3xl font-semibold tracking-tight text-white">{value}</p>
+      {hint ? <p className="mt-2 text-sm text-white/45">{hint}</p> : null}
     </div>
   );
 }

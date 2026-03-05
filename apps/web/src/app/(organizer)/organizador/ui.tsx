@@ -12,49 +12,6 @@ import { getOrganizerFromSession } from "@/lib/organizer-auth.pg.server";
 type SearchParams = Record<string, string | string[] | undefined>;
 type PayFilter = "ALL" | "OPEN" | "PAID" | "FAILED";
 
-const shellCard =
-  "rounded-xl border border-black/10 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
-const innerCard = "rounded-lg border border-black/10 bg-white";
-const chip =
-  "inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1 text-xs text-black/70";
-
-function StatCard({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className={`${innerCard} p-3`}>
-      <p className="text-[11px] text-black/50">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-black">{value}</p>
-    </div>
-  );
-}
-
-function Badge({ label, value }: { label: string; value: number | string }) {
-  return (
-    <span className={chip}>
-      <span className="text-black/45">{label}</span>
-      <span className="font-semibold text-black">{value}</span>
-    </span>
-  );
-}
-
-function StatusPill({ status }: { status: string }) {
-  const s = String(status || "").toUpperCase();
-
-  const cls =
-    s === "PAID"
-      ? "border-emerald-600/20 bg-emerald-50 text-emerald-800"
-      : s === "PENDING" || s === "CREATED"
-      ? "border-amber-600/20 bg-amber-50 text-amber-800"
-      : s === "FAILED" || s === "CANCELLED"
-      ? "border-red-600/20 bg-red-50 text-red-800"
-      : "border-black/10 bg-white text-black/60";
-
-  return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] ${cls}`}>
-      {s || "UNKNOWN"}
-    </span>
-  );
-}
-
 function percent(n: number, d: number) {
   if (!d) return 0;
   return Math.round((n / d) * 100);
@@ -74,15 +31,83 @@ function normalizePayFilter(raw: string): PayFilter {
   return "ALL";
 }
 
+function Card({
+  title,
+  right,
+  children,
+}: {
+  title?: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-white/10 bg-black/25 backdrop-blur-xl">
+      {(title || right) ? (
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-6 py-4">
+          {title ? <h2 className="text-lg font-semibold text-white">{title}</h2> : <div />}
+          {right ? <div className="flex items-center gap-2">{right}</div> : null}
+        </div>
+      ) : null}
+      <div className="p-6">{children}</div>
+    </section>
+  );
+}
+
+function KpiCard({
+  label,
+  value,
+  sub,
+  dot = "green",
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  dot?: "green" | "gray";
+}) {
+  const dotCls = dot === "green" ? "bg-emerald-400" : "bg-white/20";
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/25 p-6 backdrop-blur-xl">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold tracking-widest text-white/50">{label.toUpperCase()}</p>
+        <span className={`h-2 w-2 rounded-full ${dotCls}`} />
+      </div>
+      <p className="mt-3 text-3xl font-semibold tracking-tight text-white">{value}</p>
+      {sub ? <p className="mt-2 text-sm text-white/50">{sub}</p> : null}
+    </div>
+  );
+}
+
+function SoftBtn({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white hover:bg-white/10"
+    >
+      {children}
+    </Link>
+  );
+}
+
+function PrimaryBtn({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
+    >
+      {children}
+    </Link>
+  );
+}
+
 function PayFilterPill({ active, href, label }: { active: boolean; href: string; label: string }) {
   return (
     <Link
       href={href}
       className={[
-        "rounded-full border px-3 py-1 text-xs transition",
+        "rounded-full border px-3 py-1 text-xs transition backdrop-blur",
         active
-          ? "border-white/20 bg-white text-black"
-          : "border-white/15 bg-white/5 text-white/70 hover:bg-white/10",
+          ? "border-white/20 bg-white/15 text-white"
+          : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10",
       ].join(" ")}
     >
       {label}
@@ -104,21 +129,12 @@ export default async function OrganizadorUI({ searchParams }: { searchParams?: S
 
   if (!organizerId) {
     return (
-      <div className={`${shellCard} p-6`}>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-black">Sesión de organizador no válida</p>
-            <p className="mt-1 text-sm text-black/60">
-              Tu sesión no existe en DB (o expiró). Vuelve a iniciar sesión.
-            </p>
-          </div>
-          <StatusPill status="INVALID" />
-        </div>
-
-        <div className="mt-4">
+      <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-200">
+        Sesión de organizador no válida.
+        <div className="mt-3">
           <Link
             href="/organizador/login?reason=no_session"
-            className="inline-flex rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90"
+            className="inline-flex rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
           >
             Ir a login
           </Link>
@@ -130,16 +146,25 @@ export default async function OrganizadorUI({ searchParams }: { searchParams?: S
   const events: OrganizerEvent[] = await listOrganizerEventsPgServer(organizerId);
   const statsByEvent = await getOrganizerDashboardStatsPgServerByOrganizer(organizerId);
 
-  const payFilter = normalizePayFilter(pickOne(searchParams, "pay"));
-  const payFilterLabel =
-    payFilter === "OPEN"
-      ? "Open (CREATED+PENDING)"
-      : payFilter === "PAID"
-      ? "PAID"
-      : payFilter === "FAILED"
-      ? "Fallidos"
-      : "Todos";
+  // ===== KPIs (sumatorias) =====
+  let totalRevenue = 0;
+  let totalIssued = 0;
+  let totalUsed = 0;
 
+  for (const ev of events) {
+    const s: DashboardStats | undefined = statsByEvent[ev.id];
+    if (!s) continue;
+
+    const pending = s?.totals?.pending ?? 0;
+    const used = s?.totals?.used ?? 0;
+    totalIssued += pending + used;
+    totalUsed += used;
+
+    const rev = s?.payments?.totals?.amountPaidClp ?? 0;
+    totalRevenue += rev;
+  }
+
+  const payFilter = normalizePayFilter(pickOne(searchParams, "pay"));
   const baseHref = "/organizador";
   const hrefAll = `${baseHref}`;
   const hrefOpen = `${baseHref}?pay=open`;
@@ -147,168 +172,159 @@ export default async function OrganizadorUI({ searchParams }: { searchParams?: S
   const hrefFailed = `${baseHref}?pay=failed`;
 
   return (
-    <div className="space-y-8">
-      {/* Header del contenido */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-10">
+      {/* Header */}
+      <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-white">Organizador</h1>
-          <p className="text-sm text-white/65">Tus eventos (por cuenta) + pagos + scanner.</p>
+          <h1 className="text-4xl font-semibold tracking-tight text-white">Resumen General</h1>
+          <p className="text-white/55">Bienvenido de nuevo, organizador de Ticketchile.</p>
 
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-xs text-white/45">Filtro pagos:</span>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <span className="text-xs text-white/40">Filtro pagos:</span>
             <PayFilterPill active={payFilter === "ALL"} href={hrefAll} label="Todos" />
             <PayFilterPill active={payFilter === "OPEN"} href={hrefOpen} label="Open" />
             <PayFilterPill active={payFilter === "PAID"} href={hrefPaid} label="Paid" />
             <PayFilterPill active={payFilter === "FAILED"} href={hrefFailed} label="Fallidos" />
-            <span className="text-xs text-white/35">({payFilterLabel})</span>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/organizador/eventos/nuevo"
-            className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
-          >
-            Crear evento
-          </Link>
-
-          <form action="/organizador/logout" method="GET">
-            <button
-              type="submit"
-              className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80 hover:bg-white/10"
-            >
-              Cerrar sesión
-            </button>
-          </form>
+        <div className="flex flex-wrap items-center gap-3">
+          <SoftBtn href="/organizador/pagos">Descargar Reportes</SoftBtn>
+          <PrimaryBtn href="/organizador/eventos/nuevo">Crear Evento</PrimaryBtn>
         </div>
       </header>
 
-      {/* Tus eventos */}
-      <section className={`${shellCard} p-6`}>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-black">Tus eventos</h2>
-            <p className="mt-1 text-sm text-black/60">Resumen por evento + acceso rápido al scanner.</p>
-          </div>
-          <div className="text-xs text-black/50">
-            {events.length ? `${events.length} evento(s)` : "Sin eventos"}
-          </div>
-        </div>
+      {/* KPI row */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <KpiCard
+          label="Ventas Totales"
+          value={`$${formatCLP(totalRevenue)}`}
+          sub="Recaudado (PAID)"
+          dot="green"
+        />
+        <KpiCard
+          label="Tickets Vendidos"
+          value={String(totalIssued)}
+          sub={events.length ? `${percent(totalIssued, Math.max(totalIssued, 1))}% del total` : ""}
+          dot="green"
+        />
+        <KpiCard
+          label="Eventos Activos"
+          value={String(events.length)}
+          sub={events.length ? `${Math.min(3, events.length)} próximos` : "Sin eventos"}
+          dot={events.length ? "gray" : "gray"}
+        />
+        <KpiCard
+          label="Check-ins"
+          value={String(totalUsed)}
+          sub="Hoy"
+          dot="green"
+        />
+      </div>
 
+      {/* Events */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold text-white">Eventos Activos</h2>
+        <Link href="/organizador" className="text-sm text-white/60 hover:text-white">
+          Ver todos los eventos
+        </Link>
+      </div>
+
+      <div className="space-y-4">
         {events.length === 0 ? (
-          <div className="mt-5 rounded-lg border border-black/10 bg-white p-4 text-sm text-black/70">
-            Todavía no tienes eventos asignados (organizer_events).
-            <div className="mt-3">
-              <Link
-                href="/organizador/eventos/nuevo"
-                className="inline-flex rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90"
-              >
-                Crear evento (queda en revisión)
-              </Link>
+          <Card title="Tus eventos">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
+              Todavía no tienes eventos asignados (organizer_events).
+              <div className="mt-3">
+                <PrimaryBtn href="/organizador/eventos/nuevo">Crear evento</PrimaryBtn>
+              </div>
             </div>
-          </div>
+          </Card>
         ) : (
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {events.map((e) => {
-              const s: DashboardStats | undefined = statsByEvent[e.id];
+          events.map((e) => {
+            const s: DashboardStats | undefined = statsByEvent[e.id];
 
-              const capacity = s?.totals.capacity ?? 0;
-              const held = s?.totals.held ?? 0;
+            const capacity = s?.totals.capacity ?? 0;
+            const held = s?.totals.held ?? 0;
+            const pending = s?.totals.pending ?? 0;
+            const used = s?.totals.used ?? 0;
 
-              const pending = s?.totals.pending ?? 0;
-              const used = s?.totals.used ?? 0;
-              const issued = pending + used;
+            const issued = pending + used;
+            const remainingReal = Math.max(capacity - issued - held, 0);
+            const occ = percent(issued, capacity);
 
-              const remainingReal = Math.max(capacity - issued - held, 0);
+            const stateLabel =
+              occ >= 95 ? "Por agotar" : remainingReal <= 0 ? "Agotado" : "Activo";
 
-              const soldCounter = s?.totals.sold ?? 0;
-              const mismatch = soldCounter !== issued;
+            const stateCls =
+              occ >= 95
+                ? "border-amber-400/20 bg-amber-400/10 text-amber-200"
+                : remainingReal <= 0
+                ? "border-red-500/20 bg-red-500/10 text-red-200"
+                : "border-emerald-400/20 bg-emerald-400/10 text-emerald-200";
 
-              const soldPct = percent(issued, capacity);
-              const checkinPct = percent(used, issued);
+            return (
+              <div
+                key={e.id}
+                className="rounded-3xl border border-white/10 bg-black/25 p-8 backdrop-blur-xl"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-6">
+                  <div className="min-w-0 space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="text-2xl font-semibold text-white">{e.title}</h3>
+                      <span className={`rounded-full border px-3 py-1 text-xs ${stateCls}`}>
+                        {stateLabel}
+                      </span>
+                    </div>
 
-              const p = s?.payments;
-              const paidPay = p?.totals.paid ?? 0;
-              const createdPay = p?.totals.created ?? 0;
-              const pendingPay = p?.totals.pending ?? 0;
-              const openPay = createdPay + pendingPay;
+                    <div className="flex flex-wrap items-center gap-5 text-sm text-white/55">
+                      <span className="inline-flex items-center gap-2">
+                        <span className="text-white/35">📅</span>
+                        {formatDateLong(e.dateISO)}
+                      </span>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="text-white/35">🎟️</span>
+                        <span className="text-white/80 font-semibold">{issued}</span>
+                        <span className="text-white/35">/</span>
+                        {capacity} tickets vendidos
+                      </span>
+                    </div>
 
-              const failedPay =
-                (p?.totals.failed ?? 0) +
-                (p?.totals.cancelled ?? 0) +
-                (p?.totals.other ?? 0);
-
-              const revenue = p?.totals.amountPaidClp ?? 0;
-
-              return (
-                <div key={e.id} className="rounded-xl border border-black/10 bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.18)]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs text-black/50">
-                        {e.city} • {e.venue}
+                    <div className="pt-2">
+                      <p className="text-xs font-semibold tracking-widest text-white/35">
+                        OCUPACIÓN
                       </p>
-                      <p className="mt-2 text-lg font-semibold text-black">{e.title}</p>
-                      <p className="mt-1 text-sm text-black/60">{formatDateLong(e.dateISO)}</p>
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Badge label="Emitidos" value={issued} />
-                        <Badge label="Pendientes" value={pending} />
-                        <Badge label="Check-ins" value={used} />
-                        <Badge label="% vendido" value={`${soldPct}%`} />
-                        <Badge label="% check-in" value={`${checkinPct}%`} />
-                        <Badge label="Pagos PAID" value={paidPay} />
-                        <Badge label="Pagos open" value={openPay} />
-                        <Badge label="Fallidos" value={failedPay} />
-                        <Badge label="Recaudado" value={`$${formatCLP(revenue)}`} />
-
-                        {mismatch ? (
-                          <span className="inline-flex items-center gap-2 rounded-full border border-amber-600/20 bg-amber-50 px-3 py-1 text-xs text-amber-900">
-                            <span className="text-amber-900/70">⚠️ counters</span>
-                            <span className="font-semibold">
-                              sold={soldCounter} vs emitidos={issued}
-                            </span>
-                          </span>
-                        ) : null}
+                      <div className="mt-2 flex items-center gap-4">
+                        <div className="h-2 w-full max-w-xl rounded-full bg-white/10">
+                          <div
+                            className="h-2 rounded-full bg-blue-500/80"
+                            style={{ width: `${Math.min(100, Math.max(0, occ))}%` }}
+                          />
+                        </div>
+                        <div className="text-sm font-semibold text-blue-300">{occ}%</div>
                       </div>
                     </div>
-
-                    <div className="text-right">
-                      <p className="text-xs text-black/50">Desde</p>
-                      <p className="text-lg font-semibold text-black">${formatCLP(e.priceFromClp)}</p>
-                      <p className="mt-1 text-[11px] text-black/40">ID: {e.id}</p>
-                    </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-sm md:grid-cols-3">
-                    <StatCard label="Emitidos (VALID+USED)" value={issued} />
-                    <StatCard label="Pendientes (VALID)" value={pending} />
-                    <StatCard label="Check-ins (USED)" value={used} />
-                    <StatCard label="Disponibles (real)" value={remainingReal} />
-                    <StatCard label="En hold" value={held} />
-                    <StatCard label="Capacidad" value={capacity} />
-                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <PrimaryBtn href={`/organizador/eventos/${e.id}/scanner`}>Abrir Scanner</PrimaryBtn>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Link
-                      href={`/organizador/eventos/${e.id}/scanner`}
-                      className="inline-flex items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90"
+                    {/* No invento ruta "Gestionar". Si después la creas, cambias el href. */}
+                    <button
+                      type="button"
+                      disabled
+                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/50"
+                      title="Aún no implementado"
                     >
-                      Abrir scanner
-                    </Link>
-
-                    <Link
-                      href={`/eventos/${e.slug}`}
-                      className="inline-flex items-center justify-center rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-medium text-black hover:bg-black/5"
-                    >
-                      Ver evento público
-                    </Link>
+                      Gestionar
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })
         )}
-      </section>
+      </div>
     </div>
   );
 }

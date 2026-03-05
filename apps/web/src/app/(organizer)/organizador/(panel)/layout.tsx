@@ -1,4 +1,3 @@
-// apps/web/src/app/(organizer)/organizador/(panel)/layout.tsx
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -25,36 +24,48 @@ export default async function OrganizerPanelLayout({ children }: { children: Rea
 
   const org = await getOrganizerFromSession(sid);
 
-  // cookie zombie -> limpiar y volver
-  if (!org) redirect(`/organizador/logout?from=${encodeURIComponent(from)}&reason=invalid`);
+  if (!org) {
+    redirect(`/organizador/logout?from=${encodeURIComponent(from)}&reason=invalid`);
+  }
 
   if (!org.verified) redirect(loginUrl(from, "unverified"));
   if (!org.approved) redirect(loginUrl(from, "pending"));
 
   return (
-    <div className="min-h-screen bg-[#0B0F14] text-white">
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0B0F14]/80 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 md:px-6">
-          <Link href="/organizador" className="flex items-center gap-3">
-            <span className="text-sm font-semibold tracking-tight">Ticketchile</span>
-            <span className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-white/70">
-              Panel organizador
-            </span>
-          </Link>
+    <div className="min-h-screen text-white">
+      {/* Header glass */}
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-black/20 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 md:px-8">
+          <div className="flex items-center gap-3">
+            <Link href="/organizador" className="flex items-center gap-3">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-white text-black font-black">
+                T
+              </div>
+              <span className="text-sm font-semibold tracking-tight">Ticketchile</span>
+            </Link>
 
-          <nav className="flex items-center gap-2">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+              Panel Organizador
+            </span>
+          </div>
+
+          <nav className="flex items-center gap-3">
+            <Link
+              href="/organizador/soporte"
+              className="text-sm text-white/70 hover:text-white"
+            >
+              Soporte
+            </Link>
+
             <Link
               href="/organizador/eventos/nuevo"
-              className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-black hover:bg-white/90"
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white hover:bg-white/10"
             >
-              Crear evento
+              Crear Evento
             </Link>
 
             <form action="/organizador/logout" method="GET">
-              <button
-                type="submit"
-                className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80 hover:bg-white/10"
-              >
+              <button type="submit" className="text-sm font-medium text-red-400 hover:text-red-300">
                 Salir
               </button>
             </form>
@@ -62,11 +73,11 @@ export default async function OrganizerPanelLayout({ children }: { children: Rea
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl px-4 py-10 md:px-6">{children}</main>
+      <main className="mx-auto w-full max-w-7xl px-4 py-10 md:px-8">{children}</main>
 
-      <footer className="border-t border-white/10">
-        <div className="mx-auto max-w-6xl px-6 py-8 text-sm text-white/60">
-          <span suppressHydrationWarning>© {year} Ticketchile — organizer</span>
+      <footer className="border-t border-white/10 bg-black/10">
+        <div className="mx-auto max-w-7xl px-4 py-8 text-sm text-white/50 md:px-8">
+          <span suppressHydrationWarning>© {year} Ticketchile</span>
         </div>
       </footer>
     </div>

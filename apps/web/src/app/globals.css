@@ -39,10 +39,10 @@ body {
 
   /* Fondo oscuro uniforme + glow sutil (no discoteca) */
   background:
-    radial-gradient(900px 600px at 12% 0%, rgba(239,68,68,0.10), transparent 60%),
-    radial-gradient(900px 600px at 88% 10%, rgba(255,255,255,0.06), transparent 60%),
-    linear-gradient(180deg, #0b0f14 0%, #090c11 40%, #070a0f 100%);
-
+    radial-gradient(1100px 650px at 12% 0%, rgba(99, 102, 241, 0.22), transparent 60%),
+    radial-gradient(900px 650px at 88% 12%, rgba(56, 189, 248, 0.14), transparent 55%),
+    radial-gradient(900px 650px at 50% 110%, rgba(168, 85, 247, 0.10), transparent 65%),
+    linear-gradient(180deg, #070a14 0%, #050713 45%, #040510 100%);
   background-attachment: fixed;
 }
 
