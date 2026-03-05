@@ -3,12 +3,6 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 
-/**
- * UI: Crear evento (carrusel + preview tipo /eventos)
- * - No depende de Tailwind config (usas Tailwind v4 via @import "tailwindcss")
- * - Mantiene compatibilidad con tu backend: manda `image` como string (URL/ruta)
- */
-
 const glassCard = "rounded-2xl border border-white/10 bg-black/30 backdrop-blur";
 const glassSoft = "rounded-xl border border-white/10 bg-black/20 backdrop-blur";
 const input =
@@ -25,7 +19,7 @@ type FormState = {
   city: string;
   venue: string;
   dateISO: string;
-  image: string; // string (URL/ruta). Backend espera string en `image`.
+  image: string; // URL o ruta
   description: string;
 
   tt_name: string;
@@ -80,9 +74,7 @@ function pill(cls: string) {
 }
 
 function pickErr(errors: Record<string, string>, key: string) {
-  return errors[key] ? (
-    <div className="mt-1 text-xs text-red-200">{errors[key]}</div>
-  ) : null;
+  return errors[key] ? <div className="mt-1 text-xs text-red-200">{errors[key]}</div> : null;
 }
 
 function StepTab({
@@ -126,11 +118,7 @@ function StepTab({
   );
 }
 
-/**
- * Preview card estilo /eventos (similar a tu imagen):
- * - Poster arriba
- * - abajo info + "Desde" + botón "Comprar" rojo
- */
+/** Preview tipo /eventos */
 function EventPreviewCard({
   title,
   venue,
@@ -154,67 +142,52 @@ function EventPreviewCard({
   const from = priceFrom !== null ? `$${clp(priceFrom)}` : "—";
 
   return (
-    <div className="sticky top-6">
-      <div
-        className={[
-          "overflow-hidden rounded-[28px] border border-white/10 bg-black/30 shadow-[0_30px_90px_rgba(0,0,0,.45)] backdrop-blur",
-        ].join(" ")}
-      >
-        {/* Poster */}
-        <div className="relative aspect-[4/5] w-full overflow-hidden bg-white/5">
-          {image ? (
-            // usamos <img> para no depender de next/image domains
-            <img
-              src={image}
-              alt="Poster"
-              className="h-full w-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <div className="h-full w-full bg-gradient-to-b from-white/10 to-transparent" />
-          )}
+    <div className="overflow-hidden rounded-[28px] border border-white/10 bg-black/30 shadow-[0_30px_90px_rgba(0,0,0,.45)] backdrop-blur">
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-white/5">
+        {image ? (
+          <img src={image} alt="Poster" className="h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-b from-white/10 to-transparent" />
+        )}
 
-          {/* chips arriba */}
-          <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-            <span className={pill("border-white/10 bg-black/40 text-white/85")}>
-              <span className="h-2 w-2 rounded-full bg-red-400" />
-              {c.toUpperCase()}
-            </span>
+        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+          <span className={pill("border-white/10 bg-black/40 text-white/85")}>
+            <span className="h-2 w-2 rounded-full bg-red-400" />
+            {c.toUpperCase()}
+          </span>
 
-            <span className={pill("border-white/10 bg-black/40 text-white/85")}>
-              {when.toUpperCase()}
-            </span>
-          </div>
+          <span className={pill("border-white/10 bg-black/40 text-white/85")}>
+            {when.toUpperCase()}
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-4 p-5">
+        <div className="space-y-1">
+          <p className="text-lg font-semibold text-white">{t}</p>
+          <p className="text-sm text-white/60">{v}</p>
         </div>
 
-        {/* Footer */}
-        <div className="space-y-4 p-5">
-          <div className="space-y-1">
-            <p className="text-lg font-semibold text-white">{t}</p>
-            <p className="text-sm text-white/60">{v}</p>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="text-xs text-white/45">DESDE</p>
+            <p className="text-3xl font-semibold text-white">{from}</p>
           </div>
 
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <p className="text-xs text-white/45">DESDE</p>
-              <p className="text-3xl font-semibold text-white">{from}</p>
-            </div>
-
-            <button
-              type="button"
-              className="inline-flex items-center gap-3 rounded-full bg-red-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(239,68,68,.25)] hover:bg-red-500/90"
-            >
-              Comprar
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-                →
-              </span>
-            </button>
-          </div>
-
-          <p className="text-xs text-white/40">
-            Preview: así se vería en <span className="text-white/60">/eventos</span>.
-          </p>
+          <button
+            type="button"
+            className="inline-flex items-center gap-3 rounded-full bg-red-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(239,68,68,.25)] hover:bg-red-500/90"
+          >
+            Comprar
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+              →
+            </span>
+          </button>
         </div>
+
+        <p className="text-xs text-white/40">
+          Preview: así se vería en <span className="text-white/60">/eventos</span>.
+        </p>
       </div>
     </div>
   );
@@ -261,6 +234,12 @@ export default function NuevoEventoClient() {
         e.dateISO = "ISO inválido. Ej: 2026-04-22T17:00:00-03:00";
     }
 
+    if (v.image.trim()) {
+      const ok =
+        v.image.startsWith("/") || v.image.startsWith("http://") || v.image.startsWith("https://");
+      if (!ok) e.image = "Usa una URL (https://...) o una ruta (/events/...).";
+    }
+
     if (desc.length < 10) e.description = "Describe el evento (mínimo 10 caracteres).";
 
     if (!v.tt_name.trim()) e.tt_name = "Nombre del ticket requerido.";
@@ -268,13 +247,6 @@ export default function NuevoEventoClient() {
     else if (!Number.isFinite(price) || price < 0) e.tt_price = "Precio inválido.";
     if (!v.tt_capacity.trim()) e.tt_capacity = "Capacidad requerida.";
     else if (!Number.isFinite(cap) || cap <= 0) e.tt_capacity = "Capacidad inválida.";
-
-    // Imagen opcional, pero si viene debe ser URL/ruta razonable
-    if (v.image.trim()) {
-      // aceptamos /path o http(s)
-      const ok = v.image.startsWith("/") || v.image.startsWith("http://") || v.image.startsWith("https://");
-      if (!ok) e.image = "Usa una URL (https://...) o una ruta (/events/...).";
-    }
 
     return e;
   }, [v]);
@@ -284,7 +256,6 @@ export default function NuevoEventoClient() {
   const doneTickets = !errors.tt_name && !errors.tt_price && !errors.tt_capacity;
 
   const canSubmit = doneBasics && doneDetails && doneTickets && !busy;
-
   const priceFrom = v.tt_price.trim() ? Number(v.tt_price) : null;
 
   function goNext() {
@@ -304,6 +275,7 @@ export default function NuevoEventoClient() {
     setTopErr(null);
 
     if (!formRef.current) return;
+
     if (!canSubmit) {
       setTopErr("Revisa los campos antes de enviar.");
       setStep("review");
@@ -339,9 +311,7 @@ export default function NuevoEventoClient() {
       }
 
       const j = await r.json().catch(() => null);
-      if (!r.ok || !j?.ok) {
-        throw new Error(j?.error || `No se pudo enviar (${r.status}).`);
-      }
+      if (!r.ok || !j?.ok) throw new Error(j?.error || `No se pudo enviar (${r.status}).`);
 
       window.location.href = "/organizador";
     } catch (e: any) {
@@ -362,10 +332,9 @@ export default function NuevoEventoClient() {
 
           <h1 className="text-3xl font-semibold tracking-tight text-white">Crear evento</h1>
           <p className="text-sm text-white/70">
-            Completa el formulario por pasos. El preview (derecha) siempre se mantiene.
+            Formulario por pasos con vista previa siempre visible.
           </p>
 
-          {/* Tabs */}
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <StepTab active={step === "basics"} done={doneBasics} label="Básico" onClick={() => setStep("basics")} />
             <StepTab active={step === "details"} done={doneDetails} label="Detalles" onClick={() => setStep("details")} />
@@ -392,15 +361,46 @@ export default function NuevoEventoClient() {
         </div>
       ) : null}
 
-      {/* Layout: left form + right sticky preview */}
+      {/* ✅ Responsive real:
+          - Mobile: preview arriba (full width), form abajo
+          - Desktop: 2 columnas, preview sticky derecha
+      */}
       <div className="grid gap-6 lg:grid-cols-[1.1fr_.9fr] lg:items-start">
+        {/* PREVIEW FIRST on mobile */}
+        <div className="space-y-3 lg:order-2">
+          <div className={`${glassCard} p-4`}>
+            <p className="text-sm font-semibold text-white/90">Vista previa</p>
+            <p className="mt-1 text-xs text-white/55">
+              Replica la tarjeta de <span className="text-white/70">/eventos</span>.
+            </p>
+
+            {/* sticky solo en desktop */}
+            <div className="mt-4 lg:sticky lg:top-6">
+              <EventPreviewCard
+                title={v.title}
+                venue={v.venue}
+                city={v.city}
+                dateISO={v.dateISO}
+                image={v.image}
+                priceFrom={priceFrom}
+              />
+            </div>
+          </div>
+
+          <div className={`${glassSoft} p-4`}>
+            <p className="text-xs text-white/60">
+              Tip: usa imagen <span className="text-white/80">4:5</span> (vertical) para que se vea como el ejemplo.
+            </p>
+          </div>
+        </div>
+
         {/* FORM */}
-        <form ref={formRef} onSubmit={onSubmit} className={`${glassCard} p-6`}>
-          {/* Carrusel */}
-          <div
-            className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/20"
-            aria-label="Carrusel pasos"
-          >
+        <form ref={formRef} onSubmit={onSubmit} className={`${glassCard} p-6 lg:order-1`}>
+          {/* ✅ IMPORTANTE: quitamos el “panel detrás”.
+              Antes había un wrapper del carrusel con border+bg -> se veía como tarjeta extra.
+              Ahora solo usamos overflow-hidden SIN border/bg.
+          */}
+          <div className="relative overflow-hidden rounded-2xl">
             <div
               className="flex w-[400%] transition-transform duration-300 ease-out"
               style={{
@@ -415,7 +415,7 @@ export default function NuevoEventoClient() {
               }}
             >
               {/* STEP 1 */}
-              <section className="w-1/4 p-5">
+              <section className="w-1/4 pr-0">
                 <div className="space-y-2">
                   <h2 className="text-lg font-semibold text-white/90">Básico</h2>
                   <p className="text-sm text-white/60">Nombre y ubicación del evento.</p>
@@ -461,25 +461,10 @@ export default function NuevoEventoClient() {
                     {pickErr(errors, "venue")}
                   </label>
                 </div>
-
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs text-white/45">Paso 1 de 4</span>
-                  <button
-                    type="button"
-                    onClick={goNext}
-                    className={[
-                      "rounded-xl px-4 py-2 text-sm font-semibold",
-                      doneBasics ? "bg-white text-black hover:bg-white/90" : "bg-white/15 text-white/40 cursor-not-allowed",
-                    ].join(" ")}
-                    disabled={!doneBasics}
-                  >
-                    Siguiente →
-                  </button>
-                </div>
               </section>
 
               {/* STEP 2 */}
-              <section className="w-1/4 p-5">
+              <section className="w-1/4 pr-0">
                 <div className="space-y-2">
                   <h2 className="text-lg font-semibold text-white/90">Detalles</h2>
                   <p className="text-sm text-white/60">Fecha, imagen y descripción.</p>
@@ -514,9 +499,7 @@ export default function NuevoEventoClient() {
                       onChange={(e) => setV((x) => ({ ...x, image: e.target.value }))}
                       placeholder="https://... o /events/..."
                     />
-                    <div className={helper}>
-                      Tip: usa una imagen vertical (4:5) para que se vea como en /eventos.
-                    </div>
+                    <div className={helper}>Ideal: poster vertical 4:5.</div>
                     {pickErr(errors, "image")}
                   </label>
 
@@ -534,38 +517,13 @@ export default function NuevoEventoClient() {
                     {pickErr(errors, "description")}
                   </label>
                 </div>
-
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={goBack}
-                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm backdrop-blur hover:bg-white/10"
-                  >
-                    ← Atrás
-                  </button>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-white/45">Paso 2 de 4</span>
-                    <button
-                      type="button"
-                      onClick={goNext}
-                      className={[
-                        "rounded-xl px-4 py-2 text-sm font-semibold",
-                        doneDetails ? "bg-white text-black hover:bg-white/90" : "bg-white/15 text-white/40 cursor-not-allowed",
-                      ].join(" ")}
-                      disabled={!doneDetails}
-                    >
-                      Siguiente →
-                    </button>
-                  </div>
-                </div>
               </section>
 
               {/* STEP 3 */}
-              <section className="w-1/4 p-5">
+              <section className="w-1/4 pr-0">
                 <div className="space-y-2">
                   <h2 className="text-lg font-semibold text-white/90">Tickets</h2>
-                  <p className="text-sm text-white/60">Define el ticket base (precio desde + capacidad).</p>
+                  <p className="text-sm text-white/60">Define ticket base (desde + capacidad).</p>
                 </div>
 
                 <div className="mt-4 grid gap-4 md:grid-cols-3">
@@ -617,40 +575,13 @@ export default function NuevoEventoClient() {
                     {pickErr(errors, "tt_capacity")}
                   </label>
                 </div>
-
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={goBack}
-                    className="rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm backdrop-blur hover:bg-white/10"
-                  >
-                    ← Atrás
-                  </button>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-white/45">Paso 3 de 4</span>
-                    <button
-                      type="button"
-                      onClick={goNext}
-                      className={[
-                        "rounded-xl px-4 py-2 text-sm font-semibold",
-                        doneTickets ? "bg-white text-black hover:bg-white/90" : "bg-white/15 text-white/40 cursor-not-allowed",
-                      ].join(" ")}
-                      disabled={!doneTickets}
-                    >
-                      Siguiente →
-                    </button>
-                  </div>
-                </div>
               </section>
 
               {/* STEP 4 */}
-              <section className="w-1/4 p-5">
+              <section className="w-1/4 pr-0">
                 <div className="space-y-2">
                   <h2 className="text-lg font-semibold text-white/90">Revisión</h2>
-                  <p className="text-sm text-white/60">
-                    Si el preview se ve bien, envía. Si no, vuelve y corrige (sin drama).
-                  </p>
+                  <p className="text-sm text-white/60">Si el preview se ve bien, envía.</p>
                 </div>
 
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -716,9 +647,7 @@ export default function NuevoEventoClient() {
                     disabled={!canSubmit}
                     className={[
                       "rounded-xl px-5 py-2.5 text-sm font-semibold",
-                      canSubmit
-                        ? "bg-white text-black hover:bg-white/90"
-                        : "bg-white/15 text-white/40 cursor-not-allowed",
+                      canSubmit ? "bg-white text-black hover:bg-white/90" : "bg-white/15 text-white/40 cursor-not-allowed",
                     ].join(" ")}
                   >
                     {busy ? "Enviando…" : "Enviar a revisión"}
@@ -734,8 +663,8 @@ export default function NuevoEventoClient() {
             </div>
           </div>
 
-          {/* Mini nav móvil */}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+          {/* navegación abajo (mejor en móvil) */}
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs text-white/45">
               {step === "basics"
                 ? "Básico"
@@ -745,13 +674,7 @@ export default function NuevoEventoClient() {
                 ? "Tickets"
                 : "Revisión"}{" "}
               •{" "}
-              {step === "basics"
-                ? "1/4"
-                : step === "details"
-                ? "2/4"
-                : step === "tickets"
-                ? "3/4"
-                : "4/4"}
+              {step === "basics" ? "1/4" : step === "details" ? "2/4" : step === "tickets" ? "3/4" : "4/4"}
             </span>
 
             <div className="flex gap-2">
@@ -768,42 +691,16 @@ export default function NuevoEventoClient() {
                 type="button"
                 onClick={goNext}
                 className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-40"
-                disabled={step === "review" || (step === "basics" ? !doneBasics : step === "details" ? !doneDetails : !doneTickets)}
+                disabled={
+                  step === "review" ||
+                  (step === "basics" ? !doneBasics : step === "details" ? !doneDetails : !doneTickets)
+                }
               >
                 Siguiente
               </button>
             </div>
           </div>
         </form>
-
-        {/* PREVIEW */}
-        <div className="space-y-3">
-          <div className={`${glassCard} p-4`}>
-            <p className="text-sm font-semibold text-white/90">Vista previa</p>
-            <p className="mt-1 text-xs text-white/55">
-              Se mantiene visible y replica la tarjeta de <span className="text-white/70">/eventos</span>.
-            </p>
-
-            <div className="mt-4">
-              <EventPreviewCard
-                title={v.title}
-                venue={v.venue}
-                city={v.city}
-                dateISO={v.dateISO}
-                image={v.image}
-                priceFrom={priceFrom}
-              />
-            </div>
-          </div>
-
-          {/* Helper pro */}
-          <div className={`${glassSoft} p-4`}>
-            <p className="text-xs text-white/60">
-              Recomendación: usa imagen <span className="text-white/80">4:5</span> (vertical) para que se vea como
-              la tarjeta del ejemplo.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
