@@ -23,7 +23,7 @@ type FormState = {
   eventTime: string;
   dateISO: string;
 
-  image: string; // base64
+  image: string;
   description: string;
 
   tt_name: string;
@@ -104,7 +104,6 @@ function StepTab({
   );
 }
 
-/** ✅ preview más pequeña completa */
 function EventPreviewCard({
   title,
   venue,
@@ -349,6 +348,12 @@ export default function NuevoEventoClient() {
         cache: "no-store",
         redirect: "manual",
       });
+
+      // ✅ clave: manejar opaque redirect
+      if (r.type === "opaqueredirect") {
+        window.location.href = "/organizador";
+        return;
+      }
 
       if (r.status === 303 || r.status === 302 || r.status === 301) {
         const loc = r.headers.get("Location") || "/organizador";
@@ -669,7 +674,6 @@ export default function NuevoEventoClient() {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-        {/* formulario */}
         <form ref={formRef} onSubmit={onSubmit} className={`${glassCard} p-6`}>
           <input type="hidden" name="image" value={v.image} />
           <input type="hidden" name="dateISO" value={v.dateISO} />
@@ -724,7 +728,6 @@ export default function NuevoEventoClient() {
           </div>
         </form>
 
-        {/* preview */}
         <div className="space-y-3">
           <div className={`${glassCard} p-4`}>
             <p className="text-sm font-semibold text-white/90">Vista previa</p>
