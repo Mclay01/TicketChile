@@ -1,4 +1,3 @@
-// apps/web/src/app/(admin)/admin/page.tsx
 "use client";
 
 import Link from "next/link";
@@ -12,6 +11,9 @@ type Ev = {
   venue: string;
   date_iso: string;
   is_published: boolean;
+  kind?: "event" | "submission";
+  organizer_display_name?: string | null;
+  submission_status?: string | null;
 };
 
 type Org = {
@@ -28,23 +30,43 @@ type Org = {
 export default function AdminDashboardPage() {
   const [section, setSection] = useState<"events" | "organizers">("events");
 
-  // --- EVENTOS ---
   const [tab, setTab] = useState<"pending" | "published">("pending");
   const [events, setEvents] = useState<Ev[]>([]);
   const [busy, setBusy] = useState(false);
+  const [eventsErr, setEventsErr] = useState<string | null>(null);
 
   async function loadEvents() {
     setBusy(true);
+    setEventsErr(null);
     try {
       const r = await fetch(`/api/admin/events?tab=${tab}`, { cache: "no-store" });
       const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok) throw new Error(j?.error || "No se pudieron cargar eventos.");
       setEvents(j?.events || []);
+    } catch (e: any) {
+      setEvents([]);
+      setEventsErr(e?.message || "Error.");
     } finally {
       setBusy(false);
     }
   }
 
-  // --- ORGANIZADORES ---
+  async function approveSubmission(id: string) {
+    setBusy(true);
+    setEventsErr(null);
+    try {
+      const r = await fetch(`/api/admin/events/${encodeURIComponent(id)}/approve`, {
+        method: "POST",
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok) throw new Error(j?.error || "No se pudo aprobar.");
+      await loadEvents();
+    } catch (e: any) {
+      setEventsErr(e?.message || "Error.");
+      setBusy(false);
+    }
+  }
+
   const [orgTab, setOrgTab] = useState<"pending" | "approved">("pending");
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [orgBusy, setOrgBusy] = useState(false);
@@ -83,7 +105,6 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Effects
   useEffect(() => {
     if (section === "events") loadEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,7 +147,6 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* ===================== EVENTOS ===================== */}
       {section === "events" ? (
         <>
           <div className="mt-6 flex gap-2 items-center">
@@ -150,31 +170,58 @@ export default function AdminDashboardPage() {
 
           <div className="mt-4 rounded-2xl border border-white/10 overflow-hidden">
             <div className="grid grid-cols-12 bg-white/5 px-4 py-3 text-xs text-white/70">
-              <div className="col-span-5">Evento</div>
+              <div className="col-span-4">Evento</div>
               <div className="col-span-3">Lugar</div>
               <div className="col-span-2">Fecha</div>
+              <div className="col-span-1">Tipo</div>
               <div className="col-span-2 text-right">Acción</div>
             </div>
+
+            {eventsErr ? (
+              <div className="px-4 py-4 text-sm text-red-400 border-t border-white/10">{eventsErr}</div>
+            ) : null}
 
             {busy ? (
               <div className="px-4 py-6 text-white/60">Cargando...</div>
             ) : events.length ? (
               events.map((e) => (
                 <div key={e.id} className="grid grid-cols-12 px-4 py-3 border-t border-white/10">
-                  <div className="col-span-5">
+                  <div className="col-span-4">
                     <div className="font-medium">{e.title}</div>
-                    <div className="text-xs text-white/60">{e.slug}</div>
+                    <div className="text-xs text-white/60">
+                      {e.kind === "submission" ? e.id : e.slug}
+                    </div>
+                    {e.organizer_display_name ? (
+                      <div className="text-xs text-white/50 mt-1">
+                        Organizador: {e.organizer_display_name}
+                      </div>
+                    ) : null}
                   </div>
+
                   <div className="col-span-3 text-sm text-white/80">
                     {e.city} — {e.venue}
                   </div>
+
                   <div className="col-span-2 text-sm text-white/80">
-                    {new Date(e.date_iso).toLocaleString("es-CL")}
+                    {e.date_iso ? new Date(e.date_iso).toLocaleString("es-CL") : "—"}
                   </div>
+
+                  <div className="col-span-1 text-xs text-white/60 flex items-center">
+                    {e.kind === "submission" ? "Solicitud" : "Evento"}
+                  </div>
+
                   <div className="col-span-2 text-right">
-                    <Link className="text-sm underline" href={`/admin/eventos/${e.id}`}>
-                      Ver
-                    </Link>
+                    {e.kind === "submission" ? (
+                      <button
+                        onClick={() => approveSubmission(e.id)}
+                        className="text-sm rounded-xl bg-white text-black px-3 py-2 disabled:opacity-60"
+                        disabled={busy}
+                      >
+                        Aprobar
+                      </button>
+                    ) : (
+                      <span className="text-xs text-white/60">OK</span>
+                    )}
                   </div>
                 </div>
               ))
@@ -185,7 +232,6 @@ export default function AdminDashboardPage() {
         </>
       ) : null}
 
-      {/* ===================== ORGANIZADORES ===================== */}
       {section === "organizers" ? (
         <>
           <div className="mt-6 flex gap-2 items-center">

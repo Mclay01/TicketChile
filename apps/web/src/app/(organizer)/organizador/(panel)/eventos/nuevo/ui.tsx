@@ -349,7 +349,6 @@ export default function NuevoEventoClient() {
         redirect: "manual",
       });
 
-      // ✅ clave: manejar opaque redirect
       if (r.type === "opaqueredirect") {
         window.location.href = "/organizador";
         return;
@@ -674,7 +673,24 @@ export default function NuevoEventoClient() {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-        <form ref={formRef} onSubmit={onSubmit} className={`${glassCard} p-6`}>
+        <form
+          ref={formRef}
+          onSubmit={onSubmit}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            const target = e.target as HTMLElement | null;
+            const tag = target?.tagName?.toLowerCase();
+
+            // textarea puede seguir usando Enter normal
+            if (tag === "textarea") return;
+
+            // si no estás en revisión, NO enviar por Enter
+            if (step !== "review") {
+              e.preventDefault();
+            }
+          }}
+          className={`${glassCard} p-6`}
+        >
           <input type="hidden" name="image" value={v.image} />
           <input type="hidden" name="dateISO" value={v.dateISO} />
 

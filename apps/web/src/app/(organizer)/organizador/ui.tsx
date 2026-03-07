@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { formatCLP, formatDateLong } from "@/lib/events";
-import type { DashboardStats } from "@/lib/organizer.pg.server";
+import type {
+  DashboardStats,
+  OrganizerEvent,
+  OrganizerSubmission,
+} from "@/lib/organizer.pg.server";
 import {
   getOrganizerDashboardStatsPgServerByOrganizer,
+  listOrganizerEventSubmissionsPgServer,
   listOrganizerEventsPgServer,
-  type OrganizerEvent,
 } from "@/lib/organizer.pg.server";
 import { getOrganizerFromSession } from "@/lib/organizer-auth.pg.server";
 
@@ -115,6 +119,19 @@ function PayFilterPill({ active, href, label }: { active: boolean; href: string;
   );
 }
 
+function SubmissionStatusBadge({ status }: { status: string }) {
+  const s = String(status || "").toUpperCase();
+
+  const cls =
+    s === "APPROVED"
+      ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-200"
+      : s === "REJECTED"
+      ? "border-red-500/20 bg-red-500/10 text-red-200"
+      : "border-amber-400/20 bg-amber-400/10 text-amber-200";
+
+  return <span className={`rounded-full border px-3 py-1 text-xs ${cls}`}>{s}</span>;
+}
+
 export default async function OrganizadorUI({ searchParams }: { searchParams?: SearchParams }) {
   const ck = await cookies();
 
@@ -143,10 +160,12 @@ export default async function OrganizadorUI({ searchParams }: { searchParams?: S
     );
   }
 
-  const events: OrganizerEvent[] = await listOrganizerEventsPgServer(organizerId);
-  const statsByEvent = await getOrganizerDashboardStatsPgServerByOrganizer(organizerId);
+  const [events, submissions, statsByEvent] = await Promise.all([
+    listOrganizerEventsPgServer(organizerId),
+    listOrganizerEventSubmissionsPgServer(organizerId),
+    getOrganizerDashboardStatsPgServerByOrganizer(organizerId),
+  ]);
 
-  // ===== KPIs (sumatorias) =====
   let totalRevenue = 0;
   let totalIssued = 0;
   let totalUsed = 0;
@@ -171,9 +190,11 @@ export default async function OrganizadorUI({ searchParams }: { searchParams?: S
   const hrefPaid = `${baseHref}?pay=paid`;
   const hrefFailed = `${baseHref}?pay=failed`;
 
+  const pendingSubmissions = submissions.filter((s) => s.status === "IN_REVIEW");
+  const otherSubmissions = submissions.filter((s) => s.status !== "IN_REVIEW");
+
   return (
     <div className="space-y-10">
-      {/* Header */}
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="space-y-2">
           <h1 className="text-4xl font-semibold tracking-tight text-white">Resumen General</h1>
@@ -194,7 +215,6 @@ export default async function OrganizadorUI({ searchParams }: { searchParams?: S
         </div>
       </header>
 
-      {/* KPI row */}
       <div className="grid gap-4 md:grid-cols-4">
         <KpiCard
           label="Ventas Totales"
@@ -212,7 +232,7 @@ export default async function OrganizadorUI({ searchParams }: { searchParams?: S
           label="Eventos Activos"
           value={String(events.length)}
           sub={events.length ? `${Math.min(3, events.length)} próximos` : "Sin eventos"}
-          dot={events.length ? "gray" : "gray"}
+          dot="gray"
         />
         <KpiCard
           label="Check-ins"
@@ -222,7 +242,86 @@ export default async function OrganizadorUI({ searchParams }: { searchParams?: S
         />
       </div>
 
-      {/* Events */}
+      <Card
+        title="Solicitudes en revisión"
+        right={<span className="text-sm text-white/50">{pendingSubmissions.length} pendientes</span>}
+      >
+        {pendingSubmissions.length === 0 ? (
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
+            No tienes eventos en revisión.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {pendingSubmissions.map((sub) => (
+              <div
+                key={sub.id}
+                className="rounded-2xl border border-white/10 bg-white/5 p-5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="text-xl font-semibold text-white">
+                        {sub.payload.title || "Evento sin título"}
+                      </h3>
+                      <SubmissionStatusBadge status={sub.status} />
+                    </div>
+
+                    <div className="flex flex-wrap gap-4 text-sm text-white/60">
+                      <span>{sub.payload.city || "—"}</span>
+                      <span>{sub.payload.venue || "—"}</span>
+                      <span>
+                        {sub.payload.dateISO ? formatDateLong(sub.payload.dateISO) : "Sin fecha"}
+                      </span>
+                    </div>
+
+                    {sub.payload.ticketType ? (
+                      <div className="text-sm text-white/55">
+                        Ticket:{" "}
+                        <span className="text-white/80">
+                          {sub.payload.ticketType.name} • ${formatCLP(sub.payload.ticketType.priceClp)} • cap{" "}
+                          {sub.payload.ticketType.capacity}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="text-xs text-white/45">
+                    Enviado: {new Date(sub.createdAtISO).toLocaleString("es-CL")}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {otherSubmissions.length > 0 ? (
+        <Card title="Historial de solicitudes">
+          <div className="space-y-3">
+            {otherSubmissions.map((sub) => (
+              <div
+                key={sub.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+              >
+                <div>
+                  <div className="font-medium text-white">{sub.payload.title || "Evento"}</div>
+                  <div className="text-sm text-white/55">
+                    {sub.payload.city || "—"} • {sub.payload.venue || "—"}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <SubmissionStatusBadge status={sub.status} />
+                  <div className="text-xs text-white/45">
+                    {new Date(sub.createdAtISO).toLocaleString("es-CL")}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-white">Eventos Activos</h2>
         <Link href="/organizador" className="text-sm text-white/60 hover:text-white">
@@ -234,14 +333,14 @@ export default async function OrganizadorUI({ searchParams }: { searchParams?: S
         {events.length === 0 ? (
           <Card title="Tus eventos">
             <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-              Todavía no tienes eventos asignados (organizer_events).
+              Todavía no tienes eventos aprobados/asignados.
               <div className="mt-3">
                 <PrimaryBtn href="/organizador/eventos/nuevo">Crear evento</PrimaryBtn>
               </div>
             </div>
           </Card>
         ) : (
-          events.map((e) => {
+          events.map((e: OrganizerEvent) => {
             const s: DashboardStats | undefined = statsByEvent[e.id];
 
             const capacity = s?.totals.capacity ?? 0;
@@ -309,7 +408,6 @@ export default async function OrganizadorUI({ searchParams }: { searchParams?: S
                   <div className="flex shrink-0 items-center gap-3">
                     <PrimaryBtn href={`/organizador/eventos/${e.id}/scanner`}>Abrir Scanner</PrimaryBtn>
 
-                    {/* No invento ruta "Gestionar". Si después la creas, cambias el href. */}
                     <button
                       type="button"
                       disabled

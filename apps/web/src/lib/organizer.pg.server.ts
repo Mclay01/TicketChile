@@ -30,8 +30,6 @@ export type DashboardStats = {
     buyerEmail: string;
     usedAtISO: string | null;
   }>;
-
-  // ✅ pagos por evento
   payments: {
     totals: {
       created: number;
@@ -40,9 +38,8 @@ export type DashboardStats = {
       failed: number;
       cancelled: number;
       other: number;
-
       amountPaidClp: number;
-      amountPendingClp: number; // CREATED+PENDING
+      amountPendingClp: number;
     };
     recent: Array<{
       paymentId: string;
@@ -87,7 +84,6 @@ type RecentUsedRow = {
   used_at: Date | null;
 };
 
-// pagos agregados por evento/estado
 type PaymentAggRow = {
   event_id: string;
   status: string;
@@ -95,7 +91,6 @@ type PaymentAggRow = {
   amount: number;
 };
 
-// pagos recientes
 type PaymentRecentRow = {
   event_id: string;
   paymentId: string;
@@ -155,7 +150,7 @@ function ensureEvent(byEvent: Record<string, DashboardStats>, eventId: string) {
 }
 
 /* ============================================================
-   ✅ NUEVO: LISTAR EVENTOS POR ORGANIZADOR
+   EVENTS POR ORGANIZADOR
    ============================================================ */
 
 export type OrganizerEvent = {
@@ -220,12 +215,84 @@ export async function listOrganizerEventsPgServer(organizerId: string): Promise<
 }
 
 /* ============================================================
-   ✅ DASHBOARD STATS (GLOBAL - COMPAT)
-   (esto es lo que ya tenías: sin organizerId)
+   SUBMISSIONS POR ORGANIZADOR
+   ============================================================ */
+
+export type OrganizerSubmission = {
+  id: string;
+  organizerId: string;
+  status: string;
+  createdAtISO: string;
+  payload: {
+    title: string;
+    city: string;
+    venue: string;
+    dateISO: string;
+    image: string;
+    description: string;
+    ticketType?: {
+      name: string;
+      priceClp: number;
+      capacity: number;
+    };
+  };
+};
+
+type OrganizerSubmissionRow = {
+  id: string;
+  organizer_id: string;
+  status: string;
+  payload: any;
+  created_at: Date;
+};
+
+export async function listOrganizerEventSubmissionsPgServer(
+  organizerId: string
+): Promise<OrganizerSubmission[]> {
+  const orgId = String(organizerId || "").trim();
+  if (!orgId) return [];
+
+  const r = await pool.query<OrganizerSubmissionRow>(
+    `
+    SELECT id, organizer_id, status, payload, created_at
+    FROM organizer_event_submissions
+    WHERE organizer_id = $1
+    ORDER BY created_at DESC
+    `,
+    [orgId]
+  );
+
+  return r.rows.map((row) => {
+    const payload = row.payload && typeof row.payload === "object" ? row.payload : {};
+    return {
+      id: String(row.id),
+      organizerId: String(row.organizer_id),
+      status: String(row.status || "").toUpperCase(),
+      createdAtISO: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+      payload: {
+        title: String(payload.title || ""),
+        city: String(payload.city || ""),
+        venue: String(payload.venue || ""),
+        dateISO: String(payload.dateISO || ""),
+        image: String(payload.image || ""),
+        description: String(payload.description || ""),
+        ticketType: payload.ticketType
+          ? {
+              name: String(payload.ticketType.name || ""),
+              priceClp: Number(payload.ticketType.priceClp ?? 0) || 0,
+              capacity: Number(payload.ticketType.capacity ?? 0) || 0,
+            }
+          : undefined,
+      },
+    };
+  });
+}
+
+/* ============================================================
+   DASHBOARD STATS GLOBAL
    ============================================================ */
 
 export async function getOrganizerDashboardStatsPgServer(): Promise<Record<string, DashboardStats>> {
-  // 1) ticket_types: counters canon
   const tt = await pool.query<TicketTypeRow>(`
     SELECT
       tt.event_id,
@@ -239,7 +306,6 @@ export async function getOrganizerDashboardStatsPgServer(): Promise<Record<strin
     ORDER BY tt.event_id, tt.name ASC
   `);
 
-  // 2) tickets: pending/used por tipo
   const status = await pool.query<StatusRow>(`
     SELECT
       event_id,
@@ -250,7 +316,6 @@ export async function getOrganizerDashboardStatsPgServer(): Promise<Record<strin
     GROUP BY event_id, ticket_type_id
   `);
 
-  // 3) recientes: global y luego cap por evento
   const recent = await pool.query<RecentUsedRow>(`
     SELECT
       event_id,
@@ -298,7 +363,6 @@ export async function getOrganizerDashboardStatsPgServer(): Promise<Record<strin
     byEvent[r.event_id].totals.pending += st.pending;
   }
 
-  // recientes por evento (máx 12 por evento)
   const maxRecentPerEvent = 12;
   const recentCount: Record<string, number> = {};
 
@@ -316,7 +380,6 @@ export async function getOrganizerDashboardStatsPgServer(): Promise<Record<strin
     });
   }
 
-  // 4) pagos agregados por evento/estado
   const payAgg = await pool.query<PaymentAggRow>(`
     SELECT
       event_id,
@@ -356,7 +419,6 @@ export async function getOrganizerDashboardStatsPgServer(): Promise<Record<strin
     }
   }
 
-  // 5) pagos recientes (cap 8 por evento)
   const payRecent = await pool.query<PaymentRecentRow>(`
     SELECT
       event_id,
@@ -410,8 +472,7 @@ export async function getOrganizerDashboardStatsPgServer(): Promise<Record<strin
 }
 
 /* ============================================================
-   ✅ NUEVO: DASHBOARD STATS POR ORGANIZADOR
-   (mismo shape, pero filtrado por organizer_events)
+   DASHBOARD STATS POR ORGANIZADOR
    ============================================================ */
 
 export async function getOrganizerDashboardStatsPgServerByOrganizer(
@@ -420,7 +481,6 @@ export async function getOrganizerDashboardStatsPgServerByOrganizer(
   const orgId = String(organizerId || "").trim();
   if (!orgId) return {};
 
-  // 1) ticket_types SOLO eventos del organizador
   const tt = await pool.query<TicketTypeRow>(
     `
     SELECT
@@ -440,7 +500,6 @@ export async function getOrganizerDashboardStatsPgServerByOrganizer(
     [orgId]
   );
 
-  // 2) tickets pending/used por tipo (solo eventos del organizador)
   const status = await pool.query<StatusRow>(
     `
     SELECT
@@ -457,7 +516,6 @@ export async function getOrganizerDashboardStatsPgServerByOrganizer(
     [orgId]
   );
 
-  // 3) recientes USED (solo eventos del organizador)
   const recent = await pool.query<RecentUsedRow>(
     `
     SELECT
@@ -511,7 +569,6 @@ export async function getOrganizerDashboardStatsPgServerByOrganizer(
     byEvent[r.event_id].totals.pending += st.pending;
   }
 
-  // recientes por evento (máx 12 por evento)
   const maxRecentPerEvent = 12;
   const recentCount: Record<string, number> = {};
 
@@ -529,7 +586,6 @@ export async function getOrganizerDashboardStatsPgServerByOrganizer(
     });
   }
 
-  // pagos agregados por evento/estado (solo eventos del organizador)
   const payAgg = await pool.query<PaymentAggRow>(
     `
     SELECT
@@ -574,7 +630,6 @@ export async function getOrganizerDashboardStatsPgServerByOrganizer(
     }
   }
 
-  // pagos recientes (cap 8 por evento)
   const payRecent = await pool.query<PaymentRecentRow>(
     `
     SELECT
@@ -633,28 +688,22 @@ export async function getOrganizerDashboardStatsPgServerByOrganizer(
 }
 
 /* ============================================================
-   EXPORT CSV (compat) - lo que tu build está pidiendo
+   EXPORT CSV (compat)
    ============================================================ */
 
 type ExportTicketsCsvOptions = {
   eventId: string;
   status?: "ALL" | "VALID" | "USED";
   ticketTypeId?: string;
-
   fromISO?: string;
   toISO?: string;
-
   dateField?: "createdAt" | "usedAt";
-
   includeBom?: boolean;
 };
 
 function csvEscapeCell(v: unknown) {
   let s = String(v ?? "");
-
-  // Anti CSV/Excel injection
   if (/^[=+\-@]/.test(s)) s = "'" + s;
-
   if (/[,"\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
@@ -847,10 +896,6 @@ export async function exportCheckinsCsvPgServer(opts: {
   return bom + [header, ...lines].join("\r\n");
 }
 
-/* ============================================================
-   ✅ PAGOS: LISTADO GLOBAL + FILTROS + PAGINACIÓN (compat)
-   ============================================================ */
-
 export type PaymentListRow = {
   paymentId: string;
   provider: string;
@@ -878,9 +923,8 @@ export type PaymentsDashboard = {
     failed: number;
     cancelled: number;
     other: number;
-
     amountPaidClp: number;
-    amountOpenClp: number; // CREATED + PENDING
+    amountOpenClp: number;
   };
   rows: PaymentListRow[];
 };
@@ -1038,10 +1082,6 @@ export async function getPaymentsDashboardPgServer(
   return { total, totals, rows };
 }
 
-/* ============================================================
-   ✅ RESET CHECKINS (DEMO) - compat
-   ============================================================ */
-
 export async function resetCheckinsPg(
   eventId: string
 ): Promise<{ ok: true; eventId: string; updated: number }> {
@@ -1062,5 +1102,4 @@ export async function resetCheckinsPg(
   return { ok: true, eventId: ev, updated: r.rowCount ?? 0 };
 }
 
-// ✅ alias compatible con tus routes anteriores
 export const resetCheckinsPgServer = resetCheckinsPg;
