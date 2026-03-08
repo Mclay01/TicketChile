@@ -89,12 +89,12 @@ export default async function EventoDetallePage({ params }: Props) {
             </div>
 
             {/* Imagen del evento dentro de la tarjeta principal */}
-            <div className="relative h-full w-full">
+            <div className="relative flex h-full items-stretch justify-end overflow-hidden">
               {eventImage ? (
                 <img
                   src={eventImage}
                   alt={event.title}
-                  className="absolute right-0 top-0 h-full w-full object-cover"
+                  className="h-full w-auto max-w-none object-contain object-right"
                 />
               ) : (
                 <div className="flex h-full min-h-[280px] items-center justify-center bg-white/5 text-sm text-white/35">
