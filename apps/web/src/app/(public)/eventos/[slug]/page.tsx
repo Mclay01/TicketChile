@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { formatDateLong } from "@/lib/events";
 import { getEventBySlugDb } from "@/lib/events.server";
 import EventTicketSelector from "@/components/EventTicketSelector";
-import HeroBanner from "@/components/HeroBanner";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -25,26 +24,13 @@ function formatTimeOnly(dateISO: string) {
 export default async function EventoDetallePage({ params }: Props) {
   const { slug } = await params;
 
-  // ✅ DB manda
   const event = await getEventBySlugDb(slug);
   if (!event) return notFound();
 
-  // ✅ banners reales por evento (DB) con fallback seguro
-  const desktopSrc = event.hero?.desktop ?? "/banners/1400x450/fiesta-verano.jpg";
-  const mobileSrc = event.hero?.mobile ?? "/banners/800x400/fiesta-verano.jpg";
+  const eventImage = event.image?.trim() || "";
 
   return (
     <div className="bg-transparent text-white">
-      <HeroBanner
-        href={undefined}
-        desktopSrc={desktopSrc}
-        mobileSrc={mobileSrc}
-        alt={`Banner del evento ${event.title}`}
-        fullBleed
-        priority
-        height={{ base: 230, md: 360, lg: 420 }}
-      />
-
       <div className="space-y-6 py-10">
         <div>
           <Link
@@ -55,48 +41,68 @@ export default async function EventoDetallePage({ params }: Props) {
           </Link>
         </div>
 
-        <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(0,0,0,0.55),rgba(255,255,255,0.06))] shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-sm">
-          <div className="p-6 md:p-7">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-black/25 px-3 py-1 text-xs text-white/90 ring-1 ring-white/10">
-                {event.city}
-              </span>
-              <span className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs text-white ring-1 ring-[color:var(--accent-soft-2)]">
-                {formatDateOnly(event.dateISO)}
-              </span>
-              <span className="rounded-full bg-black/25 px-3 py-1 text-xs text-white/90 ring-1 ring-white/10">
-                {formatTimeOnly(event.dateISO)}
-              </span>
+        {/* Tarjeta principal con imagen del evento integrada */}
+        <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(0,0,0,0.55),rgba(255,255,255,0.06))] shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-sm">
+          <div className="grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="p-6 md:p-7">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-black/25 px-3 py-1 text-xs text-white/90 ring-1 ring-white/10">
+                  {event.city}
+                </span>
+                <span className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs text-white ring-1 ring-[color:var(--accent-soft-2)]">
+                  {formatDateOnly(event.dateISO)}
+                </span>
+                <span className="rounded-full bg-black/25 px-3 py-1 text-xs text-white/90 ring-1 ring-white/10">
+                  {formatTimeOnly(event.dateISO)}
+                </span>
+              </div>
+
+              <h1 className="mt-4 text-3xl font-extrabold tracking-tight md:text-5xl">
+                {event.title}
+              </h1>
+
+              <div className="mt-4 space-y-2 text-sm text-white/85 md:text-base">
+                <p>
+                  <span className="text-white/70">Lugar:</span>{" "}
+                  <span className="font-semibold">{event.venue}</span>
+                </p>
+                <p className="text-white/75">{event.city}</p>
+                <p className="text-sm text-white/70">
+                  {formatDateLong(event.dateISO)} • {event.venue} • {event.city}
+                </p>
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a
+                  href="#tickets"
+                  className="inline-flex items-center justify-center rounded-2xl bg-[color:var(--accent)] px-5 py-3 text-sm font-semibold text-white hover:brightness-95"
+                >
+                  Comprar tickets
+                </a>
+                <a
+                  href="#info"
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white/90 hover:bg-white/10"
+                >
+                  Ver info
+                </a>
+              </div>
             </div>
 
-            <h1 className="mt-3 text-3xl font-extrabold tracking-tight md:text-4xl">
-              {event.title}
-            </h1>
+            {/* Imagen del evento dentro de la tarjeta principal */}
+            <div className="relative min-h-[280px] lg:min-h-full">
+              {eventImage ? (
+                <img
+                  src={eventImage}
+                  alt={event.title}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full min-h-[280px] items-center justify-center bg-white/5 text-sm text-white/35">
+                  Sin imagen del evento
+                </div>
+              )}
 
-            <div className="mt-3 space-y-1 text-sm text-white/85">
-              <p>
-                <span className="text-white/70">Lugar:</span>{" "}
-                <span className="font-semibold">{event.venue}</span>
-              </p>
-              <p className="text-white/75">{event.city}</p>
-              <p className="text-sm text-white/70">
-                {formatDateLong(event.dateISO)} • {event.venue} • {event.city}
-              </p>
-            </div>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              <a
-                href="#tickets"
-                className="inline-flex items-center justify-center rounded-2xl bg-[color:var(--accent)] px-4 py-2 text-sm font-semibold text-white hover:brightness-95"
-              >
-                Comprar tickets
-              </a>
-              <a
-                href="#info"
-                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/90 hover:bg-white/10"
-              >
-                Ver info
-              </a>
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-transparent via-black/10 to-black/35 lg:bg-gradient-to-r lg:from-black/10 lg:via-transparent lg:to-transparent" />
             </div>
           </div>
         </section>
@@ -124,7 +130,7 @@ export default async function EventoDetallePage({ params }: Props) {
             </div>
           </section>
 
-          <aside id="tickets" className="lg:sticky lg:top-20 h-fit scroll-mt-24">
+          <aside id="tickets" className="h-fit scroll-mt-24 lg:sticky lg:top-20">
             <EventTicketSelector event={event} />
           </aside>
         </div>
