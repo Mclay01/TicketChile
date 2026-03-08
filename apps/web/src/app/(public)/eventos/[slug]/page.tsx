@@ -43,7 +43,7 @@ export default async function EventoDetallePage({ params }: Props) {
 
         {/* Tarjeta principal con imagen del evento integrada */}
         <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(0,0,0,0.55),rgba(255,255,255,0.06))] shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-sm">
-          <div className="grid lg:grid-cols-[1.35fr_0.45fr] overflow-hidden">
+          <div className="grid items-stretch gap-0 lg:grid-cols-[1.2fr_360px]">
             <div className="p-6 md:p-7">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-black/25 px-3 py-1 text-xs text-white/90 ring-1 ring-white/10">
@@ -88,21 +88,20 @@ export default async function EventoDetallePage({ params }: Props) {
               </div>
             </div>
 
-            {/* Imagen del evento dentro de la tarjeta principal */}
-            <div className="relative flex h-full items-stretch justify-end overflow-hidden">
+            <div className="flex items-center justify-end p-0">
               {eventImage ? (
-                <img
-                  src={eventImage}
-                  alt={event.title}
-                  className="h-full w-auto max-w-none object-contain object-right"
-                />
+                <div className="h-full w-full max-w-[360px] overflow-hidden border-l border-white/10 bg-black/20">
+                  <img
+                    src={eventImage}
+                    alt={event.title}
+                    className="block h-full max-h-[420px] w-full object-contain object-right"
+                  />
+                </div>
               ) : (
-                <div className="flex h-full min-h-[280px] items-center justify-center bg-white/5 text-sm text-white/35">
+                <div className="flex h-full min-h-[260px] w-full max-w-[360px] items-center justify-center border-l border-white/10 bg-white/5 text-sm text-white/35">
                   Sin imagen del evento
                 </div>
               )}
-
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-transparent via-black/10 to-black/35 lg:bg-gradient-to-r lg:from-black/10 lg:via-transparent lg:to-transparent" />
             </div>
           </div>
         </section>
