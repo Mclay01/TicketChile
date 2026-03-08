@@ -88,15 +88,13 @@ export default async function EventoDetallePage({ params }: Props) {
               </div>
             </div>
 
-            <div className="flex items-center justify-end p-0">
+            <div className="flex items-center justify-end">
               {eventImage ? (
-                <div className="h-full w-full max-w-[360px] overflow-hidden border-l border-white/10 bg-black/20">
-                  <img
-                    src={eventImage}
-                    alt={event.title}
-                    className="block h-full max-h-[420px] w-full object-contain object-right"
-                  />
-                </div>
+                <img
+                  src={eventImage}
+                  alt={event.title}
+                  className="block max-h-[420px] w-auto rounded-r-[28px] object-contain"
+                />
               ) : (
                 <div className="flex h-full min-h-[260px] w-full max-w-[360px] items-center justify-center border-l border-white/10 bg-white/5 text-sm text-white/35">
                   Sin imagen del evento
