@@ -12,12 +12,26 @@ export default function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-black/40 backdrop-blur">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 md:px-6">
+
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
-          <Image src="/brand/logo.svg" alt="Ticket Chile" width={150} height={36} priority />
+          <Image
+            src="/brand/ticketchile-logo.png"
+            alt="Ticketchile"
+            width={180}
+            height={40}
+            priority
+            className="h-8 w-auto"
+          />
         </Link>
 
+        {/* Navigation */}
         <nav className="flex items-center gap-3">
-          <Link href="/eventos" className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10">
+
+          <Link
+            href="/eventos"
+            className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
+          >
             Eventos
           </Link>
 
@@ -31,8 +45,6 @@ export default function SiteHeader() {
               >
                 Mis tickets
               </Link>
-
-              {/* ✅ Organizador eliminado del header público (queda como panel interno tuyo) */}
 
               <div className="flex items-center gap-2">
                 <span className="hidden sm:inline max-w-[240px] truncate text-sm text-white/70">
@@ -49,7 +61,10 @@ export default function SiteHeader() {
             </>
           ) : (
             <>
-              <Link href="/signin" className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10">
+              <Link
+                href="/signin"
+                className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
+              >
                 Iniciar sesión
               </Link>
 
@@ -61,6 +76,7 @@ export default function SiteHeader() {
               </Link>
             </>
           )}
+
         </nav>
       </div>
     </header>
