@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -33,15 +34,18 @@ export default async function OrganizerPanelLayout({ children }: { children: Rea
 
   return (
     <div className="min-h-screen text-white">
-      {/* Header glass */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-black/20 backdrop-blur-xl">
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-3">
             <Link href="/organizador" className="flex items-center gap-3">
-              <div className="grid h-9 w-9 place-items-center rounded-xl bg-white text-black font-black">
-                T
-              </div>
-              <span className="text-sm font-semibold tracking-tight">Ticketchile</span>
+              <Image
+                src="/brand/ticketchile-logo.png"
+                alt="Ticketchile"
+                width={180}
+                height={48}
+                priority
+                className="h-9 w-auto"
+              />
             </Link>
 
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
