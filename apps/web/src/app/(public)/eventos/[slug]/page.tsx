@@ -43,7 +43,7 @@ export default async function EventoDetallePage({ params }: Props) {
 
         {/* Tarjeta principal con imagen del evento integrada */}
         <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(0,0,0,0.55),rgba(255,255,255,0.06))] shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-sm">
-          <div className="grid gap-0 lg:grid-cols-[1.25fr_0.55fr]">
+          <div className="grid lg:grid-cols-[1.35fr_0.45fr] overflow-hidden">
             <div className="p-6 md:p-7">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-black/25 px-3 py-1 text-xs text-white/90 ring-1 ring-white/10">
@@ -89,12 +89,12 @@ export default async function EventoDetallePage({ params }: Props) {
             </div>
 
             {/* Imagen del evento dentro de la tarjeta principal */}
-            <div className="relative flex items-center justify-center p-4">
+            <div className="relative h-full w-full">
               {eventImage ? (
                 <img
                   src={eventImage}
                   alt={event.title}
-                  className="max-h-[260px] w-auto rounded-xl object-contain shadow-[0_15px_40px_rgba(0,0,0,0.6)]"
+                  className="absolute right-0 top-0 h-full w-full object-cover"
                 />
               ) : (
                 <div className="flex h-full min-h-[280px] items-center justify-center bg-white/5 text-sm text-white/35">
