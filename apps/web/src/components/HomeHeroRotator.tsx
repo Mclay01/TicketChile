@@ -45,7 +45,7 @@ export default function HomeHeroRotator({
         alt={current.alt}
         fullBleed
         priority
-        height={{ base: 230, md: 360, lg: 420 }}
+        height={{ min: 280, fluid: 34, max: 420 }}
       />
 
       {safeItems.length > 1 ? (

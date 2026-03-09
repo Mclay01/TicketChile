@@ -1,4 +1,3 @@
-// components/HeroBanner.tsx
 import Link from "next/link";
 
 type Props = {
@@ -7,12 +6,13 @@ type Props = {
   mobileSrc: string;
   alt: string;
 
-  fullBleed?: boolean; // edge-to-edge real
-  priority?: boolean; // carga rápida
+  fullBleed?: boolean;
+  priority?: boolean;
+
   height?: {
-    base?: number; // px
-    md?: number;
-    lg?: number;
+    min?: number;   // altura mínima
+    fluid?: number; // factor viewport
+    max?: number;   // altura máxima
   };
 };
 
@@ -23,47 +23,44 @@ export default function HeroBanner({
   alt,
   fullBleed = true,
   priority = true,
-  height = { base: 220, md: 320, lg: 380 },
+  height = {
+    min: 260,
+    fluid: 34,
+    max: 420,
+  },
 }: Props) {
   const Wrapper: any = href ? Link : "div";
   const wrapperProps = href ? { href, "aria-label": alt } : {};
 
-  // ✅ Full-bleed estable (evita el “scroll horizontal fantasma”)
   const sectionClass = fullBleed
     ? "relative left-1/2 -translate-x-1/2 w-[100vw] overflow-hidden"
     : "relative w-full overflow-hidden";
 
-  const hBase = height.base ?? 220;
-  const hMd = height.md ?? 320;
-  const hLg = height.lg ?? 380;
+  const minH = height.min ?? 260;
+  const fluid = height.fluid ?? 34;
+  const maxH = height.max ?? 420;
 
   return (
     <section
       className={sectionClass}
       style={
         {
-          // CSS vars para alturas responsivas (sin styled-jsx)
-          ["--hb-h-base" as any]: `${hBase}px`,
-          ["--hb-h-md" as any]: `${hMd}px`,
-          ["--hb-h-lg" as any]: `${hLg}px`,
+          ["--hb-min" as any]: `${minH}px`,
+          ["--hb-fluid" as any]: `${fluid}vw`,
+          ["--hb-max" as any]: `${maxH}px`,
         } as React.CSSProperties
       }
     >
       <Wrapper {...wrapperProps} className="block w-full">
         <picture>
-          {/* ✅ Mobile <= 767px (Tailwind md arranca en 768) */}
           <source media="(max-width: 767px)" srcSet={mobileSrc} />
 
           <img
             src={desktopSrc}
             alt={alt}
-            className={[
-              "block w-full select-none object-cover",
-              "h-[var(--hb-h-base)] md:h-[var(--hb-h-md)] lg:h-[var(--hb-h-lg)]",
-            ].join(" ")}
+            className="block w-full select-none object-cover h-[clamp(var(--hb-min),var(--hb-fluid),var(--hb-max))]"
             draggable={false}
             loading={priority ? "eager" : "lazy"}
-            // Si TS se pone exquisito con fetchPriority, lo dejamos tipado seguro
             fetchPriority={priority ? ("high" as const) : ("auto" as const)}
             decoding="async"
           />
