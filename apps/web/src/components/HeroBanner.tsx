@@ -5,14 +5,12 @@ type Props = {
   desktopSrc: string;
   mobileSrc: string;
   alt: string;
-
   fullBleed?: boolean;
   priority?: boolean;
-
   height?: {
-    min?: number;   // altura mínima
-    fluid?: number; // factor viewport
-    max?: number;   // altura máxima
+    base?: number;
+    md?: number;
+    lg?: number;
   };
 };
 
@@ -23,11 +21,7 @@ export default function HeroBanner({
   alt,
   fullBleed = true,
   priority = true,
-  height = {
-    min: 260,
-    fluid: 34,
-    max: 420,
-  },
+  height = { base: 230, md: 360, lg: 420 },
 }: Props) {
   const Wrapper: any = href ? Link : "div";
   const wrapperProps = href ? { href, "aria-label": alt } : {};
@@ -36,35 +30,45 @@ export default function HeroBanner({
     ? "relative left-1/2 -translate-x-1/2 w-[100vw] overflow-hidden"
     : "relative w-full overflow-hidden";
 
-  const minH = height.min ?? 260;
-  const fluid = height.fluid ?? 34;
-  const maxH = height.max ?? 420;
+  const hBase = height.base ?? 230;
+  const hMd = height.md ?? 360;
+  const hLg = height.lg ?? 420;
 
   return (
     <section
       className={sectionClass}
       style={
         {
-          ["--hb-min" as any]: `${minH}px`,
-          ["--hb-fluid" as any]: `${fluid}vw`,
-          ["--hb-max" as any]: `${maxH}px`,
+          ["--hb-h-base" as any]: `${hBase}px`,
+          ["--hb-h-md" as any]: `${hMd}px`,
+          ["--hb-h-lg" as any]: `${hLg}px`,
         } as React.CSSProperties
       }
     >
       <Wrapper {...wrapperProps} className="block w-full">
-        <picture>
-          <source media="(max-width: 767px)" srcSet={mobileSrc} />
+        <div className="relative w-full overflow-hidden h-[var(--hb-h-base)] md:h-[var(--hb-h-md)] lg:h-[var(--hb-h-lg)]">
+          <picture>
+            <source media="(max-width: 767px)" srcSet={mobileSrc} />
 
-          <img
-            src={desktopSrc}
-            alt={alt}
-            className="block w-full select-none object-cover h-[clamp(var(--hb-min),var(--hb-fluid),var(--hb-max))]"
-            draggable={false}
-            loading={priority ? "eager" : "lazy"}
-            fetchPriority={priority ? ("high" as const) : ("auto" as const)}
-            decoding="async"
-          />
-        </picture>
+            <img
+              src={desktopSrc}
+              alt={alt}
+              draggable={false}
+              loading={priority ? "eager" : "lazy"}
+              fetchPriority={priority ? ("high" as const) : ("auto" as const)}
+              decoding="async"
+              className={[
+                "absolute left-1/2 top-0 block h-full -translate-x-1/2 select-none object-cover object-center",
+                // móvil: llena normal
+                "w-full min-w-0",
+                // desktop/tablet: evita que se adelgace, mejor recorta lados
+                "md:w-auto md:max-w-none md:min-w-[1280px]",
+                "lg:min-w-[1440px]",
+                "xl:min-w-[1600px]",
+              ].join(" ")}
+            />
+          </picture>
+        </div>
       </Wrapper>
     </section>
   );
