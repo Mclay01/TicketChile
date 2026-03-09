@@ -8,9 +8,8 @@ type Props = {
   fullBleed?: boolean;
   priority?: boolean;
   height?: {
-    base?: number;
-    md?: number;
-    lg?: number;
+    mobile?: number;
+    desktop?: number;
   };
 };
 
@@ -21,7 +20,7 @@ export default function HeroBanner({
   alt,
   fullBleed = true,
   priority = true,
-  height = { base: 260, md: 360, lg: 420 },
+  height = { mobile: 230, desktop: 420 },
 }: Props) {
   const Wrapper: any = href ? Link : "div";
   const wrapperProps = href ? { href, "aria-label": alt } : {};
@@ -30,23 +29,21 @@ export default function HeroBanner({
     ? "relative left-1/2 -translate-x-1/2 w-screen overflow-hidden"
     : "relative w-full overflow-hidden";
 
-  const hBase = height.base ?? 260;
-  const hMd = height.md ?? 360;
-  const hLg = height.lg ?? 420;
+  const mobileH = height.mobile ?? 230;
+  const desktopH = height.desktop ?? 420;
 
   return (
     <section
       className={sectionClass}
       style={
         {
-          ["--hb-h-base" as any]: `${hBase}px`,
-          ["--hb-h-md" as any]: `${hMd}px`,
-          ["--hb-h-lg" as any]: `${hLg}px`,
+          ["--hb-mobile-h" as any]: `${mobileH}px`,
+          ["--hb-desktop-h" as any]: `${desktopH}px`,
         } as React.CSSProperties
       }
     >
       <Wrapper {...wrapperProps} className="block w-full">
-        <div className="relative h-[var(--hb-h-base)] w-full md:h-[var(--hb-h-md)] lg:h-[var(--hb-h-lg)]">
+        <div className="relative w-full h-[var(--hb-mobile-h)] md:h-[var(--hb-desktop-h)]">
           <picture>
             <source media="(max-width: 767px)" srcSet={mobileSrc} />
             <img
