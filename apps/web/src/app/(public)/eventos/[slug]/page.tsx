@@ -18,7 +18,10 @@ function formatDateOnly(dateISO: string) {
 
 function formatTimeOnly(dateISO: string) {
   const d = new Date(dateISO);
-  return d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString("es-CL", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default async function EventoDetallePage({ params }: Props) {
@@ -41,10 +44,21 @@ export default async function EventoDetallePage({ params }: Props) {
           </Link>
         </div>
 
-        {/* Tarjeta principal con imagen del evento integrada */}
         <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(0,0,0,0.55),rgba(255,255,255,0.06))] shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-sm">
-          <div className="grid items-stretch gap-0 lg:grid-cols-[1.2fr_360px]">
-            <div className="p-6 md:p-7">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_360px]">
+            {/* Imagen primero en móvil */}
+            {eventImage ? (
+              <div className="order-1 lg:order-2">
+                <img
+                  src={eventImage}
+                  alt={event.title}
+                  className="block h-[260px] w-full object-cover object-center sm:h-[320px] lg:h-full lg:max-h-[420px]"
+                />
+              </div>
+            ) : null}
+
+            {/* Información */}
+            <div className="order-2 p-6 md:p-7 lg:order-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-black/25 px-3 py-1 text-xs text-white/90 ring-1 ring-white/10">
                   {event.city}
@@ -86,20 +100,6 @@ export default async function EventoDetallePage({ params }: Props) {
                   Ver info
                 </a>
               </div>
-            </div>
-
-            <div className="flex items-center justify-end">
-              {eventImage ? (
-                <img
-                  src={eventImage}
-                  alt={event.title}
-                  className="block max-h-[420px] w-auto rounded-r-[28px] object-contain"
-                />
-              ) : (
-                <div className="flex h-full min-h-[260px] w-full max-w-[360px] items-center justify-center border-l border-white/10 bg-white/5 text-sm text-white/35">
-                  Sin imagen del evento
-                </div>
-              )}
             </div>
           </div>
         </section>
