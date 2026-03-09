@@ -21,16 +21,16 @@ export default function HeroBanner({
   alt,
   fullBleed = true,
   priority = true,
-  height = { base: 230, md: 360, lg: 420 },
+  height = { base: 260, md: 360, lg: 420 },
 }: Props) {
   const Wrapper: any = href ? Link : "div";
   const wrapperProps = href ? { href, "aria-label": alt } : {};
 
   const sectionClass = fullBleed
-    ? "relative left-1/2 -translate-x-1/2 w-[100vw] overflow-hidden"
+    ? "relative left-1/2 -translate-x-1/2 w-screen overflow-hidden"
     : "relative w-full overflow-hidden";
 
-  const hBase = height.base ?? 230;
+  const hBase = height.base ?? 260;
   const hMd = height.md ?? 360;
   const hLg = height.lg ?? 420;
 
@@ -46,10 +46,9 @@ export default function HeroBanner({
       }
     >
       <Wrapper {...wrapperProps} className="block w-full">
-        <div className="relative w-full overflow-hidden h-[var(--hb-h-base)] md:h-[var(--hb-h-md)] lg:h-[var(--hb-h-lg)]">
+        <div className="relative h-[var(--hb-h-base)] w-full md:h-[var(--hb-h-md)] lg:h-[var(--hb-h-lg)]">
           <picture>
             <source media="(max-width: 767px)" srcSet={mobileSrc} />
-
             <img
               src={desktopSrc}
               alt={alt}
@@ -57,15 +56,7 @@ export default function HeroBanner({
               loading={priority ? "eager" : "lazy"}
               fetchPriority={priority ? ("high" as const) : ("auto" as const)}
               decoding="async"
-              className={[
-                "absolute left-1/2 top-0 block h-full -translate-x-1/2 select-none object-cover object-center",
-                // móvil: llena normal
-                "w-full min-w-0",
-                // desktop/tablet: evita que se adelgace, mejor recorta lados
-                "md:w-auto md:max-w-none md:min-w-[1280px]",
-                "lg:min-w-[1440px]",
-                "xl:min-w-[1600px]",
-              ].join(" ")}
+              className="block h-full w-full select-none object-cover object-center"
             />
           </picture>
         </div>
