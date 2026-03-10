@@ -52,7 +52,7 @@ export default async function EventoDetallePage({ params }: Props) {
                 <img
                   src={eventImage}
                   alt={event.title}
-                  className="block w-full bg-black object-contain object-center h-[260px] sm:h-[320px] lg:h-[420px]"
+                  className="block w-full object-contain object-center h-[260px] sm:h-[320px] lg:h-[420px]"
                 />
               </div>
             ) : null}
