@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#15161A; -webkit-font-smoothing:antialiased; }
+  a { color:#D8342C; text-decoration:none; }
+  a:hover { color:#E9615A; }
+</style>
+</helmet>
+
+<section style="padding:80px 80px 160px;font-family:'Manrope',sans-serif;color:#E9EAE7;background:#15161A;display:flex;flex-direction:column;gap:56px">
+
+  <div style="max-width:1120px;display:flex;flex-direction:column;gap:18px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#8C9196">Fase 2A · panel organizador · base</div>
+    <div style="display:flex;align-items:flex-end;gap:20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:.16em;color:#0A0B0C;background:#D8342C;padding:7px 12px 6px">5A</div>
+      <div style="font-size:46px;font-weight:300;line-height:1;letter-spacing:-.025em">Sistema 1D — Panel organizador</div>
+    </div>
+    <div style="font-size:15.5px;line-height:1.65;color:#A8ADB1;max-width:840px">Cuatro pantallas desktop 1440 y cuatro mobile 390. El panel se apoya en la retícula de líneas finas y las cifras tabulares; el lenguaje de entrada queda reducido a acento: un troquel en el bloque de acceso y la muesca de fecha en las filas de evento. Sin mosaico de KPI: tres cifras de cabecera y el resto es trabajo pendiente.</div>
+    <div style="display:flex;gap:0;border:1px solid rgba(192,138,62,.3);background:rgba(192,138,62,.05);width:fit-content">
+      <div style="padding:12px 17px;border-right:1px solid rgba(192,138,62,.25);font-size:12.5px;color:#A8ADB1"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:#C08A3E;display:block;margin-bottom:5px">PROVISORIO</span>Comisión y liquidaciones</div>
+      <div style="padding:12px 17px;border-right:1px solid rgba(192,138,62,.25);font-size:12.5px;color:#A8ADB1"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:#C08A3E;display:block;margin-bottom:5px">PROVISORIO</span>Verificación del organizador</div>
+      <div style="padding:12px 17px;font-size:12.5px;color:#A8ADB1"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:#C08A3E;display:block;margin-bottom:5px">PLACEHOLDER</span>Símbolo de marca</div>
+    </div>
+  </div>
+
+  <!-- ================= A · LOGIN ORGANIZADOR ================= -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:16px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;color:#D8342C">A · ACCESO AL PANEL</div>
+      <div style="font-size:13px;color:#8C9196">Login y registro · el único lugar del panel donde el troquel aparece completo</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;color:#8C9196">A1 · LOGIN ORGANIZADOR — DESKTOP 1440</div>
+      <div data-screen-label="2A Login organizador Desktop" style="width:1440px;height:740px;border:1px solid rgba(255,255,255,.09);background:#0A0B0C;overflow:hidden;display:flex;box-shadow:0 50px 120px rgba(0,0,0,.55)">
+        <div style="flex:1;padding:34px 56px 44px;display:flex;flex-direction:column;background:#0C0E10;border-right:1px solid rgba(255,255,255,.07)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:auto"><div style="width:18px;height:18px;border:2px solid #D8342C"></div><div style="font-size:16px;font-weight:600">TicketChile</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:#8C9196;border-left:1px solid rgba(255,255,255,.14);padding-left:12px;margin-left:4px">ORGANIZADORES</div></div>
+          <div style="max-width:460px;margin-bottom:auto">
+            <div style="font-size:34px;font-weight:300;line-height:1.2;letter-spacing:-.025em;margin-bottom:16px">El panel donde se controla la venta, el aforo y el acceso</div>
+            <div style="font-size:14.5px;line-height:1.7;color:#8C9196">Ventas al día, alertas de stock, check-in en puerta y liquidaciones en un mismo lugar.</div>
+          </div>
+          <div style="display:flex;gap:0;border:1px solid rgba(255,255,255,.1);width:fit-content">
+            <div style="padding:14px 20px;border-right:1px solid rgba(255,255,255,.1)"><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:#6E7378;margin-bottom:8px">EVENTOS PUBLICADOS</div><div style="font-family:'IBM Plex Mono',monospace;font-size:18px">1.284</div></div>
+            <div style="padding:14px 20px;border-right:1px solid rgba(255,255,255,.1)"><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:#6E7378;margin-bottom:8px">ORGANIZADORES</div><div style="font-family:'IBM Plex Mono',monospace;font-size:18px">312</div></div>
+            <div style="padding:14px 20px"><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:#6E7378;margin-bottom:8px">CIUDADES</div><div style="font-family:'IBM Plex Mono',monospace;font-size:18px">28</div></div>
+          </div>
+        </div>
+        <div style="width:1px;background:repeating-linear-gradient(180deg,rgba(255,255,255,.24) 0 6px,transparent 6px 12px);position:relative">
+          <div style="position:absolute;left:-8px;top:-9px;width:17px;height:17px;border-radius:50%;background:#15161A"></div>
+          <div style="position:absolute;left:-8px;bottom:-9px;width:17px;height:17px;border-radius:50%;background:#15161A"></div>
+        </div>
+        <div style="width:540px;flex:none;padding:60px 68px;display:flex;flex-direction:column;justify-content:center">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:#8C9196;margin-bottom:14px">PANEL ORGANIZADOR</div>
+          <div style="font-size:30px;font-weight:300;letter-spacing:-.025em;margin-bottom:28px">Entra a tu panel</div>
+          <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:18px">
+            <div><div style="font-size:12.5px;color:#8C9196;margin-bottom:7px">Correo de la organización</div><div style="height:46px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;padding:0 14px;font-size:15px">produccion@austral.cl</div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:7px"><div style="font-size:12.5px;color:#8C9196">Contraseña</div><div style="font-size:12.5px;color:#D8342C">¿La olvidaste?</div></div><div style="height:46px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px;letter-spacing:.2em">••••••••••<span style="letter-spacing:normal;font-size:12.5px;color:#6E7378">mostrar</span></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:11px;font-size:12.5px;color:#8C9196;margin-bottom:24px"><div style="width:14px;height:14px;border-radius:2px;background:#D8342C;color:#0A0B0C;font-size:10px;display:flex;align-items:center;justify-content:center">✓</div>Mantener sesión en este equipo</div>
+          <div style="height:48px;background:#D8342C;color:#0A0B0C;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;margin-bottom:16px">Entrar al panel</div>
+          <div style="border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:16px 18px;margin-bottom:20px">
+            <div style="font-size:13.5px;margin-bottom:7px">Verificación en dos pasos</div>
+            <div style="font-size:12.5px;line-height:1.6;color:#8C9196">Si tu organización la tiene activa, pediremos un código de seis dígitos después de la contraseña. <span style="color:#C08A3E">(provisorio)</span></div>
+          </div>
+          <div style="font-size:13px;color:#8C9196;text-align:center">¿Primera vez? <span style="color:#D8342C">Crea tu cuenta de organizador</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;color:#8C9196">A2 · REGISTRO ORGANIZADOR — DESKTOP (RECORTE 940)</div>
+        <div data-screen-label="2A Registro organizador Desktop" style="width:940px;border:1px solid rgba(255,255,255,.09);background:#0A0B0C;overflow:hidden;box-shadow:0 40px 90px rgba(0,0,0,.5)">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 40px;border-bottom:1px solid rgba(255,255,255,.07)">
+            <div style="display:flex;align-items:center;gap:12px"><div style="width:16px;height:16px;border:2px solid #D8342C"></div><div style="font-size:15px;font-weight:600">TicketChile</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;color:#8C9196;border-left:1px solid rgba(255,255,255,.14);padding-left:11px">ORGANIZADORES</div></div>
+            <div style="font-size:13px;color:#8C9196">Ya tengo cuenta</div>
+          </div>
+
+          <div style="display:flex;align-items:center;padding:20px 40px;border-bottom:1px solid rgba(255,255,255,.07)">
+            <div style="display:flex;align-items:center;gap:10px;padding-right:24px"><div style="width:18px;height:18px;border-radius:50%;border:1px solid #D8342C;font-family:'IBM Plex Mono',monospace;font-size:10px;display:flex;align-items:center;justify-content:center">1</div><div style="font-size:13.5px">Organización</div></div>
+            <div style="width:32px;height:1px;background:rgba(255,255,255,.12)"></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:0 24px;color:#6E7378"><div style="width:18px;height:18px;border-radius:50%;border:1px solid rgba(255,255,255,.16);font-family:'IBM Plex Mono',monospace;font-size:10px;display:flex;align-items:center;justify-content:center">2</div><div style="font-size:13.5px">Datos de facturación</div></div>
+            <div style="width:32px;height:1px;background:rgba(255,255,255,.12)"></div>
+            <div style="display:flex;align-items:center;gap:10px;padding-left:24px;color:#6E7378"><div style="width:18px;height:18px;border-radius:50%;border:1px solid rgba(255,255,255,.16);font-family:'IBM Plex Mono',monospace;font-size:10px;display:flex;align-items:center;justify-content:center">3</div><div style="font-size:13.5px">Verificación</div></div>
+            <div style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;color:#6E7378">PUEDES CREAR UN BORRADOR ANTES DE VERIFICARTE</div>
+          </div>
+
+          <div style="display:flex">
+            <div style="flex:1;min-width:0;padding:30px 32px 40px 40px;border-right:1px solid rgba(255,255,255,.07)">
+              <div style="font-size:24px;font-weight:300;letter-spacing:-.025em;margin-bottom:8px">Crea tu cuenta de organizador</div>
+              <div style="font-size:13.5px;line-height:1.65;color:#8C9196;margin-bottom:26px;max-width:520px">Con estos datos publicas eventos y recibes las liquidaciones. Puedes completar la facturación más tarde.</div>
+              <div style="display:flex;flex-direction:column;gap:16px">
+                <div><div style="font-size:12.5px;color:#8C9196;margin-bottom:7px">Nombre de la organización · aparece en la página del evento</div><div style="height:44px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;padding:0 14px;font-size:15px">Productora Austral</div></div>
+                <div style="display:flex;gap:16px">
+                  <div style="flex:1"><div style="font-size:12.5px;color:#8C9196;margin-bottom:7px">RUT de la organización</div><div style="height:44px;border:1px solid rgba(127,160,138,.5);border-radius:3px;background:#0E1013;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-family:'IBM Plex Mono',monospace;font-size:14px">76.882.410-9<span style="font-family:'Manrope',sans-serif;font-size:11.5px;color:#7FA08A">válido</span></div></div>
+                  <div style="flex:1"><div style="font-size:12.5px;color:#8C9196;margin-bottom:7px">Tipo</div><div style="height:44px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:14.5px">Empresa<span style="font-size:12.5px;color:#6E7378">▾</span></div></div>
+                </div>
+                <div style="display:flex;gap:16px">
+                  <div style="flex:1"><div style="font-size:12.5px;color:#8C9196;margin-bottom:7px">Persona de contacto</div><div style="height:44px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;padding:0 14px;font-size:15px">Rodrigo Silva</div></div>
+                  <div style="flex:1"><div style="font-size:12.5px;color:#8C9196;margin-bottom:7px">Teléfono</div><div style="height:44px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;padding:0 14px;font-family:'IBM Plex Mono',monospace;font-size:14px">+56 2 2874 1120</div></div>
+                </div>
+                <div><div style="font-size:12.5px;color:#8C9196;margin-bottom:7px">Correo de la organización</div><div style="height:44px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;padding:0 14px;font-size:15px">produccion@austral.cl</div></div>
+                <div><div style="font-size:12.5px;color:#8C9196;margin-bottom:7px">Contraseña</div><div style="height:44px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px;letter-spacing:.2em">••••••••••<span style="letter-spacing:normal;font-size:12.5px;color:#6E7378">mostrar</span></div><div style="display:flex;gap:5px;margin-top:9px"><div style="flex:1;height:3px;background:#7FA08A"></div><div style="flex:1;height:3px;background:#7FA08A"></div><div style="flex:1;height:3px;background:#7FA08A"></div><div style="flex:1;height:3px;background:rgba(255,255,255,.1)"></div></div><div style="font-size:11.5px;color:#7FA08A;margin-top:7px">Segura</div></div>
+                <div><div style="font-size:12.5px;color:#8C9196;margin-bottom:7px">¿Qué tipo de eventos organizas?</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    <div style="height:34px;padding:0 13px;border:1px solid rgba(216,52,44,.45);background:rgba(216,52,44,.06);border-radius:3px;display:flex;align-items:center;font-size:13px">Conciertos</div>
+                    <div style="height:34px;padding:0 13px;border:1px solid rgba(216,52,44,.45);background:rgba(216,52,44,.06);border-radius:3px;display:flex;align-items:center;font-size:13px">Fiestas</div>
+                    <div style="height:34px;padding:0 13px;border:1px solid rgba(255,255,255,.12);border-radius:3px;display:flex;align-items:center;font-size:13px;color:#A8ADB1">Festivales</div>
+                    <div style="height:34px;padding:0 13px;border:1px solid rgba(255,255,255,.12);border-radius:3px;display:flex;align-items:center;font-size:13px;color:#A8ADB1">Teatro</div>
+                    <div style="height:34px;padding:0 13px;border:1px solid rgba(255,255,255,.12);border-radius:3px;display:flex;align-items:center;font-size:13px;color:#A8ADB1">Deportes</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:11px;align-items:flex-start;font-size:12.5px;line-height:1.6;color:#8C9196;margin-top:4px"><div style="width:14px;height:14px;border:1px solid #6E7378;border-radius:2px;flex:none;margin-top:2px"></div><div>Acepto los términos para organizadores y las condiciones de liquidación <span style="color:#C08A3E">(provisorios)</span>.</div></div>
+                <div style="display:flex;align-items:center;gap:16px;margin-top:10px">
+                  <div style="height:46px;padding:0 24px;border:1px solid rgba(255,255,255,.1);border-radius:3px;display:flex;align-items:center;font-size:14.5px;color:#4E5358">Continuar</div>
+                  <div style="font-size:12px;color:#6E7378">Disabled hasta aceptar los términos</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="width:320px;flex:none;padding:30px 40px 40px 28px;background:#0C0E10">
+              <div style="border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:18px 20px;margin-bottom:18px">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:#6E7378;margin-bottom:14px">QUÉ PASA DESPUÉS</div>
+                <div style="display:flex;gap:12px;align-items:flex-start;padding-bottom:13px;border-bottom:1px solid rgba(255,255,255,.06)"><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#D8342C;flex:none;padding-top:2px">01</div><div style="font-size:13px;line-height:1.6;color:#A8ADB1">Puedes crear y previsualizar eventos de inmediato.</div></div>
+                <div style="display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.06)"><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#D8342C;flex:none;padding-top:2px">02</div><div style="font-size:13px;line-height:1.6;color:#A8ADB1">Para publicar y vender pedimos la verificación de la organización.</div></div>
+                <div style="display:flex;gap:12px;align-items:flex-start;padding-top:13px"><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#D8342C;flex:none;padding-top:2px">03</div><div style="font-size:13px;line-height:1.6;color:#A8ADB1">Los datos bancarios se piden antes de la primera liquidación.</div></div>
+              </div>
+              <div style="border:1px solid rgba(192,138,62,.35);background:rgba(192,138,62,.05);border-radius:8px;padding:16px 18px;margin-bottom:18px">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;color:#C08A3E;margin-bottom:10px">POR DEFINIR</div>
+                <div style="font-size:12.5px;line-height:1.65;color:#A8ADB1">Requisitos de verificación, documentos exigidos y plazos de aprobación quedan pendientes del PRD.</div>
+              </div>
+              <div style="border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:16px 18px">
+                <div style="font-size:13.5px;margin-bottom:7px">¿Solo quieres probar?</div>
+                <div style="font-size:12.5px;line-height:1.6;color:#8C9196;margin-bottom:13px">Puedes generar un evento de prueba con TicketChile AI sin registrarte.</div>
+                <div style="height:36px;border:1px solid rgba(255,255,255,.16);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:13px">Probar el simulador</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;color:#6E7378">A3 · LOGIN MOBILE</div>
+        <div data-screen-label="2A Login organizador Mobile" style="width:390px;height:844px;border:1px solid rgba(255,255,255,.09);border-radius:16px;overflow:hidden;background:#0A0B0C;position:relative">
+          <div style="padding:50px 20px 24px;background:#0C0E10;border-bottom:1px solid rgba(255,255,255,.07)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:26px"><div style="width:16px;height:16px;border:2px solid #D8342C"></div><div style="font-size:15px;font-weight:600">TicketChile</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;color:#8C9196;border-left:1px solid rgba(255,255,255,.14);padding-left:10px">ORG.</div></div>
+            <div style="font-size:24px;font-weight:300;line-height:1.2;letter-spacing:-.025em">Ventas, aforo y acceso en un panel</div>
+          </div>
+          <div style="height:1px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.24) 0 6px,transparent 6px 12px);position:relative"><div style="position:absolute;top:-8px;left:-9px;width:17px;height:17px;border-radius:50%;background:#15161A"></div><div style="position:absolute;top:-8px;right:-9px;width:17px;height:17px;border-radius:50%;background:#15161A"></div></div>
+          <div style="padding:24px 20px 120px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;color:#8C9196;margin-bottom:10px">PANEL ORGANIZADOR</div>
+            <div style="font-size:24px;font-weight:300;letter-spacing:-.025em;margin-bottom:22px">Entra a tu panel</div>
+            <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:18px">
+              <div><div style="font-size:12.5px;color:#8C9196;margin-bottom:6px">Correo</div><div style="height:46px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;padding:0 13px;font-size:15px">produccion@austral.cl</div></div>
+              <div><div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:12.5px;color:#8C9196">Contraseña</div><div style="font-size:12.5px;color:#D8342C">¿La olvidaste?</div></div><div style="height:46px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;justify-content:space-between;padding:0 13px;font-size:15px;letter-spacing:.2em">••••••••••<span style="letter-spacing:normal;font-size:12.5px;color:#6E7378">mostrar</span></div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:11px;font-size:12.5px;color:#8C9196;margin-bottom:20px"><div style="width:14px;height:14px;border-radius:2px;background:#D8342C;color:#0A0B0C;font-size:10px;display:flex;align-items:center;justify-content:center">✓</div>Mantener sesión</div>
+            <div style="border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:14px 16px">
+              <div style="font-size:13px;margin-bottom:6px">Modo puerta</div>
+              <div style="font-size:12.5px;line-height:1.6;color:#8C9196">Si vas a escanear entradas, entra con el código del evento en lugar de la contraseña.</div>
+            </div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#0C0E10;border-top:1px solid rgba(255,255,255,.09);padding:14px 20px 26px">
+            <div style="height:48px;background:#D8342C;color:#0A0B0C;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600">Entrar al panel</div>
+            <div style="text-align:center;font-size:12.5px;color:#8C9196;margin-top:12px">¿Primera vez? <span style="color:#D8342C">Crea tu cuenta</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;color:#6E7378">A4 · REGISTRO MOBILE · PASO 1 DE 3</div>
+        <div data-screen-label="2A Registro organizador Mobile" style="width:390px;height:844px;border:1px solid rgba(255,255,255,.09);border-radius:16px;overflow:hidden;background:#0A0B0C;position:relative">
+          <div style="padding:50px 20px 13px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:12px">
+            <div style="width:30px;height:30px;border:1px solid rgba(255,255,255,.16);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:13px">←</div>
+            <div style="font-size:15px;font-weight:600">Cuenta de organizador</div>
+          </div>
+          <div style="padding:14px 20px 108px">
+            <div style="display:flex;gap:6px;margin-bottom:16px"><div style="flex:1;height:3px;background:#D8342C"></div><div style="flex:1;height:3px;background:rgba(255,255,255,.12)"></div><div style="flex:1;height:3px;background:rgba(255,255,255,.12)"></div></div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;color:#6E7378;margin-bottom:10px">PASO 1 DE 3 · ORGANIZACIÓN</div>
+            <div style="font-size:22px;font-weight:300;letter-spacing:-.02em;margin-bottom:10px">Datos de tu organización</div>
+            <div style="font-size:13px;line-height:1.65;color:#8C9196;margin-bottom:20px">La facturación y la verificación se completan después.</div>
+            <div style="display:flex;flex-direction:column;gap:13px">
+              <div><div style="font-size:12.5px;color:#8C9196;margin-bottom:6px">Nombre de la organización</div><div style="height:44px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;padding:0 13px;font-size:14.5px">Productora Austral</div></div>
+              <div><div style="font-size:12.5px;color:#8C9196;margin-bottom:6px">RUT</div><div style="height:44px;border:1px solid rgba(127,160,138,.5);border-radius:3px;background:#0E1013;display:flex;align-items:center;justify-content:space-between;padding:0 13px;font-family:'IBM Plex Mono',monospace;font-size:14px">76.882.410-9<span style="font-family:'Manrope',sans-serif;font-size:11.5px;color:#7FA08A">válido</span></div></div>
+              <div><div style="font-size:12.5px;color:#8C9196;margin-bottom:6px">Correo</div><div style="height:44px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;padding:0 13px;font-size:14.5px">produccion@austral.cl</div></div>
+              <div><div style="font-size:12.5px;color:#8C9196;margin-bottom:6px">Contraseña</div><div style="height:44px;border:1px solid rgba(255,255,255,.14);border-radius:3px;background:#0E1013;display:flex;align-items:center;justify-content:space-between;padding:0 13px;font-size:14.5px;letter-spacing:.2em">••••••••••<span style="letter-spacing:normal;font-size:12px;color:#6E7378">mostrar</span></div></div>
+            </div>
+            <div style="display:flex;gap:11px;align-items:flex-start;font-size:12.5px;line-height:1.6;color:#8C9196;margin-top:16px"><div style="width:14px;height:14px;border:1px solid #6E7378;border-radius:2px;flex:none;margin-top:2px"></div><div>Acepto los términos para organizadores <span style="color:#C08A3E">(provisorios)</span>.</div></div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#0C0E10;border-top:1px solid rgba(255,255,255,.09);padding:14px 20px 26px">
+            <div style="height:48px;border:1px solid rgba(255,255,255,.1);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:15px;color:#4E5358">Continuar</div>
+            <div style="text-align:center;font-size:11.5px;color:#6E7378;margin-top:10px">Acepta los términos para continuar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= B · DASHBOARD GLOBAL ================= -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:16px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;color:#D8342C">B · DASHBOARD GLOBAL</div>
+      <div style="font-size:13px;color:#8C9196">Tres cifras de cabecera, luego trabajo: alertas, tareas, próximos eventos, actividad y IA contextual</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;color:#8C9196">B1 · DASHBOARD — DESKTOP 1440</div>
+      <div data-screen-label="2A Dashboard Desktop" style="width:1440px;border:1px solid rgba(255,255,255,.09);background:#0A0B0C;display:flex;overflow:hidden;box-shadow:0 50px 120px rgba(0,0,0,.55)">
+        <div style="width:216px;flex:none;border-right:1px solid rgba(255,255,255,.07);padding:24px 0;background:#0C0E10">
+          <div style="display:flex;align-items:center;gap:9px;padding:0 22px 8px"><div style="width:16px;height:16px;border:2px solid #D8342C"></div><div style="font-size:14.5px;font-weight:600">TicketChile</div></div>
+          <div style="padding:0 22px 24px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.16em;color:#5B6065">PANEL ORGANIZADOR</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.18em;color:#5B6065;padding:0 22px 10px">OPERACIÓN</div>
+          <div style="font-size:13.5px;padding:9px 22px;background:rgba(255,255,255,.05);border-left:2px solid #D8342C">Resumen</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:#8C9196;padding:9px 22px">Eventos<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378">7</span></div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Ventas</div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Asistentes</div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Acceso / puerta</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.18em;color:#5B6065;padding:22px 22px 10px">FINANZAS</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:#8C9196;padding:9px 22px">Liquidaciones<span style="width:6px;height:6px;background:#C08A3E"></span></div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Comisiones</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.18em;color:#5B6065;padding:22px 22px 10px">EQUIPO</div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Staff y permisos</div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Configuración</div>
+          <div style="margin:22px;padding:12px 14px;border:1px solid rgba(255,255,255,.1);border-radius:3px;display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:#8C9196">Buscar o preguntar<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#5B6065">⌘K</span></div>
+          <div style="margin:0 22px;padding-top:16px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:11px">
+            <div style="width:28px;height:28px;border-radius:3px;background:#1B1E22;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:11px;flex:none">PA</div>
+            <div style="min-width:0"><div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Productora Austral</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#7FA08A;margin-top:3px">VERIFICADA</div></div>
+          </div>
+        </div>
+
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:24px 40px;border-bottom:1px solid rgba(255,255,255,.07)">
+            <div>
+              <div style="font-size:24px;font-weight:300;letter-spacing:-.02em">Resumen</div>
+              <div style="font-size:12.5px;color:#6E7378;margin-top:6px">Productora Austral · 7 eventos activos · datos al 07.09 09:12</div>
+            </div>
+            <div style="display:flex;gap:10px">
+              <div style="height:36px;padding:0 14px;border:1px solid rgba(255,255,255,.12);border-radius:3px;display:flex;align-items:center;font-size:13px;color:#8C9196">Últimos 30 días ▾</div>
+              <div style="height:36px;padding:0 14px;border:1px solid rgba(255,255,255,.12);border-radius:3px;display:flex;align-items:center;font-size:13px;color:#8C9196">Exportar</div>
+              <div style="height:36px;padding:0 16px;background:#D8342C;color:#0A0B0C;border-radius:3px;display:flex;align-items:center;font-size:13.5px;font-weight:600">Crear evento</div>
+            </div>
+          </div>
+
+          <div style="display:flex;border-bottom:1px solid rgba(255,255,255,.07)">
+            <div style="flex:1.2;padding:26px 32px;border-right:1px solid rgba(255,255,255,.07)">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:#6E7378;margin-bottom:14px">VENTAS NETAS · 30 DÍAS</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:34px;line-height:1">$62.480.000</div>
+              <div style="display:flex;gap:16px;margin-top:12px;font-size:12.5px"><span style="color:#7FA08A">+18,2%</span><span style="color:#6E7378">bruto $68.220.000</span></div>
+              <div style="display:flex;align-items:flex-end;gap:3px;height:36px;margin-top:18px">
+                <div style="flex:1;height:32%;background:#2A2E33"></div><div style="flex:1;height:41%;background:#2A2E33"></div><div style="flex:1;height:36%;background:#2A2E33"></div><div style="flex:1;height:52%;background:#343A40"></div><div style="flex:1;height:47%;background:#343A40"></div><div style="flex:1;height:63%;background:#343A40"></div><div style="flex:1;height:58%;background:#3E454C"></div><div style="flex:1;height:74%;background:#3E454C"></div><div style="flex:1;height:69%;background:#3E454C"></div><div style="flex:1;height:88%;background:#D8342C"></div><div style="flex:1;height:100%;background:#D8342C"></div><div style="flex:1;height:81%;background:#D8342C"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#5B6065;margin-top:8px"><span>09.08</span><span>07.09</span></div>
+            </div>
+            <div style="flex:1;padding:26px 32px;border-right:1px solid rgba(255,255,255,.07)">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:#6E7378;margin-bottom:14px">TICKETS VENDIDOS · 30 DÍAS</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:34px;line-height:1">4.318</div>
+              <div style="display:flex;gap:16px;margin-top:12px;font-size:12.5px"><span style="color:#7FA08A">+1.412 / 7 d</span><span style="color:#6E7378">medio $14.470</span></div>
+              <div style="margin-top:18px;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:#8C9196"><span>Conciertos</span><span style="font-family:'IBM Plex Mono',monospace">2.640</span></div>
+                <div style="height:3px;background:rgba(255,255,255,.08)"><div style="height:3px;width:61%;background:#6E7378"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:#8C9196;margin-top:4px"><span>Fiestas</span><span style="font-family:'IBM Plex Mono',monospace">1.128</span></div>
+                <div style="height:3px;background:rgba(255,255,255,.08)"><div style="height:3px;width:26%;background:#6E7378"></div></div>
+              </div>
+            </div>
+            <div style="flex:1;padding:26px 32px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:#6E7378;margin-bottom:14px">EVENTOS ACTIVOS</div>
+              <div style="display:flex;align-items:baseline;gap:12px"><div style="font-family:'IBM Plex Mono',monospace;font-size:34px;line-height:1">7</div><div style="font-size:12.5px;color:#6E7378">de 24 este año</div></div>
+              <div style="margin-top:16px;display:flex;flex-direction:column;gap:0">
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(255,255,255,.07);font-size:12.5px"><div style="width:6px;height:6px;background:#7FA08A;flex:none"></div><div style="flex:1;color:#A8ADB1">Publicados y vendiendo</div><div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px">4</div></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(255,255,255,.07);font-size:12.5px"><div style="width:6px;height:6px;background:#C08A3E;flex:none"></div><div style="flex:1;color:#A8ADB1">Borradores</div><div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px">2</div></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07);font-size:12.5px"><div style="width:6px;height:6px;background:#6E7378;flex:none"></div><div style="flex:1;color:#A8ADB1">Preventa programada</div><div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px">1</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex">
+            <div style="flex:1;min-width:0;padding:28px 32px 40px;border-right:1px solid rgba(255,255,255,.07)">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+                <div style="font-size:17px;font-weight:600">Próximos eventos</div>
+                <div style="font-size:12.5px;color:#8C9196">Ver todos los eventos</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:34px">
+                <div style="display:flex;align-items:stretch;border:1px solid rgba(216,52,44,.3);border-radius:8px;overflow:hidden;position:relative">
+                  <div style="width:64px;background:#0E1013;border-right:1px dashed rgba(255,255,255,.2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 0;flex:none">
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:18px">12</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;color:#6E7378;margin-top:3px">SEP</div>
+                  </div>
+                  <div style="position:absolute;left:56px;top:-8px;width:16px;height:16px;border-radius:50%;background:#0A0B0C"></div>
+                  <div style="position:absolute;left:56px;bottom:-8px;width:16px;height:16px;border-radius:50%;background:#0A0B0C"></div>
+                  <div style="flex:1;padding:13px 18px"><div style="font-size:15px">Ritual Nocturno</div><div style="font-size:12.5px;color:#6E7378;margin-top:4px">Movistar Arena · en 5 días</div></div>
+                  <div style="width:180px;padding:13px 18px;border-left:1px solid rgba(255,255,255,.07)"><div style="height:4px;background:rgba(255,255,255,.08)"><div style="height:4px;width:91%;background:#D8342C"></div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8C9196;margin-top:8px">91% · 4.004 / 4.400</div></div>
+                  <div style="width:116px;padding:13px 18px;border-left:1px solid rgba(255,255,255,.07);font-family:'IBM Plex Mono',monospace;font-size:14px;text-align:right">$24,1M</div>
+                  <div style="width:118px;padding:13px 18px;border-left:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:flex-end;font-size:12.5px;color:#A8ADB1">Centro ›</div>
+                </div>
+                <div style="display:flex;align-items:stretch;border:1px solid rgba(255,255,255,.09);border-radius:8px;overflow:hidden;position:relative">
+                  <div style="width:64px;background:#0E1013;border-right:1px dashed rgba(255,255,255,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 0;flex:none">
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:18px">20</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;color:#6E7378;margin-top:3px">SEP</div>
+                  </div>
+                  <div style="position:absolute;left:56px;top:-8px;width:16px;height:16px;border-radius:50%;background:#0A0B0C"></div>
+                  <div style="position:absolute;left:56px;bottom:-8px;width:16px;height:16px;border-radius:50%;background:#0A0B0C"></div>
+                  <div style="flex:1;padding:13px 18px"><div style="font-size:15px">Nocturna · Sesión 05</div><div style="font-size:12.5px;color:#6E7378;margin-top:4px">Club Matadero · en 13 días</div></div>
+                  <div style="width:180px;padding:13px 18px;border-left:1px solid rgba(255,255,255,.07)"><div style="height:4px;background:rgba(255,255,255,.08)"><div style="height:4px;width:54%;background:#D8342C"></div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8C9196;margin-top:8px">54% · 432 / 800</div></div>
+                  <div style="width:116px;padding:13px 18px;border-left:1px solid rgba(255,255,255,.07);font-family:'IBM Plex Mono',monospace;font-size:14px;text-align:right">$7,9M</div>
+                  <div style="width:118px;padding:13px 18px;border-left:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:flex-end;font-size:12.5px;color:#A8ADB1">Centro ›</div>
+                </div>
+                <div style="display:flex;align-items:stretch;border:1px solid rgba(192,138,62,.35);border-radius:8px;overflow:hidden;position:relative">
+                  <div style="width:64px;background:#0E1013;border-right:1px dashed rgba(192,138,62,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 0;flex:none">
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:18px;color:#C08A3E">08</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;color:#C08A3E;margin-top:3px">NOV</div>
+                  </div>
+                  <div style="position:absolute;left:56px;top:-8px;width:16px;height:16px;border-radius:50%;background:#0A0B0C"></div>
+                  <div style="position:absolute;left:56px;bottom:-8px;width:16px;height:16px;border-radius:50%;background:#0A0B0C"></div>
+                  <div style="flex:1;padding:13px 18px"><div style="font-size:15px">Festival Puerto Vivo</div><div style="font-size:12.5px;color:#C08A3E;margin-top:4px">Borrador · falta dirección del recinto</div></div>
+                  <div style="width:180px;padding:13px 18px;border-left:1px solid rgba(255,255,255,.07)"><div style="height:4px;background:rgba(255,255,255,.08)"><div style="height:4px;width:24%;background:#8C9196"></div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8C9196;margin-top:8px">24% · 720 / 3.000</div></div>
+                  <div style="width:116px;padding:13px 18px;border-left:1px solid rgba(255,255,255,.07);font-family:'IBM Plex Mono',monospace;font-size:14px;text-align:right">$4,7M</div>
+                  <div style="width:118px;padding:13px 18px;border-left:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:flex-end;font-size:12.5px;color:#A8ADB1">Completar ›</div>
+                </div>
+              </div>
+
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px">
+                <div style="font-size:17px;font-weight:600">Actividad reciente</div>
+                <div style="font-size:12.5px;color:#8C9196">Ver todo</div>
+              </div>
+              <div style="display:flex;gap:16px;align-items:flex-start;padding:13px 0;border-top:1px solid rgba(255,255,255,.07)">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378;width:52px;flex:none;padding-top:2px">09:04</div>
+                <div style="width:6px;height:6px;background:#7FA08A;flex:none;margin-top:6px"></div>
+                <div style="flex:1;font-size:13.5px;line-height:1.6;color:#A8ADB1">14 entradas vendidas en <span style="color:#E9EAE7">Ritual Nocturno</span> · Tribuna A</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;flex:none">+$392.000</div>
+              </div>
+              <div style="display:flex;gap:16px;align-items:flex-start;padding:13px 0;border-top:1px solid rgba(255,255,255,.07)">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378;width:52px;flex:none;padding-top:2px">08:41</div>
+                <div style="width:6px;height:6px;background:#6E7378;flex:none;margin-top:6px"></div>
+                <div style="flex:1;font-size:13.5px;line-height:1.6;color:#A8ADB1">Rodrigo Silva editó los tipos de entrada de <span style="color:#E9EAE7">Nocturna · Sesión 05</span></div>
+              </div>
+              <div style="display:flex;gap:16px;align-items:flex-start;padding:13px 0;border-top:1px solid rgba(255,255,255,.07)">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378;width:52px;flex:none;padding-top:2px">08:12</div>
+                <div style="width:6px;height:6px;background:#C08A3E;flex:none;margin-top:6px"></div>
+                <div style="flex:1;font-size:13.5px;line-height:1.6;color:#A8ADB1">Reembolso aprobado · orden ORD-118402 · <span style="color:#E9EAE7">Ritual Nocturno</span></div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;flex:none;color:#8C9196">−$19.620</div>
+              </div>
+              <div style="display:flex;gap:16px;align-items:flex-start;padding:13px 0;border-top:1px solid rgba(255,255,255,.07)">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378;width:52px;flex:none;padding-top:2px">07:58</div>
+                <div style="width:6px;height:6px;background:#7FA08A;flex:none;margin-top:6px"></div>
+                <div style="flex:1;font-size:13.5px;line-height:1.6;color:#A8ADB1">Preventa de <span style="color:#E9EAE7">Cordillera Sonora</span> abrió automáticamente</div>
+              </div>
+              <div style="display:flex;gap:16px;align-items:flex-start;padding:13px 0;border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07)">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378;width:52px;flex:none;padding-top:2px">AYER</div>
+                <div style="width:6px;height:6px;background:#6E7378;flex:none;margin-top:6px"></div>
+                <div style="flex:1;font-size:13.5px;line-height:1.6;color:#A8ADB1">Liquidación de agosto emitida · pendiente de confirmación bancaria</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;flex:none">$18.940.200</div>
+              </div>
+            </div>
+
+            <div style="width:376px;flex:none;padding:28px 32px 40px;display:flex;flex-direction:column;gap:28px">
+              <div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px"><div style="font-size:15px;font-weight:600">Requiere atención</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6E7378">3</div></div>
+                <div style="padding:14px 0;border-top:1px solid rgba(255,255,255,.07);display:flex;gap:12px">
+                  <div style="width:3px;background:#D8342C;flex:none"></div>
+                  <div><div style="font-size:13.5px;line-height:1.45;margin-bottom:6px">Tribuna A al 96% en Ritual Nocturno</div><div style="font-size:12.5px;color:#6E7378;line-height:1.55;margin-bottom:11px">Quedan 38 entradas y hay 20 cortesías sin usar.</div><div style="display:flex;gap:14px;font-size:12.5px"><span style="border-bottom:1px solid rgba(255,255,255,.3)">Revisar stock</span><span style="color:#6E7378">Descartar</span></div></div>
+                </div>
+                <div style="padding:14px 0;border-top:1px solid rgba(255,255,255,.07);display:flex;gap:12px">
+                  <div style="width:3px;background:#C08A3E;flex:none"></div>
+                  <div><div style="font-size:13.5px;line-height:1.45;margin-bottom:6px">Liquidación de agosto lista para cobro</div><div style="font-size:12.5px;color:#6E7378;line-height:1.55;margin-bottom:11px">$18.940.200 netos · confirma la cuenta bancaria. <span style="color:#C08A3E">(monto provisorio)</span></div><div style="font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.3);width:fit-content">Ir a liquidaciones</div></div>
+                </div>
+                <div style="padding:14px 0;border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07);display:flex;gap:12px">
+                  <div style="width:3px;background:#C08A3E;flex:none"></div>
+                  <div><div style="font-size:13.5px;line-height:1.45;margin-bottom:6px">Puerto Vivo no se puede publicar</div><div style="font-size:12.5px;color:#6E7378;line-height:1.55;margin-bottom:11px">Falta la dirección exacta y la imagen del hero.</div><div style="font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.3);width:fit-content">Completar evento</div></div>
+                </div>
+              </div>
+
+              <div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><div style="font-size:15px;font-weight:600">Tareas</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6E7378">4 ABIERTAS</div></div>
+                <div style="display:flex;gap:11px;align-items:flex-start;padding:13px 0;border-top:1px solid rgba(255,255,255,.07)"><div style="width:14px;height:14px;border:1px solid #6E7378;border-radius:2px;flex:none;margin-top:2px"></div><div style="font-size:13.5px;color:#A8ADB1">Asignar staff de puerta · Ritual Nocturno<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#D8342C;margin-top:5px">VENCE EN 2 DÍAS</div></div></div>
+                <div style="display:flex;gap:11px;align-items:flex-start;padding:13px 0;border-top:1px solid rgba(255,255,255,.07)"><div style="width:14px;height:14px;border:1px solid #6E7378;border-radius:2px;flex:none;margin-top:2px"></div><div style="font-size:13.5px;color:#A8ADB1">Cargar mapa de sectores · Sesión 05<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378;margin-top:5px">VENCE 15.09</div></div></div>
+                <div style="display:flex;gap:11px;align-items:flex-start;padding:13px 0;border-top:1px solid rgba(255,255,255,.07)"><div style="width:14px;height:14px;border:1px solid #6E7378;border-radius:2px;flex:none;margin-top:2px"></div><div style="font-size:13.5px;color:#A8ADB1">Responder 6 consultas de asistentes</div></div>
+                <div style="display:flex;gap:11px;align-items:flex-start;padding:13px 0;border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07);opacity:.55"><div style="width:14px;height:14px;border-radius:2px;background:#7FA08A;color:#0A0B0C;font-size:10px;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">✓</div><div style="font-size:13.5px;color:#8C9196;text-decoration:line-through">Confirmar aforo con el recinto</div></div>
+              </div>
+
+              <div style="border:1px solid rgba(255,255,255,.1);border-radius:8px;background:#101215">
+                <div style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;align-items:center">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:#8C9196">TICKETCHILE AI · LECTURA DEL PERIODO</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#5B6065">⌘K</div>
+                </div>
+                <div style="padding:18px">
+                  <div style="font-size:13.5px;line-height:1.6;margin-bottom:12px">Ritual Nocturno se agota antes de la fecha: al ritmo actual, Tribuna A cierra el 10.09 y quedará demanda sin cubrir.</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378;line-height:1.6;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.07)">BASE: 4.004/4.400 · 96% TRIBUNA A · 14 VENTAS HOY</div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:13px;color:#A8ADB1">Liberar 20 cortesías a venta<span style="font-size:12.5px;color:#E9EAE7;border-bottom:1px solid rgba(255,255,255,.3)">Revisar</span></div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;font-size:13px;color:#A8ADB1">Abrir lista de espera<span style="font-size:12.5px;color:#E9EAE7;border-bottom:1px solid rgba(255,255,255,.3)">Revisar</span></div>
+                  <div style="margin-top:12px;font-size:11.5px;color:#6E7378;line-height:1.55">Ninguna acción se aplica sin tu confirmación.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= C · LISTA DE EVENTOS ================= -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:16px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;color:#D8342C">C · LISTA DE EVENTOS</div>
+      <div style="font-size:13px;color:#8C9196">Tabla en desktop, cards en mobile · nombre, fecha, estado, recinto, vendidos, ventas y acceso al centro</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;color:#8C9196">C1 · EVENTOS — DESKTOP 1440</div>
+      <div data-screen-label="2A Lista eventos Desktop" style="width:1440px;border:1px solid rgba(255,255,255,.09);background:#0A0B0C;display:flex;overflow:hidden;box-shadow:0 50px 120px rgba(0,0,0,.55)">
+        <div style="width:216px;flex:none;border-right:1px solid rgba(255,255,255,.07);padding:24px 0;background:#0C0E10">
+          <div style="display:flex;align-items:center;gap:9px;padding:0 22px 8px"><div style="width:16px;height:16px;border:2px solid #D8342C"></div><div style="font-size:14.5px;font-weight:600">TicketChile</div></div>
+          <div style="padding:0 22px 24px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.16em;color:#5B6065">PANEL ORGANIZADOR</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.18em;color:#5B6065;padding:0 22px 10px">OPERACIÓN</div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Resumen</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13.5px;padding:9px 22px;background:rgba(255,255,255,.05);border-left:2px solid #D8342C">Eventos<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378">7</span></div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Ventas</div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Asistentes</div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Acceso / puerta</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.18em;color:#5B6065;padding:22px 22px 10px">FINANZAS</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:#8C9196;padding:9px 22px">Liquidaciones<span style="width:6px;height:6px;background:#C08A3E"></span></div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Comisiones</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.18em;color:#5B6065;padding:22px 22px 10px">EQUIPO</div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Staff y permisos</div>
+          <div style="font-size:13.5px;color:#8C9196;padding:9px 22px">Configuración</div>
+          <div style="margin:22px;padding:12px 14px;border:1px solid rgba(255,255,255,.1);border-radius:3px;display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:#8C9196">Buscar o preguntar<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#5B6065">⌘K</span></div>
+        </div>
+
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:24px 40px;border-bottom:1px solid rgba(255,255,255,.07)">
+            <div>
+              <div style="font-size:24px;font-weight:300;letter-spacing:-.02em">Eventos</div>
+              <div style="font-size:12.5px;color:#6E7378;margin-top:6px">7 activos · 24 en total este año</div>
+            </div>
+            <div style="display:flex;gap:10px">
+              <div style="height:36px;width:230px;border:1px solid rgba(255,255,255,.12);border-radius:3px;display:flex;align-items:center;gap:10px;padding:0 12px;font-size:13px;color:#6E7378"><div style="width:11px;height:11px;border:1.5px solid #6E7378;border-radius:50%;flex:none"></div>Buscar evento o recinto</div>
+              <div style="height:36px;padding:0 14px;border:1px solid rgba(255,255,255,.12);border-radius:3px;display:flex;align-items:center;font-size:13px;color:#8C9196">Exportar</div>
+              <div style="height:36px;padding:0 16px;background:#D8342C;color:#0A0B0C;border-radius:3px;display:flex;align-items:center;font-size:13.5px;font-weight:600">Crear evento</div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 40px;border-bottom:1px solid rgba(255,255,255,.07)">
+            <div style="display:flex;gap:22px;font-size:13.5px;color:#8C9196">
+              <div style="color:#E9EAE7;padding-bottom:14px;margin-bottom:-17px;border-bottom:1px solid #D8342C">Activos <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378">7</span></div>
+              <div>Borradores <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378">2</span></div>
+              <div>Finalizados <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378">15</span></div>
+              <div>Cancelados <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E7378">0</span></div>
+            </div>
+            <div style="display:flex;gap:20px;font-size:13px;color:#8C9196"><div>Categoría ▾</div><div>Ciudad ▾</div><div>Ordenar: fecha ▾</div></div>
+          </div>
+
+          <div style="padding:0 40px 48px">
+            <div style="display:grid;grid-template-columns:96px 1.5fr 190px 120px 210px 130px 100px;gap:20px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.12);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;color:#6E7378"><div>FECHA</div><div>EVENTO</div><div>RECINTO</div><div>ESTADO</div><div>TICKETS VENDIDOS</div><div style="text-align:right">VENTAS</div><div></div></div>
+
+            <div style="display:grid;grid-template-columns:96px 1.5fr 190px 120px 210px 130px 100px;gap:20px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.07)">
+              <div><div style="font-family:'IBM Plex Mono',monospace;font-size:14px">12.09</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6E7378;margin-top:4px">21:00</div></div>
+              <div style="display:flex;align-items:center;gap:14px;min-width:0"><div style="width:56px;height:42px;border-radius:3px;background:linear-gradient(155deg,#2E2A2C,#141518);flex:none"></div><div style="min-width:0"><div style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Ritual Nocturno</div><div style="font-size:12px;color:#6E7378;margin-top:4px">Concierto · 3 sectores</div></div></div>
+              <div style="font-size:13.5px;color:#A8ADB1">Movistar Arena<div style="font-size:12px;color:#6E7378;margin-top:3px">Santiago</div></div>
+              <div style="display:flex;align-items:center;gap:9px;font-size:13px"><div style="width:6px;height:6px;background:#7FA08A;flex:none"></div>Publicado</div>
+              <div><div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:12px;margin-bottom:7px"><span>4.004</span><span style="color:#8C9196">91%</span></div><div style="height:4px;background:rgba(255,255,255,.08)"><div style="height:4px;width:91%;background:#D8342C"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;text-align:right">$24,1M</div>
+              <div style="display:flex;justify-content:flex-end;gap:14px;align-items:center;font-size:12.5px;color:#A8ADB1">Centro<span style="color:#6E7378">⋯</span></div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:96px 1.5fr 190px 120px 210px 130px 100px;gap:20px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.07)">
+              <div><div style="font-family:'IBM Plex Mono',monospace;font-size:14px">20.09</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6E7378;margin-top:4px">23:00</div></div>
+              <div style="display:flex;align-items:center;gap:14px;min-width:0"><div style="width:56px;height:42px;border-radius:3px;background:linear-gradient(155deg,#2E2432,#15131A);flex:none"></div><div style="min-width:0"><div style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Nocturna · Sesión 05</div><div style="font-size:12px;color:#6E7378;margin-top:4px">Fiesta · +18</div></div></div>
+              <div style="font-size:13.5px;color:#A8ADB1">Club Matadero<div style="font-size:12px;color:#6E7378;margin-top:3px">Santiago</div></div>
+              <div style="display:flex;align-items:center;gap:9px;font-size:13px"><div style="width:6px;height:6px;background:#7FA08A;flex:none"></div>Publicado</div>
+              <div><div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:12px;margin-bottom:7px"><span>432</span><span style="color:#8C9196">54%</span></div><div style="height:4px;background:rgba(255,255,255,.08)"><div style="height:4px;width:54%;background:#D8342C"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;text-align:right">$7,9M</div>
+              <div style="display:flex;justify-content:flex-end;gap:14px;align-items:center;font-size:12.5px;color:#A8ADB1">Centro<span style="color:#6E7378">⋯</span></div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:96px 1.5fr 190px 120px 210px 130px 100px;gap:20px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.07)">
+              <div><div style="font-family:'IBM Plex Mono',monospace;font-size:14px">04.10</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6E7378;margin-top:4px">20:30</div></div>
+              <div style="display:flex;align-items:center;gap:14px;min-width:0"><div style="width:56px;height:42px;border-radius:3px;background:linear-gradient(155deg,#2B2A2E,#14161A);flex:none"></div><div style="min-width:0"><div style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Cordillera Sonora</div><div style="font-size:12px;color:#6E7378;margin-top:4px">Concierto · preventa activa</div></div></div>
+              <div style="font-size:13.5px;color:#A8ADB1">Teatro Caupolicán<div style="font-size:12px;color:#6E7378;margin-top:3px">Santiago</div></div>
+              <div style="display:flex;align-items:center;gap:9px;font-size:13px"><div style="width:6px;height:6px;background:#6E7378;flex:none"></div>Preventa</div>
+              <div><div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:12px;margin-bottom:7px"><span>318</span><span style="color:#8C9196">27%</span></div><div style="height:4px;background:rgba(255,255,255,.08)"><div style="height:4px;width:27%;background:#D8342C"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;text-align:right">$3,9M</div>
+              <div style="display:flex;justify-content:flex-end;gap:14px;align-items:center;font-size:12.5px;color:#A8ADB1">Centro<span style="color:#6E7378">⋯</span></div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:96px 1.5fr 190px 120px 210px 130px 100px;gap:20px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(192,138,62,.03)">
+              <div><div style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:#C08A3E">08.11</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6E7378;margin-top:4px">14:00</div></div>
+              <div style="display:flex;align-items:center;gap:14px;min-width:0"><div style="width:56px;height:42px;border-radius:3px;background:linear-gradient(155deg,#3A3524,#181710);flex:none"></div><div style="min-width:0"><div style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Festival Puerto Vivo</div><div style="font-size:12px;color:#C08A3E;margin-top:4px">Falta dirección e imagen</div></div></div>
+              <div style="font-size:13.5px;color:#A8ADB1">Parque Italia<div style="font-size:12px;color:#6E7378;margin-top:3px">Valparaíso</div></div>
+              <div style="display:flex;align-items:center;gap:9px;font-size:13px;color:#C08A3E"><div style="width:6px;height:6px;background:#C08A3E;flex:none"></div>Borrador</div>
+              <div><div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:12px;margin-bottom:7px"><span>720</span><span style="color:#8C9196">24%</span></div><div style="height:4px;background:rgba(255,255,255,.08)"><div style="height:4px;width:24%;background:#8C9196"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;text-align:right">$4,7M</div>
+              <div style="display:flex;justify-content:flex-end;gap:14px;align-items:center;font-size:12.5px;color:#C08A3E">Completar<span style="color:#6E7378">⋯</span></div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:96px 1.5fr 190px 120px 210px 130px 100px;gap:20px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.07);opacity:.62">
+              <div><div style="font-family:'IBM Plex Mono',monospace;font-size:14px">12.07</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6E7378;margin-top:4px">23:00</div></div>
+              <div style="display:flex;align-items:center;gap:14px;min-width:0"><div style="width:56px;height:42px;border-radius:3px;background:linear-gradient(155deg,#26282B,#121315);flex:none"></div><div style="min-width:0"><div style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Nocturna · Sesión 04</div><div style="font-size:12px;color:#6E7378;margin-top:4px">Fiesta · liquidado</div></div></div>
+              <div style="font-size:13.5px;color:#A8ADB1">Club Matadero<div style="font-size:12px;color:#6E7378;margin-top:3px">Santiago</div></div>
+              <div style="display:flex;align-items:center;gap:9px;font-size:13px;color:#8C9196"><div style="width:6px;height:6px;background:#6E7378;flex:none"></div>Finalizado</div>
+              <div><div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:12px;margin-bottom:7px"><span>786</span><span style="color:#8C9196">98%</span></div><div style="height:4px;background:rgba(255,255,255,.08)"><div style="height:4px;width:98%;background:#6E7378"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;text-align:right">$12,4M</div>
+              <div style="display:flex;justify-content:flex-end;gap:14px;align-items:center;font-size:12.5px;color:#A8ADB1">Informe<span style="color:#6E7378">⋯</span></div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:22px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;color:#6E7378">5 DE 7 EVENTOS ACTIVOS</div>
+              <div style="display:flex;gap:10px"><div style="height:34px;padding:0 14px;border:1px solid rgba(255,255,255,.12);border-radius:3px;display:flex;align-items:center;font-size:13px;color:#8C9196">Ver 2 más</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;color:#6E7378">B2 · DASHBOARD MOBILE</div>
+        <div data-screen-label="2A Dashboard Mobile" style="width:390px;height:844px;border:1px solid rgba(255,255,255,.09);border-radius:16px;overflow:hidden;background:#0A0B0C;position:relative">
+          <div style="padding:50px 20px 13px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:16px;font-weight:300;letter-spacing:-.02em">Resumen</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:#6E7378;margin-top:4px">P. AUSTRAL · 30 DÍAS</div></div>
+            <div style="display:flex;gap:10px;align-items:center"><div style="width:30px;height:30px;border:1px solid rgba(255,255,255,.14);border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8C9196">⌘K</div><div style="width:30px;height:30px;border-radius:3px;background:#1B1E22;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:11px">PA</div></div>
+          </div>
+          <div style="padding:14px 20px 88px">
+            <div style="border:1px solid rgba(255,255,255,.1);border-radius:8px;overflow:hidden;margin-bottom:18px">
+              <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.07)">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;color:#6E7378;margin-bottom:9px">VENTAS NETAS</div>
+                <div style="display:flex;align-items:baseline;justify-content:space-between"><div style="font-family:'IBM Plex Mono',monospace;font-size:26px">$62.480.000</div><div style="font-size:12px;color:#7FA08A">+18,2%</div></div>
+                <div style="display:flex;align-items:flex-end;gap:2px;height:26px;margin-top:12px"><div style="flex:1;height:32%;background:#2A2E33"></div><div style="flex:1;height:41%;background:#2A2E33"></div><div style="flex:1;height:36%;background:#2A2E33"></div><div style="flex:1;height:52%;background:#343A40"></div><div style="flex:1;height:47%;background:#343A40"></div><div style="flex:1;height:63%;background:#343A40"></div><div style="flex:1;height:58%;background:#3E454C"></div><div style="flex:1;height:74%;background:#3E454C"></div><div style="flex:1;height:69%;background:#3E454C"></div><div style="flex:1;height:88%;background:#D8342C"></div><div style="flex:1;height:100%;background:#D8342C"></div><div style="flex:1;height:81%;background:#D8342C"></div></div>
+              </div>
+              <div style="display:flex">
+                <div style="flex:1;padding:13px 16px;border-right:1px solid rgba(255,255,255,.07)"><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:#6E7378;margin-bottom:7px">TICKETS</div><div style="font-family:'IBM Plex Mono',monospace;font-size:19px">4.318</div></div>
+                <div style="flex:1;padding:13px 16px"><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:#6E7378;margin-bottom:7px">ACTIVOS</div><div style="font-family:'IBM Plex Mono',monospace;font-size:19px">7</div></div>
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px"><div style="font-size:15px;font-weight:600">Requiere atención</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6E7378">3</div></div>
+            <div style="display:flex;gap:11px;padding:12px 0;border-top:1px solid rgba(255,255,255,.07)">
+              <div style="width:3px;background:#D8342C;flex:none"></div>
+              <div><div style="font-size:13.5px;line-height:1.45;margin-bottom:5px">Tribuna A al 96% en Ritual Nocturno</div><div style="font-size:12.5px;color:#6E7378;line-height:1.5">Quedan 38 entradas · 20 cortesías sin usar</div></div>
+            </div>
+            <div style="display:flex;gap:11px;padding:12px 0;border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07)">
+              <div style="width:3px;background:#C08A3E;flex:none"></div>
+              <div><div style="font-size:13.5px;line-height:1.45;margin-bottom:5px">Liquidación de agosto lista</div><div style="font-size:12.5px;color:#6E7378;line-height:1.5">$18.940.200 netos <span style="color:#C08A3E">(provisorio)</span></div></div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin:20px 0 11px"><div style="font-size:15px;font-weight:600">Próximo evento</div><div style="font-size:12.5px;color:#8C9196">Ver todos</div></div>
+            <div style="display:flex;align-items:stretch;border:1px solid rgba(216,52,44,.3);border-radius:8px;overflow:hidden;position:relative;margin-bottom:18px">
+              <div style="width:56px;background:#0E1013;border-right:1px dashed rgba(255,255,255,.2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0;flex:none"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px">12</div><div style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.12em;color:#6E7378;margin-top:3px">SEP</div></div>
+              <div style="position:absolute;left:48px;top:-8px;width:16px;height:16px;border-radius:50%;background:#0A0B0C"></div>
+              <div style="position:absolute;left:48px;bottom:-8px;width:16px;height:16px;border-radius:50%;background:#0A0B0C"></div>
+              <div style="flex:1;padding:11px 14px">
+                <div style="font-size:14.5px;margin-bottom:4px">Ritual Nocturno</div>
+                <div style="font-size:12px;color:#6E7378;margin-bottom:9px">Movistar Arena · en 5 días</div>
+                <div style="height:4px;background:rgba(255,255,255,.08)"><div style="height:4px;width:91%;background:#D8342C"></div></div>
+                <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8C9196;margin-top:7px"><span>91% · 4.004 / 4.400</span><span>$24,1M</span></div>
+              </div>
+            </div>
+
+            <div style="border:1px solid rgba(255,255,255,.1);border-radius:8px;background:#101215;padding:14px 16px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;color:#8C9196;margin-bottom:10px">TICKETCHILE AI</div>
+              <div style="font-size:13px;line-height:1.6;margin-bottom:10px">Tribuna A cierra el 10.09 al ritmo actual y quedará demanda sin cubrir.</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-top:11px;border-top:1px solid rgba(255,255,255,.07);font-size:12.5px;color:#A8ADB1">Liberar 20 cortesías<span style="color:#E9EAE7;border-bottom:1px solid rgba(255,255,255,.3)">Revisar</span></div>
+            </div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#0A0B0C;border-top:1px solid rgba(255,255,255,.08);display:flex;padding:13px 0 26px;font-size:10.5px">
+            <div style="flex:1;text-align:center"><div style="width:14px;height:14px;border:1.5px solid #D8342C;margin:0 auto 7px"></div>Resumen</div>
+            <div style="flex:1;text-align:center;color:#6E7378"><div style="width:14px;height:14px;border:1.5px solid #6E7378;margin:0 auto 7px"></div>Eventos</div>
+            <div style="flex:1;text-align:center;color:#6E7378"><div style="width:14px;height:14px;border:1.5px solid #6E7378;border-radius:50%;margin:0 auto 7px"></div>Puerta</div>
+            <div style="flex:1;text-align:center;color:#6E7378"><div style="width:14px;height:14px;border:1.5px solid #6E7378;margin:0 auto 7px"></div>Más</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;color:#6E7378">C2 · LISTA DE EVENTOS MOBILE · CARDS</div>
+        <div data-screen-label="2A Lista eventos Mobile" style="width:390px;height:844px;border:1px solid rgba(255,255,255,.09);border-radius:16px;overflow:hidden;background:#0A0B0C;position:relative">
+          <div style="padding:50px 20px 13px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:16px;font-weight:300;letter-spacing:-.02em">Eventos</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:#6E7378;margin-top:4px">7 ACTIVOS · 24 EN EL AÑO</div></div>
+            <div style="width:30px;height:30px;border:1px solid rgba(255,255,255,.14);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#8C9196">⌕</div>
+          </div>
+          <div style="padding:12px 20px;display:flex;gap:8px;border-bottom:1px solid rgba(255,255,255,.07);overflow:hidden">
+            <div style="height:32px;padding:0 12px;border:1px solid rgba(255,255,255,.16);border-radius:3px;display:flex;align-items:center;gap:7px;font-size:12.5px;flex:none">Activos <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6E7378">7</span></div>
+            <div style="height:32px;padding:0 12px;border:1px solid rgba(255,255,255,.08);border-radius:3px;display:flex;align-items:center;gap:7px;font-size:12.5px;color:#8C9196;flex:none">Borradores <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">2</span></div>
+            <div style="height:32px;padding:0 12px;border:1px solid rgba(255,255,255,.08);border-radius:3px;display:flex;align-items:center;font-size:12.5px;color:#8C9196;flex:none">Finalizados</div>
+          </div>
+          <div style="padding:14px 20px 92px">
+            <div style="border:1px solid rgba(216,52,44,.3);border-radius:8px;overflow:hidden;margin-bottom:12px">
+              <div style="display:flex;align-items:stretch;position:relative">
+                <div style="width:52px;background:#0E1013;border-right:1px dashed rgba(255,255,255,.2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 0;flex:none"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px">12</div><div style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.12em;color:#6E7378;margin-top:3px">SEP</div></div>
+                <div style="position:absolute;left:44px;top:-8px;width:16px;height:16px;border-radius:50%;background:#0A0B0C"></div>
+                <div style="flex:1;padding:12px 14px;min-width:0">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:5px"><div style="font-size:15px">Ritual Nocturno</div><div style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:#7FA08A;flex:none"><div style="width:5px;height:5px;background:#7FA08A"></div>Publicado</div></div>
+                  <div style="font-size:12px;color:#6E7378">21:00 · Movistar Arena, Santiago</div>
+                </div>
+              </div>
+              <div style="padding:0 14px 13px 14px;border-top:1px solid rgba(255,255,255,.07);padding-top:12px">
+                <div style="height:4px;background:rgba(255,255,255,.08);margin-bottom:8px"><div style="height:4px;width:91%;background:#D8342C"></div></div>
+                <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8C9196;margin-bottom:12px"><span>4.004 / 4.400 · 91%</span><span style="color:#E9EAE7;font-size:13px">$24,1M</span></div>
+                <div style="height:40px;border:1px solid rgba(255,255,255,.16);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:13.5px">Ir al centro del evento</div>
+              </div>
+            </div>
+
+            <div style="border:1px solid rgba(255,255,255,.09);border-radius:8px;overflow:hidden;margin-bottom:12px">
+              <div style="display:flex;align-items:stretch;position:relative">
+                <div style="width:52px;background:#0E1013;border-right:1px dashed rgba(255,255,255,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 0;flex:none"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px">20</div><div style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.12em;color:#6E7378;margin-top:3px">SEP</div></div>
+                <div style="position:absolute;left:44px;top:-8px;width:16px;height:16px;border-radius:50%;background:#0A0B0C"></div>
+                <div style="flex:1;padding:12px 14px;min-width:0">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:5px"><div style="font-size:15px">Nocturna · Sesión 05</div><div style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:#7FA08A;flex:none"><div style="width:5px;height:5px;background:#7FA08A"></div>Publicado</div></div>
+                  <div style="font-size:12px;color:#6E7378">23:00 · Club Matadero, Santiago</div>
+                </div>
+              </div>
+              <div style="padding:12px 14px 13px;border-top:1px solid rgba(255,255,255,.07)">
+                <div style="height:4px;background:rgba(255,255,255,.08);margin-bottom:8px"><div style="height:4px;width:54%;background:#D8342C"></div></div>
+                <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8C9196"><span>432 / 800 · 54%</span><span style="color:#E9EAE7;font-size:13px">$7,9M</span></div>
+              </div>
+            </div>
+
+            <div style="border:1px solid rgba(192,138,62,.35);border-radius:8px;overflow:hidden">
+              <div style="display:flex;align-items:stretch;position:relative">
+                <div style="width:52px;background:#0E1013;border-right:1px dashed rgba(192,138,62,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 0;flex:none"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;color:#C08A3E">08</div><div style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.12em;color:#C08A3E;margin-top:3px">NOV</div></div>
+                <div style="position:absolute;left:44px;top:-8px;width:16px;height:16px;border-radius:50%;background:#0A0B0C"></div>
+                <div style="flex:1;padding:12px 14px;min-width:0">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:5px"><div style="font-size:15px">Festival Puerto Vivo</div><div style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:#C08A3E;flex:none"><div style="width:5px;height:5px;background:#C08A3E"></div>Borrador</div></div>
+                  <div style="font-size:12px;color:#C08A3E">Falta dirección e imagen del hero</div>
+                </div>
+              </div>
+              <div style="padding:12px 14px 13px;border-top:1px solid rgba(255,255,255,.07)">
+                <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8C9196;margin-bottom:12px"><span>720 / 3.000 · 24%</span><span style="color:#E9EAE7;font-size:13px">$4,7M</span></div>
+                <div style="height:40px;border:1px solid rgba(192,138,62,.5);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:13.5px;color:#C08A3E">Completar para publicar</div>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#0A0B0C;border-top:1px solid rgba(255,255,255,.08);display:flex;padding:13px 0 26px;font-size:10.5px">
+            <div style="flex:1;text-align:center;color:#6E7378"><div style="width:14px;height:14px;border:1.5px solid #6E7378;margin:0 auto 7px"></div>Resumen</div>
+            <div style="flex:1;text-align:center"><div style="width:14px;height:14px;border:1.5px solid #D8342C;margin:0 auto 7px"></div>Eventos</div>
+            <div style="flex:1;text-align:center;color:#6E7378"><div style="width:14px;height:14px;border:1.5px solid #6E7378;border-radius:50%;margin:0 auto 7px"></div>Puerta</div>
+            <div style="flex:1;text-align:center;color:#6E7378"><div style="width:14px;height:14px;border:1.5px solid #6E7378;margin:0 auto 7px"></div>Más</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:280px;padding-top:34px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;color:#D8342C">PANEL · CRITERIOS</div>
+        <div style="font-size:13px;line-height:1.65;color:#A8ADB1">Tres cifras de cabecera, no doce: ventas, tickets y eventos activos. Cada una lleva su propia lectura secundaria en vez de una card aparte.</div>
+        <div style="font-size:13px;line-height:1.65;color:#A8ADB1">La columna derecha es trabajo pendiente: alertas con acción, tareas con vencimiento e IA que cita la cifra en que se apoya.</div>
+        <div style="font-size:13px;line-height:1.65;color:#A8ADB1">El troquel solo aparece en la muesca de fecha de la fila de evento y en el bloque de acceso. Nada de hueso ni QR dentro del panel.</div>
+        <div style="font-size:13px;line-height:1.65;color:#A8ADB1">En mobile la tabla se convierte en card por evento: fecha troquelada, estado como punto de color, barra de aforo y una sola acción según el estado.</div>
+        <div style="font-size:13px;line-height:1.65;color:#A8ADB1">La barra inferior mobile prioriza Puerta: el organizador usa el teléfono el día del evento, no para administrar.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
