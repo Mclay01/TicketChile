@@ -1,11 +1,14 @@
 // apps/web/src/app/api/admin/organizers/[id]/approve/route.ts
 import { NextResponse, type NextRequest } from "next/server";
 import { pool } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin-guard.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const gate = await requireAdmin(req);
+  if (!gate.ok) return gate.response;
   const { id } = await ctx.params;
   const organizerId = String(id || "").trim();
 

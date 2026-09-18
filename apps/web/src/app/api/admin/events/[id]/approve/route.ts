@@ -2,6 +2,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { pool } from "@/lib/db";
 import crypto from "crypto";
+import { requireAdmin } from "@/lib/admin-guard.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,16 +17,18 @@ function slugify(input: string) {
     .slice(0, 80);
 }
 
-function pickString(v: any) {
+function pickString(v: unknown) {
   return typeof v === "string" ? v.trim() : "";
 }
 
-function pickInt(v: any) {
+function pickInt(v: unknown) {
   const n = Number(v);
   return Number.isFinite(n) ? Math.floor(n) : 0;
 }
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const gate = await requireAdmin(req);
+  if (!gate.ok) return gate.response;
   const { id } = await ctx.params;
   const submissionId = String(id || "").trim();
 
@@ -41,7 +44,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       id: string;
       organizer_id: string;
       status: string;
-      payload: any;
+      payload: Record<string, unknown> | null;
       created_at: Date;
     }>(
       `
@@ -49,6 +52,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       FROM organizer_event_submissions
       WHERE id = $1
       LIMIT 1
+      FOR UPDATE
       `,
       [submissionId]
     );
@@ -82,9 +86,11 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const image = pickString(payload.image);
     const description = pickString(payload.description);
 
-    const ticketName = pickString(payload.ticketType?.name) || "General";
-    const ticketPrice = pickInt(payload.ticketType?.priceClp);
-    const ticketCapacity = pickInt(payload.ticketType?.capacity);
+    const ticketType = payload.ticketType && typeof payload.ticketType === "object"
+      ? payload.ticketType as Record<string, unknown> : {};
+    const ticketName = pickString(ticketType.name) || "General";
+    const ticketPrice = pickInt(ticketType.priceClp);
+    const ticketCapacity = pickInt(ticketType.capacity);
 
     if (!title || !city || !venue || !dateISO || !description) {
       await client.query("ROLLBACK");
@@ -159,12 +165,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       submissionId,
       slug,
     });
-  } catch (e: any) {
+  } catch {
     try {
       await client.query("ROLLBACK");
     } catch {}
     return NextResponse.json(
-      { ok: false, error: e?.message || "No se pudo aprobar la solicitud." },
+      { ok: false, error: "No se pudo aprobar la solicitud." },
       { status: 500 }
     );
   } finally {

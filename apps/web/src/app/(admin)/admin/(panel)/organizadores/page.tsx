@@ -1,4 +1,3 @@
-// apps/web/src/app/(admin)/admin/organizadores/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";

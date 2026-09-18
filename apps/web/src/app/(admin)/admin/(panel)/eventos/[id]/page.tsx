@@ -1,16 +1,16 @@
-// apps/web/src/app/(admin)/admin/eventos/[id]/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function AdminEventDetailPage({ params }: { params: { id: string } }) {
+export default function AdminEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [ev, setEv] = useState<any>(null);
   const [busy, setBusy] = useState(false);
 
   async function load() {
-    const r = await fetch(`/api/admin/event/${params.id}`, { cache: "no-store" });
+    const r = await fetch(`/api/admin/event/${id}`, { cache: "no-store" });
     const j = await r.json().catch(() => ({}));
     setEv(j?.event || null);
   }
@@ -23,7 +23,7 @@ export default function AdminEventDetailPage({ params }: { params: { id: string 
   async function publish() {
     setBusy(true);
     try {
-      await fetch(`/api/admin/events/${params.id}/publish`, { method: "POST" });
+      await fetch(`/api/admin/events/${id}/publish`, { method: "POST" });
       router.push("/admin");
     } finally {
       setBusy(false);
@@ -33,7 +33,7 @@ export default function AdminEventDetailPage({ params }: { params: { id: string 
   async function unpublish() {
     setBusy(true);
     try {
-      await fetch(`/api/admin/events/${params.id}/unpublish`, { method: "POST" });
+      await fetch(`/api/admin/events/${id}/unpublish`, { method: "POST" });
       router.push("/admin");
     } finally {
       setBusy(false);

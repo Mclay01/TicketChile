@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { EVENTS, formatCLP } from "@/lib/events";
-import { getPaymentsDashboardPgServer } from "@/lib/organizer.pg.server";
+import { formatCLP } from "@/lib/events";
+import { getPaymentsDashboardPgServer, listOrganizerEventsPgServer } from "@/lib/organizer.pg.server";
+import { requireOrganizerApproved } from "@/lib/organizer-guard.server";
+import { redirect } from "next/navigation";
 import PaymentsTableClient from "./PaymentsTableClient";
 
 export const runtime = "nodejs";
@@ -48,17 +50,22 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 export default async function OrganizadorPagosPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const eventId = pickString(searchParams.eventId);
-  const status = pickString(searchParams.status).toUpperCase() || "ALL";
-  const q = pickString(searchParams.q);
+  const gate = await requireOrganizerApproved();
+  if (!gate.ok) redirect("/organizador/login");
+  const params = await searchParams;
+  const events = await listOrganizerEventsPgServer(gate.organizerId);
+  const eventId = pickString(params.eventId);
+  const status = pickString(params.status).toUpperCase() || "ALL";
+  const q = pickString(params.q);
 
-  const limit = Math.min(200, Math.max(10, pickInt(searchParams.limit, 50)));
-  const page = Math.max(1, pickInt(searchParams.page, 1));
+  const limit = Math.min(200, Math.max(10, Math.floor(pickInt(params.limit, 50))));
+  const page = Math.max(1, Math.floor(pickInt(params.page, 1)));
   const offset = (page - 1) * limit;
 
   const data = await getPaymentsDashboardPgServer({
+    organizerId: gate.organizerId,
     eventId,
     status,
     q,
@@ -145,7 +152,7 @@ export default async function OrganizadorPagosPage({
               className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
             >
               <option value="">Todos</option>
-              {EVENTS.map((e) => (
+              {events.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.title} ({e.id})
                 </option>

@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "test:in-process": "node --test --experimental-test-isolation=none tests/*.test.mjs",
+    "build:verify": "node scripts/verify-build.mjs"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.2.6",

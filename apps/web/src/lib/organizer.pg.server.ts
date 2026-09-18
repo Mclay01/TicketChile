@@ -930,6 +930,7 @@ export type PaymentsDashboard = {
 };
 
 type PaymentsDashboardOpts = {
+  organizerId: string;
   eventId?: string;
   status?: string;
   q?: string;
@@ -940,6 +941,8 @@ type PaymentsDashboardOpts = {
 export async function getPaymentsDashboardPgServer(
   opts: PaymentsDashboardOpts
 ): Promise<PaymentsDashboard> {
+  const organizerId = String(opts.organizerId ?? "").trim();
+  if (!organizerId) throw new Error("Organizer scope is required.");
   const eventId = String(opts.eventId ?? "").trim();
   const status = String(opts.status ?? "ALL").trim().toUpperCase();
   const qRaw = String(opts.q ?? "").trim();
@@ -949,9 +952,11 @@ export async function getPaymentsDashboardPgServer(
   const limit = Number.isFinite(opts.limit) ? Math.max(1, Math.min(200, Number(opts.limit))) : 50;
   const offset = Number.isFinite(opts.offset) ? Math.max(0, Number(opts.offset)) : 0;
 
-  const where: string[] = ["1=1"];
-  const params: any[] = [];
-  let p = 1;
+  const where: string[] = [
+    "event_id IN (SELECT event_id FROM organizer_events WHERE organizer_id = $1)",
+  ];
+  const params: (string | number)[] = [organizerId];
+  let p = 2;
 
   if (eventId) {
     where.push(`event_id = $${p++}`);

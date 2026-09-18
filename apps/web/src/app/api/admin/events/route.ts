@@ -2,6 +2,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { adminListEventsDb } from "@/lib/events.admin.server";
 import { pool } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin-guard.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,12 +11,14 @@ type SubmissionRow = {
   id: string;
   organizer_id: string;
   status: string;
-  payload: any;
+  payload: Record<string, unknown> | null;
   created_at: Date;
   organizer_display_name: string | null;
 };
 
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (!gate.ok) return gate.response;
   const url = new URL(req.url);
   const tab = url.searchParams.get("tab"); // pending | published
 
@@ -58,7 +61,7 @@ export async function GET(req: NextRequest) {
 
   // ✅ Published = eventos reales publicados
   const events = await adminListEventsDb({ published: true });
-  const normalized = (events || []).map((e: any) => ({
+  const normalized = (events || []).map((e) => ({
     ...e,
     kind: "event" as const,
   }));

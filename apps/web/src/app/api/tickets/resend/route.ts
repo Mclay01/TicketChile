@@ -1,196 +1,87 @@
-// apps/web/src/app/api/tickets/resend/route.ts
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { sendTicketEmail } from "@/lib/tickets.email";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth";
-import { apiUrl } from "@/lib/api";
+import { getBuyerEmail, TICKET_OWNER_SQL } from "@/lib/buyer-guard.server";
+import { signTicketToken } from "@/lib/qr-token.server";
+import * as QRCode from "qrcode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function json(status: number, payload: any) {
-  return NextResponse.json(payload, {
-    status,
-    headers: { "Cache-Control": "no-store" },
-  });
+function json(status: number, payload: unknown) {
+  return NextResponse.json(payload, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-function normalizeEmail(v: any) {
-  return String(v || "").trim().toLowerCase();
-}
-
-function uniqEmails(emails: Array<string | null | undefined>) {
-  const set = new Set<string>();
-  for (const e of emails) {
-    const n = normalizeEmail(e);
-    if (n.includes("@")) set.add(n);
-  }
-  return Array.from(set);
-}
-
-function normalizeBaseUrl(u: string) {
-  return String(u || "").replace(/\/+$/, "");
-}
-
-// ✅ Base URL robusta para server->server fetch en Vercel
-function baseUrlFromRequest(req: Request) {
-  const envBase = normalizeBaseUrl(
-    String(process.env.APP_BASE_URL || process.env.NEXTAUTH_URL || "").trim()
-  );
-  if (envBase) return envBase;
-
-  const proto = req.headers.get("x-forwarded-proto") || "http";
-  const host =
-    req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
-  if (!host) return "";
-  return normalizeBaseUrl(`${proto}://${host}`);
-}
-
-async function fetchQrPngBase64(req: Request, ticketId: string, eventId: string) {
-  try {
-    const base = baseUrlFromRequest(req);
-    if (!base) return null;
-
-    // Usa tu prefijo actual (api/demo o api, etc.)
-    const path = apiUrl(
-      `/qr?ticketId=${encodeURIComponent(ticketId)}&eventId=${encodeURIComponent(eventId)}`
-    );
-    const url = `${base}${path}`;
-
-    // Por si tu /qr requiere cookies de sesión (más robusto)
-    const cookie = req.headers.get("cookie") || "";
-
-    const r = await fetch(url, {
-      method: "GET",
-      headers: cookie ? { cookie } : undefined,
-      cache: "no-store",
-    });
-
-    if (!r.ok) return null;
-
-    const ab = await r.arrayBuffer();
-    const b64 = Buffer.from(ab).toString("base64");
-    return b64 || null;
-  } catch {
-    return null;
-  }
-}
+type TicketEmailRow = {
+  ticket_id: string;
+  ticket_status: string;
+  ticket_type_name: string;
+  order_id: string;
+  buyer_name: string;
+  buyer_email: string;
+  event_id: string;
+  event_title: string;
+  city: string | null;
+  venue: string | null;
+  date_iso: Date | string | null;
+};
 
 export async function POST(req: Request) {
-  let body: any;
   try {
-    body = await req.json();
-  } catch {
-    return json(400, { ok: false, error: "Body inválido (JSON)." });
-  }
+    const sessionEmail = await getBuyerEmail();
+    if (!sessionEmail) return json(401, { ok: false, error: "No autenticado." });
 
-  const ticketId = String(body?.ticketId || "").trim();
-  if (!ticketId) return json(400, { ok: false, error: "Falta ticketId." });
+    const body: unknown = await req.json().catch(() => null);
+    const ticketId = body && typeof body === "object" && "ticketId" in body &&
+      typeof body.ticketId === "string" ? body.ticketId.trim() : "";
+    if (!ticketId || ticketId.length > 200) {
+      return json(400, { ok: false, error: "Ticket inv?lido." });
+    }
 
-  // ✅ email de la cuenta logueada (fallback)
-  const session = await getServerSession(authOptions);
-  const sessionEmail = normalizeEmail(session?.user?.email);
-
-  const client = await pool.connect();
-  try {
-    const tRes = await client.query(
-      `
-      SELECT
-        t.id as ticket_id,
-        t.status as ticket_status,
-        t.ticket_type_name,
-        t.owner_email as ticket_owner_email,
-        o.id as order_id,
-        o.buyer_name,
-        o.buyer_email,
-        o.owner_email as order_owner_email,
-        o.event_id,
-        o.event_title,
-        e.city,
-        e.venue,
-        e.date_iso
-      FROM tickets t
-      JOIN orders o ON o.id = t.order_id
-      LEFT JOIN events e ON e.id = o.event_id
-      WHERE t.id = $1
-      LIMIT 1
-      `,
-      [ticketId]
+    const result = await pool.query<TicketEmailRow>(
+      `SELECT t.id AS ticket_id, t.status AS ticket_status, t.ticket_type_name,
+              o.id AS order_id, o.buyer_name, o.buyer_email,
+              t.event_id, o.event_title, e.city, e.venue, e.date_iso
+       FROM tickets t
+       JOIN orders o ON o.id = t.order_id
+       LEFT JOIN events e ON e.id = t.event_id
+       WHERE t.id = $1 AND ${TICKET_OWNER_SQL} = $2
+       LIMIT 1`,
+      [ticketId, sessionEmail],
     );
-
-    if (tRes.rowCount === 0) {
-      return json(404, { ok: false, error: "Ticket no encontrado." });
+    const row = result.rows[0];
+    // Do not distinguish a missing ticket from another buyer's ticket.
+    if (!row) return json(404, { ok: false, error: "Ticket no encontrado." });
+    if (row.ticket_status === "CANCELLED") {
+      return json(409, { ok: false, error: "La entrada est? cancelada." });
     }
 
-    const row = tRes.rows[0];
-
-    const buyerEmail = normalizeEmail(row.buyer_email);
-    const ownerEmailFromTicket = normalizeEmail(row.ticket_owner_email);
-    const ownerEmailFromOrder = normalizeEmail(row.order_owner_email);
-
-    // ✅ destinatarios: checkout + owner(ticket/order) + sesión(fallback)
-    const to = uniqEmails([buyerEmail, ownerEmailFromTicket, ownerEmailFromOrder, sessionEmail]);
-
-    if (to.length === 0) {
-      return json(409, { ok: false, error: "No hay destinatarios válidos para reenviar." });
-    }
-
-    // ✅ Traer QR en base64 una sola vez
-    const eventId = String(row.event_id || "").trim();
-    const qrPngBase64 = eventId ? await fetchQrPngBase64(req, String(row.ticket_id), eventId) : null;
-
-    const sentTo: string[] = [];
-    const failedTo: Array<{ email: string; error: string }> = [];
-
-    for (const email of to) {
-      try {
-        await sendTicketEmail({
-          to: [email],
-          ticket: {
-            id: String(row.ticket_id),
-            status: String(row.ticket_status),
-            ticketTypeName: String(row.ticket_type_name || ""),
-            qrPngBase64, // ✅ aquí va el QR
-          },
-          order: {
-            id: String(row.order_id),
-            buyerName: String(row.buyer_name || ""),
-            buyerEmail,
-            ownerEmail: ownerEmailFromTicket || ownerEmailFromOrder || sessionEmail || "",
-          },
-          event: {
-            id: eventId,
-            title: String(row.event_title || ""),
-            city: String(row.city || ""),
-            venue: String(row.venue || ""),
-            dateISO: row.date_iso ? new Date(row.date_iso).toISOString() : "",
-          },
-        });
-
-        sentTo.push(email);
-      } catch (e: any) {
-        failedTo.push({ email, error: String(e?.message || e) });
-      }
-    }
-
-    if (sentTo.length > 0) {
-      return json(200, {
-        ok: true,
-        sentTo,
-        failedTo,
-        qrIncluded: Boolean(qrPngBase64),
-      });
-    }
-
-    return json(500, {
-      ok: false,
-      error: "Falló el envío a todos los destinatarios.",
-      failedTo,
+    // Render after ownership validation, without forwarding cookies to a
+    // request-derived host or relying on a public signing endpoint.
+    const token = signTicketToken({ ticketId: row.ticket_id, eventId: row.event_id });
+    const png = await QRCode.toBuffer(token, {
+      type: "png", width: 260, margin: 1, errorCorrectionLevel: "M",
     });
-  } catch (e: any) {
-    return json(500, { ok: false, error: String(e?.message || e) });
-  } finally {
-    client.release();
+
+    // Only the current owner receives a reissued access credential. An original
+    // buyer may no longer own it, and the request cannot add recipients.
+    await sendTicketEmail({
+      to: [sessionEmail],
+      ticket: {
+        id: row.ticket_id, status: row.ticket_status,
+        ticketTypeName: row.ticket_type_name, qrPngBase64: png.toString("base64"),
+      },
+      order: {
+        id: row.order_id, buyerName: row.buyer_name,
+        buyerEmail: row.buyer_email, ownerEmail: sessionEmail,
+      },
+      event: {
+        id: row.event_id, title: row.event_title, city: row.city || "",
+        venue: row.venue || "", dateISO: row.date_iso ? new Date(row.date_iso).toISOString() : "",
+      },
+    });
+    return json(200, { ok: true, sentTo: [sessionEmail], failedTo: [], qrIncluded: true });
+  } catch {
+    return json(500, { ok: false, error: "No se pudo reenviar la entrada. Intenta nuevamente." });
   }
 }

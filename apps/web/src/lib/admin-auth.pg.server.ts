@@ -85,7 +85,7 @@ export async function createAdminSession(adminId: string) {
 
 export async function getAdminFromSession(sessionId: string): Promise<AdminUser | null> {
   const sid = String(sessionId || "").trim();
-  if (!sid) return null;
+  if (!/^admsess_[a-f0-9]{48}$/.test(sid)) return null;
 
   const r = await pool.query<{
     id: string;

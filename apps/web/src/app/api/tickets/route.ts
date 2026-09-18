@@ -1,18 +1,12 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth";
+import { getBuyerEmail, TICKET_OWNER_SQL } from "@/lib/buyer-guard.server";
 import { pool } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function normalizeEmail(v: unknown) {
-  return String(v || "").trim().toLowerCase();
-}
-
-export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  const ownerEmail = normalizeEmail(session?.user?.email);
+export async function GET() {
+  const ownerEmail = await getBuyerEmail();
 
   if (!ownerEmail) {
     return NextResponse.json(
@@ -33,11 +27,13 @@ export async function GET(req: Request) {
         t.event_id        AS "eventId",
         o.event_title     AS "eventTitle",
         t.ticket_type_name AS "ticketTypeName",
+        t.ticket_type_id AS "ticketTypeId",
+        t.created_at AS "createdAtISO",
         t.buyer_email     AS "buyerEmail",
         t.status
       FROM tickets t
       JOIN orders o ON o.id = t.order_id
-      WHERE COALESCE(t.owner_email, o.owner_email, o.buyer_email, t.buyer_email) = $1
+      WHERE ${TICKET_OWNER_SQL} = $1
       ORDER BY t.created_at DESC
       `,
       [ownerEmail]
@@ -47,9 +43,9 @@ export async function GET(req: Request) {
       { ok: true, tickets: rows },
       { status: 200, headers: { "Cache-Control": "no-store" } }
     );
-  } catch (e: any) {
+  } catch {
     return NextResponse.json(
-      { ok: false, error: String(e?.message || e) },
+      { ok: false, error: "No se pudieron cargar tus entradas." },
       { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   } finally {

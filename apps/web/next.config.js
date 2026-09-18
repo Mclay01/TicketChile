@@ -2,6 +2,8 @@ const path = require("path");
 
 /** @type {import("next").NextConfig} */
 const nextConfig = {
+  // Isolate verification builds from a developer's running .next directory.
+  distDir: process.env.TICKETCHILE_BUILD_DIR || ".next",
   turbopack: { root: path.join(__dirname, "../..") },
 
   allowedDevOrigins: [

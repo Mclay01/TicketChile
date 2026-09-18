@@ -1,11 +1,14 @@
 // apps/web/src/app/api/admin/organizers/route.ts
 import { NextResponse, type NextRequest } from "next/server";
 import { pool } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin-guard.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (!gate.ok) return gate.response;
   const url = new URL(req.url);
   const status = url.searchParams.get("status"); // pending | approved
 

@@ -78,7 +78,7 @@ export default function TicketCard({ t }: { t: TicketCardTicket }) {
             onClick={resendTicket}
             disabled={sending}
             className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10 disabled:opacity-50"
-            title="Reenvía este ticket al correo del checkout y al correo de tu cuenta"
+            title="Reenvía esta entrada al correo de tu cuenta"
           >
             {sending ? "Reenviando…" : "Reenviar al correo"}
           </button>
