@@ -19,7 +19,7 @@ Updated: 2026-09-18. Branch: `astra/ticketchile-v2`. Starting commit: `6104fd9`.
 
 ## Current work
 
-M1 remains complete in `39a0931` and was not reimplemented. M2 is complete in the commit containing this entry. Its starting tree was clean. Work stops here as requested; M3 has not begun. No deployment, production credentials, production data mutations or provider API calls.
+M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df1875d392abc7b7ad60a67`. Both were verified before M3 and were extended rather than reimplemented. M3 is complete in the commit containing the M3 entry below. No deployment, production credentials/data, provider calls, merge or push.
 
 ## M2 completed
 
@@ -34,7 +34,7 @@ M1 remains complete in `39a0931` and was not reimplemented. M2 is complete in th
 
 ## Pending
 
-M3-M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). No schema migration, staff assignment model, recovery, MFA, real provider flow or design milestone has been delivered. The full platform remains incomplete and is not production-ready.
+M4-M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). M3 delivers the versioned local schema, persisted staff/security foundation, recovery, MFA, rates and audit. No production schema adoption, external security delivery worker, real provider end-to-end flow or design milestone is claimed. The full platform remains incomplete and is not production-ready.
 
 ## Decisions
 
@@ -44,16 +44,16 @@ M3-M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). No schem
 - No automatic production operations, external emails, migration execution or credential use.
 - Approved 1D designs determine visual language; fees/legal/settlement examples are not policy.
 - The current owner alone receives QR email delivery, including initial payment delivery and resend. Checkout contact email is not ticket ownership. Guest buyer read access is not preserved.
-- M1/M2 authorization and their exceptions are documented in [AUTHORIZATION.md](AUTHORIZATION.md). Bootstrap/provisioning/login/logout still use their legacy mechanisms and need the identity hardening milestone.
+- M1/M2 authorization and their exceptions are documented in [AUTHORIZATION.md](AUTHORIZATION.md). M3 retires HTTP bootstrap/provisioning/SSO bypasses and shares hardened login/logout/recovery/MFA/session services; see [IDENTITY-SECURITY.md](IDENTITY-SECURITY.md).
 
 ## Blockers and constraints
 
 - `pnpm` is absent from PATH; installed Node 22.15.1 and local dependencies allow direct CLI checks.
-- Runtime database schema diverges from SQL; no local database fixture has been verified. No remote DB inspection attempted.
+- The reconstructed local schema is verified on disposable PostgreSQL 18.1. The actual production schema is still unknown and requires catalog reconciliation; no remote DB inspection was attempted.
 - Three bundled design HTMLs contain their real markup in `__bundler/template`; inspect the template, not the loading thumbnail.
 - Existing root package/config and lint debt need dedicated follow-up.
-- Remaining exposures: legacy provisioning/bootstrap and identity controls; rate limits and public hold abuse; incomplete staff/audit/transfer/key-rotation models; legacy Stripe/Fintoc callback binding/replay-window review; inventory/finalization and email-outbox reliability. M2 closes the previously listed public ticket/scanner/payment-read bypasses but does not certify financial or identity workflows.
-- Tests use infrastructure doubles and validate SQL scope contracts; persisted-session expiry, tenant isolation against actual PostgreSQL, row-lock concurrency and provider/browser end-to-end flows have not been executed.
+- Remaining exposures: unverified production catalog/infrastructure, privileged onboarding/key management/recovery-email proof, security delivery worker and retention/archival, distributed abuse/load controls, email-based ticket ownership and transfer/key rotation, legacy Stripe/Fintoc callback binding/replay-window review, and payment/inventory/finalization/email reliability. M3 closes the scoped identity/rate/hold/staff/audit gaps; it does not certify production or financial workflows.
+- M1/M2 tests retain isolated provider/session/DB doubles; M3 additionally executes real PostgreSQL migrations, persisted expiry/revocation/grants, token/MFA/rate/hold/check-in concurrency and audit. Browser/provider/email/Wallet end-to-end and distributed load remain unexecuted.
 
 ## M1 verification (historical)
 
@@ -95,6 +95,40 @@ Whole-repository lint was not rerun or claimed clean in M2; the M1 baseline abov
 
 Not executed: real PostgreSQL migrations/tenant/concurrency tests, provider sandbox end-to-end, actual email/Wallet calls, browser/mobile/camera QA. Schema divergence and these validation gaps remain explicit, not waived.
 
+## M3 completed
+
+Starting point: clean `astra/ticketchile-v2` at M2 `319cb5f`. The latest user attachment explicitly requested M3 after confirming M1/M2. No unrelated product redesign or M4 work was undertaken.
+
+- Added a versioned migration runner, reconstructed fresh-local runtime baseline, shared identity/security schema and persisted capability SQL. Checksums, ordering, transactional rollback, idempotency and refusal to auto-adopt unknown existing tables are tested. Existing production adoption remains a reviewed catalog/reconciliation procedure, not an automatic migration.
+- Shared buyer/organizer/admin identity security state, hashed persisted sessions, versioned revocation, modern asynchronous scrypt with progressive legacy compatibility, nonenumerating recovery and strong expiring single-use verification/reset tokens. Buyer JWT refresh cannot revive a revoked session; a concurrent security-version change also invalidates the current buyer principal lookup.
+- Mandatory TOTP enrollment for ADMIN/SUPERADMIN/ORGANIZER_OWNER before operational access; encrypted secrets, replay counters, atomic single-use recovery codes, strongly verified reconfiguration/disable and session invalidation. Minimal functional security form/login code fields only.
+- Durable owner/manager/door/finance/support capability model, tenant/event scopes, hashed email-bound invitations, acceptance/revocation and owner-only grant changes. Existing scanner/statistics/CSV services enforce live role/capability intersection. Disabled owners suspend their tenant's staff and pending invitations. Staff scanner entry reuses the existing scanner UI.
+- PostgreSQL-backed rate limits with explicit injectable test storage cover login/registration/recovery/reset/verification/MFA/invites/checkout/holds/ticket reads/resend/scanner/exports. Public AI has no implemented provider endpoint; M7 must adopt the same boundary.
+- Holds require a verified buyer, persist ownership, ignore arbitrary standalone TTL, enforce quantity/account quotas under a transaction advisory lock and release expired inventory through existing transaction logic. Stripe/transfer retries cannot claim an unowned/foreign hold. Payment lifecycle consolidation remains M4.
+- Durable audit accompanies sensitive security, invitation/permission, organizer approval, publication and check-in mutations. Check-in and audit commit atomically. Audit UPDATE/DELETE is rejected; production DB permissions/archival are still required.
+- HTTP bootstrap/provisioning/SSO bypasses retired; local-only bootstrap and encrypted development inbox replace them without external email. All logout callers use POST; legacy verification navigation goes to the new token workflow. Removed unused signed organizer-ID authentication code.
+- Updated [AUTHORIZATION.md](AUTHORIZATION.md), [MIGRATION-PLAN.md](MIGRATION-PLAN.md), [QA-CHECKLIST.md](QA-CHECKLIST.md) and [IDENTITY-SECURITY.md](IDENTITY-SECURITY.md), including limitations, migration risks and exact operational commands.
+
+## M3 verification
+
+Run from `apps/web` unless noted:
+
+| Check | Result |
+| --- | --- |
+| `node --test --experimental-test-isolation=none --test-reporter=spec tests/*.test.mjs` | PASS: 204 tests, zero failures/skips; all 177 M1/M2 cases retained plus 27 M3 cases using actual disposable PostgreSQL where applicable |
+| `node node_modules/typescript/bin/tsc --noEmit --incremental false` | PASS |
+| `node scripts/lint-changed.mjs` | PASS: all 78 changed/new `.ts`, `.tsx`, `.mjs` files, zero errors/warnings; root Git used despite nested `apps/web/.git` |
+| `node scripts/verify-build.mjs` | PASS: optimized compilation, TypeScript, static generation and route collection using inert credentials/unreachable loopback DB |
+| Root `git -c core.safecrlf=false diff --check` | PASS |
+
+The local PostgreSQL 18.1 cluster binds only `127.0.0.1:55439`, uses synthetic fixtures and never loads application `.env.local`. Each integration run creates a unique empty test database; no database was dropped or recreated. Fixtures/local inbox/build output are ignored, not committed. Pools close after tests; the local cluster is stopped when work ends, retaining its files. No production credentials, database/provider/email calls, deployment, merge or push occurred.
+
+Intermediate failures were corrected before final gates: TypeScript's overloaded scrypt promisification, a test-double AccessError class mismatch, re-exported Next route configuration rejected by the build, and two inherited unused lint suppression comments in a touched logout client. Automatic approval review rejected a broad proxy exception; it was replaced by a narrow exception for the existing audited scanner aliases. No broader API gate was removed.
+
+Whole-repository lint was not rerun or claimed clean. The historical M1 baseline remains 287 legacy errors and 35 warnings. No unrelated lint cleanup or visual redesign was undertaken.
+
+Not executed/certified: existing/production schema adoption, secure production key and DB-role operations, external security delivery worker, browser MFA/Google OAuth/camera/Wallet/provider sandboxes, distributed abuse/load tests, payment financial invariants or final product UI. Security email is durably queued/encrypted, not externally delivered; production identity provisioning/onboarding still requires a reviewed runbook. Full residual details are in the linked security and migration documents.
+
 ## Exact next milestone
 
-**M3: versioned local schema, identity/RBAC, recovery, rate limits, MFA and audit.** Completion evidence: local migrations plus authorization/recovery integration tests. Establish a disposable local database before those tests; do not inspect/mutate production. Persist event grants before admitting staff (operational staff/scanner workflow remains M8). Continue from M2; do not restart M0 or reimplement M1/M2.
+**M4: Payment/hold/finalization consolidation, provider availability and email.** Completion evidence: idempotency, expiry, amount and issuance tests. Continue from M3; preserve the persisted authorization/security boundaries and do not restart M1/M2. M4 has not begun. Stop after the coherent M3 commit; do not deploy.

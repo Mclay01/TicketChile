@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { loadSource } from "./load-source.mjs";
+import { loadSource as loadRawSource } from "./load-source.mjs";
+// M1/M2 route contracts isolate rate storage; real atomic limits are covered by security.integration.
+const loadSource=(entry,overrides={})=>loadRawSource(entry,{
+  "@/lib/security/rate-limit.server":{limit:async()=>{},publicLimit:async()=>{}},...overrides,
+});
 
 const payment = { id: "pay_1", hold_id: "hold_1", order_id: null, event_id: "event_1", provider: "flow",
   provider_ref: "stored-token", owner_email: "owner@test.cl", buyer_email: "recipient@test.cl",
@@ -144,6 +148,10 @@ for (const provider of ["stripe", "transfer", "webpay", "flow"]) {
 test("payment retry cannot reassign existing owner or switch providers", async () => {
   const { checkPaymentRetry } = loadSource("lib/payment-create-access.server.ts", { "@/lib/ticket-access.server": {} });
   const client = { query: async (sql, args) => {
+    if(sql.includes("FROM holds")){
+      assert.match(sql,/owner_email=\$2 FOR UPDATE/);assert.equal(args[0],"hold_1");
+      return {rowCount:args[1]==="owner@test.cl"?1:0,rows:[]};
+    }
     assert.match(sql, /hold_id=\$1 FOR UPDATE/); assert.deepEqual(args, ["hold_1"]); return { rows: [payment] };
   } };
   await assert.rejects(() => checkPaymentRetry(client, "hold_1", "attacker@test.cl", "flow"), error => error.status === 404);

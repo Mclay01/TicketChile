@@ -10,7 +10,12 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",
     "test:in-process": "node --test --experimental-test-isolation=none tests/*.test.mjs",
-    "build:verify": "node scripts/verify-build.mjs"
+    "build:verify": "node scripts/verify-build.mjs",
+    "test:security": "node --test --experimental-test-isolation=none tests/security.integration.test.mjs",
+    "db:local:start": "node scripts/local-db.mjs start",
+    "db:local:stop": "node scripts/local-db.mjs stop",
+    "db:migrate:local": "node scripts/migrate.mjs",
+    "lint:changed": "node scripts/lint-changed.mjs"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.2.6",

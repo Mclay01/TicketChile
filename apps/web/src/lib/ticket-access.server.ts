@@ -3,6 +3,7 @@ import { pool } from "@/lib/db";
 import { getBuyerEmail, TICKET_OWNER_SQL } from "@/lib/buyer-guard.server";
 import { AccessError, identifier } from "@/lib/access.server";
 import { verifyTicketToken } from "@/lib/qr-token.server";
+import { limit } from "@/lib/security/rate-limit.server";
 
 export type OwnedTicket = {
   id: string; event_id: string; order_id: string; status: string;
@@ -13,6 +14,7 @@ export type OwnedTicket = {
 export async function requireBuyerEmail() {
   const email = await getBuyerEmail();
   if (!email) throw new AccessError(401, "UNAUTHENTICATED", "Inicia sesión para acceder a tus entradas.");
+  await limit("ticket-read",email,{hits:600,seconds:60});
   return email;
 }
 

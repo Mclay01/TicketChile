@@ -60,8 +60,8 @@ export default function OrganizerRegisterPage() {
     if (step === 4) return v.email.includes("@");
     if (step === 5) return true;
     if (step === 6) return v.channel === "email" ? true : v.phone.trim().length >= 8;
-    if (step === 7) return v.password.trim().length >= 8;
-    if (step === 8) return v.password2.trim().length >= 8 && v.password2.trim() === v.password.trim();
+    if (step === 7) return v.password.length >= 12;
+    if (step === 8) return v.password2.length >= 12 && v.password2 === v.password;
     return true;
   }
 
@@ -92,9 +92,9 @@ export default function OrganizerRegisterPage() {
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j?.ok) throw new Error(j?.error || "No se pudo registrar.");
 
-      router.push(`/organizador/verificar?organizerId=${encodeURIComponent(j.organizerId)}`);
-    } catch (e: any) {
-      setErr(e?.message || "Error.");
+      router.push("/security?kind=ORGANIZER&operation=verify-email");
+    } catch (e: unknown) {
+      setErr(e instanceof Error?e.message:"Error.");
     } finally {
       setBusy(false);
     }
@@ -104,7 +104,7 @@ export default function OrganizerRegisterPage() {
     step === 8 &&
     v.password2.length > 0 &&
     v.password.trim().length >= 1 &&
-    v.password2.trim() !== v.password.trim();
+    v.password2 !== v.password;
 
   const inputCls =
     "w-full rounded-lg border border-black/10 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-black/10";
@@ -202,6 +202,7 @@ export default function OrganizerRegisterPage() {
 
                 <button
                   className={["w-full rounded-lg border border-black/10 px-3 py-2 text-sm font-medium", v.channel === "whatsapp" ? "bg-black text-white" : "bg-white hover:bg-black/5"].join(" ")}
+                  disabled
                   onClick={() => setV((x) => ({ ...x, channel: "whatsapp" }))}
                   type="button"
                 >

@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { loadSource } from "./load-source.mjs";
+import { loadSource as loadRawSource } from "./load-source.mjs";
+// M1/M2 route contracts isolate rate storage; real atomic limits are covered by security.integration.
+const loadSource=(entry,overrides={})=>loadRawSource(entry,{
+  "@/lib/event-access.server":{},
+  "@/lib/security/rate-limit.server":{limit:async()=>{},publicLimit:async()=>{}},...overrides,
+});
 
-const validSession = "admsess_" + "a".repeat(48);
+const validSession = "a".repeat(64);
+const activeAdmin={id:"admin-a",principal_id:"admin-a",kind:"ADMIN",login:"admin",version:1,mfa_verified:true,active:true,verified:true,disabled:false,mfa_enabled:true,mfa_required:true,role:"ADMIN"};
 const protectedRoutes = [
   ["admin/events", "GET"], ["admin/event/[id]", "GET"],
   ["admin/organizers", "GET"], ["admin/events/[id]/approve", "POST"],
@@ -19,10 +25,12 @@ for (const [route, method] of protectedRoutes) {
         "next/headers": cookieJar(sid),
         "@/lib/db": { pool: {
           query: async (sql, args) => {
-            assert.match(sql, /FROM admin_sessions/);
-            assert.match(sql, /JOIN admin_users/);
-            assert.match(sql, /asn\.expires_at > NOW\(\)/);
-            assert.deepEqual(args, [sid]);
+            assert.match(sql, /FROM identity_sessions/);
+            assert.match(sql, /revoked_at IS NULL/);
+            assert.match(sql, /expires_at>NOW\(\)/);
+            assert.equal(args[0].length,64);
+            assert.notEqual(args[0],sid);
+            assert.equal(args[1],"ADMIN");
             return { rows: [], rowCount: 0 };
           }, connect: forbidden,
         } },
@@ -39,7 +47,7 @@ test("valid persisted admin can read and publish; browser cross-origin mutation 
   const writes = [];
   const overrides = {
     "next/headers": cookieJar(validSession),
-    "@/lib/db": { pool: { query: async () => ({ rows: [{ id: "admin-a", username: "admin", display_name: null }] }) } },
+    "@/lib/db": { pool: { query: async () => ({ rows: [activeAdmin] }) } },
     "@/lib/events.admin.server": {
       adminListEventsDb: async () => [{ id: "event-a" }],
       adminSetPublishedDb: async (...args) => writes.push(args),
@@ -55,7 +63,7 @@ test("valid persisted admin can read and publish; browser cross-origin mutation 
   assert.equal((await publish.POST(request("https://attacker.test"), ctx)).status, 403);
   assert.deepEqual(writes, []);
   assert.equal((await publish.POST(request("https://ticketchile.test"), ctx)).status, 200);
-  assert.deepEqual(writes, [["event-a", true]]);
+  assert.deepEqual(writes, [["event-a", true,{kind:"ADMIN",id:"admin-a"}]]);
 });
 
 test("session store failure returns a generic unavailable response without allowing work", async () => {
@@ -75,7 +83,7 @@ test("approved submission retry is locked and cannot issue another event", async
   const route = loadSource("app/api/admin/events/[id]/approve/route.ts", {
     "next/headers": cookieJar(validSession),
     "@/lib/db": { pool: {
-      query: async () => ({ rows: [{ id: "admin-a" }] }),
+      query: async () => ({ rows: [activeAdmin] }),
       connect: async () => ({
         release: () => { released = true; },
         query: async sql => {
@@ -102,7 +110,7 @@ test("admin panel layout rejects a forged cookie and keeps valid session access"
     const layout = loadSource("app/(admin)/admin/(panel)/layout.tsx", {
       "next/headers": cookieJar(validSession),
       "next/navigation": { redirect: path => { throw new Error(`redirect:${path}`); } },
-      "@/lib/db": { pool: { query: async () => ({ rows: authorized ? [{ id: "admin-a" }] : [] }) } },
+      "@/lib/db": { pool: { query: async () => ({ rows: authorized ? [activeAdmin] : [] }) } },
     });
     if (authorized) assert.equal(await layout.default({ children: "protected content" }), "protected content");
     else await assert.rejects(layout.default({ children: "protected content" }), /redirect:\/admin\/login/);

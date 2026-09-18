@@ -1,3 +1,5 @@
+import { limit } from "@/lib/security/rate-limit.server";
+import { accessResponse } from "@/lib/access.server";
 import { NextResponse } from "next/server";
 import { getBuyerEmail, TICKET_OWNER_SQL } from "@/lib/buyer-guard.server";
 import { pool } from "@/lib/db";
@@ -15,6 +17,7 @@ export async function GET() {
     );
   }
 
+  try {await limit("ticket-read",ownerEmail,{hits:600,seconds:60});}catch(error){return accessResponse(error);}
   // Seguridad: ignoramos el query param email (evita que alguien consulte tickets ajenos)
   // La sesión manda.
   const client = await pool.connect();

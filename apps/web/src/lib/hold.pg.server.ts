@@ -1,4 +1,6 @@
 import { pool } from "@/lib/db";
+import type { PoolClient } from "pg";
+import { enforceHoldBudget,HOLD_TTL_SECONDS } from "@/lib/security/holds.server";
 import crypto from "node:crypto";
 
 type HoldItemCanon = {
@@ -23,7 +25,7 @@ function newId(prefix: string) {
   return `${prefix}_${a}_${b}`;
 }
 
-async function expireHoldsTx(client: any) {
+export async function expireHoldsTx(client: PoolClient) {
   // 1) marca expirados
   const expired = await client.query(
     `
@@ -37,7 +39,7 @@ async function expireHoldsTx(client: any) {
     `
   );
 
-  const ids: string[] = expired.rows.map((r: any) => r.id);
+  const ids: string[] = expired.rows.map((r: {id:string}) => r.id);
   if (ids.length === 0) return;
 
   // 2) descuenta held en ticket_types
@@ -66,12 +68,12 @@ async function expireHoldsTx(client: any) {
 export async function createHoldPgServer(args: {
   eventId: string;
   requested: { ticketTypeId: string; qty: number }[];
-  ttlSeconds: number;
+  ownerEmail: string;
 }): Promise<{ hold: Hold }> {
   const { eventId } = args;
 
   // clamp TTL razonable
-  const ttlSeconds = Math.max(60, Math.min(60 * 60, Math.floor(args.ttlSeconds || 480)));
+  const ttlSeconds = HOLD_TTL_SECONDS;
 
   // colapsar duplicados por ticketTypeId
   const byId = new Map<string, number>();
@@ -83,6 +85,8 @@ export async function createHoldPgServer(args: {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
+    await enforceHoldBudget(client,args.ownerEmail,args.requested.map(it=>it.qty));
 
     // limpieza: expira holds y libera held
     await expireHoldsTx(client);
@@ -112,11 +116,11 @@ export async function createHoldPgServer(args: {
       throw new Error("TicketType inválido (uno o más).");
     }
 
-    const ttById = new Map<string, any>();
+    const ttById = new Map<string, {id:string;name:string;price_clp:number;capacity:number;sold:number;held:number}>();
     for (const row of ttRes.rows) ttById.set(row.id, row);
 
     const items: HoldItemCanon[] = requested.map((r) => {
-      const row = ttById.get(r.ticketTypeId);
+      const row = ttById.get(r.ticketTypeId)!;
       return {
         ticketTypeId: row.id,
         ticketTypeName: row.name,
@@ -127,7 +131,7 @@ export async function createHoldPgServer(args: {
 
     // validar stock
     for (const it of items) {
-      const row = ttById.get(it.ticketTypeId);
+      const row = ttById.get(it.ticketTypeId)!;
       const remaining = Math.max(Number(row.capacity) - Number(row.sold) - Number(row.held), 0);
 
       if (it.qty > remaining) {
@@ -146,10 +150,10 @@ export async function createHoldPgServer(args: {
 
     await client.query(
       `
-      INSERT INTO holds (id, event_id, status, created_at, expires_at)
-      VALUES ($1, $2, 'ACTIVE', $3, $4)
+      INSERT INTO holds (id, event_id, status, created_at, expires_at, owner_email)
+      VALUES ($1, $2, 'ACTIVE', $3, $4, $5)
       `,
-      [holdId, eventId, created.toISOString(), expires.toISOString()]
+      [holdId, eventId, created.toISOString(), expires.toISOString(), args.ownerEmail]
     );
 
     for (const it of items) {

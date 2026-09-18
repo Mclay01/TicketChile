@@ -11,6 +11,7 @@ export default function AdminLoginClient() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [code,setCode]=useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -22,14 +23,14 @@ export default function AdminLoginClient() {
       const r = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ username, password, from }),
+        body: JSON.stringify({ username, password, code, from }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j?.ok) throw new Error(j?.error || "No se pudo iniciar sesión.");
 
-      router.replace(from);
-    } catch (e: any) {
-      setErr(e?.message || "Error.");
+      router.replace(j.next);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Error.");
     } finally {
       setBusy(false);
     }
@@ -58,6 +59,7 @@ export default function AdminLoginClient() {
             autoComplete="current-password"
           />
 
+          <label className="block text-sm">Codigo TOTP o recuperacion (si esta activo)<input className="w-full rounded border border-current bg-transparent px-3 py-2" value={code} onChange={e=>setCode(e.target.value)} autoComplete="one-time-code" /></label>
           {err ? <div className="text-sm text-red-400">{err}</div> : null}
 
           <button
@@ -66,6 +68,7 @@ export default function AdminLoginClient() {
           >
             {busy ? "Entrando..." : "Entrar"}
           </button>
+        <a className="block text-sm underline" href="/security?kind=ADMIN">Recuperar acceso / seguridad</a>
         </form>
       </div>
     </main>

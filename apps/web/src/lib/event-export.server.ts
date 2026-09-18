@@ -21,9 +21,9 @@ export function csvEscapeCell(value: unknown) {
 }
 
 async function exportEventCsv(options: ExportOptions, checkins: boolean) {
-  const access = await requireEventAccess(options.eventId);
-  const where = ["t.event_id=$1", "EXISTS (SELECT 1 FROM organizer_events oe WHERE oe.event_id=t.event_id AND oe.organizer_id=$2)"];
-  const params: string[] = [access.event.id, access.organizerId];
+  const access = await requireEventAccess(options.eventId, "attendees.export");
+  const where = ["t.event_id=$1", "security_can_event($2,$3,$4,t.event_id,'attendees.export')"];
+  const params: (string | number)[] = [access.event.id, access.actor.kind, access.actor.id, access.actor.version];
   const status = checkins ? "USED" : options.status;
   if (status && status !== "ALL") { params.push(status); where.push(`t.status=$${params.length}`); }
   if (options.ticketTypeId) { params.push(options.ticketTypeId); where.push(`t.ticket_type_id=$${params.length}`); }

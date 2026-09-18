@@ -1,20 +1,31 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { loadSource } from "./load-source.mjs";
+import { loadSource as loadRawSource } from "./load-source.mjs";
+const sharedAccess=loadRawSource("lib/access.server.ts");
+// M1/M2 route contracts isolate rate storage; real atomic limits are covered by security.integration.
+const loadSource=(entry,overrides={})=>{
+  const db=overrides["@/lib/db"];
+  if(db?.pool?.query&&!db.withTx)db.withTx=fn=>fn(db.pool);
+  return loadRawSource(entry,{
+  "@/lib/access.server":sharedAccess,
+  "@/lib/security/rate-limit.server":{limit:async()=>{},publicLimit:async()=>{}},...overrides,
+});};
 
 function auth(scenario) {
-  return {
-    "next/headers": { cookies: async () => ({ get: () => scenario === "anonymous" ? undefined : { value: "test-organizer-session" } }) },
-    "@/lib/organizer-auth.pg.server": { getOrganizerFromSession: async () => scenario === "forged" ? null : {
-      id: "org_1", verified: scenario !== "unverified", approved: scenario !== "pending",
-    } },
-  };
+  return {"@/lib/security/capabilities.server":{organizerActor:async()=>{
+    if(["anonymous","forged","unverified","pending"].includes(scenario)) {
+      const {AccessError}=sharedAccess;
+      throw new AccessError(["anonymous","forged"].includes(scenario)?401:403,"NOT_AUTHORIZED","No autorizado.");
+    }
+    return {kind:"ORGANIZER",id:"org_1",version:1};
+  }}};
 }
-const event = { id: "event_1", title: "Database event", slug: "database-event", city: "Santiago", venue: "Test" };
+const event = { organizer_id:"org_1", id: "event_1", title: "Database event", slug: "database-event", city: "Santiago", venue: "Test" };
 function eventQuery(sql, args, scenario) {
   assert.match(sql, /JOIN organizer_events/);
-  assert.match(sql, /oe.organizer_id = \$2/);
-  assert.deepEqual(args, ["event_1", "org_1"]);
+  assert.match(sql, /security_can_event\(\$2,\$3,\$4,e.id,\$5\)/);
+  assert.deepEqual(args.slice(0,4), ["event_1", "ORGANIZER", "org_1",1]);
+  assert.ok(["scanner.read","scanner.checkin","attendees.export"].includes(args[4]));
   return { rows: scenario === "foreign" ? [] : [event] };
 }
 for (const endpoint of ["scanner/checkin", "demo/checkin"]) {
@@ -29,8 +40,8 @@ for (const endpoint of ["scanner/checkin", "demo/checkin"]) {
         "@/lib/db": { pool: { query: async (sql, args) => {
           if (sql.includes("JOIN organizer_events")) { eventReads++; return eventQuery(sql, args, scenario); }
           assert.match(sql, /t.event_id=\$2/);
-          assert.match(sql, /oe.organizer_id=\$3/);
-          assert.deepEqual(args, ["tkt_1", "event_1", "org_1"]);
+          assert.match(sql, /security_can_event\(\$3,\$4,\$5,t.event_id,'scanner.checkin'\)/);
+          assert.deepEqual(args, ["tkt_1", "event_1", "ORGANIZER", "org_1",1]);
           if (sql.startsWith("UPDATE")) {
             writes++; assert.match(sql, /t.status='VALID'/);
             return { rows: ["owned", "manual"].includes(scenario) ? [{ id: "tkt_1", ticket_type_name: "General", status: "USED", used_at: new Date() }] : [] };
@@ -63,8 +74,8 @@ for (const prefix of ["scanner", "demo"]) {
             if (sql.includes("JOIN organizer_events")) return eventQuery(sql, args, scenario);
             reads++;
             assert.match(sql, /event_id=\$1/);
-            assert.match(sql, /oe.organizer_id=\$2/);
-            assert.deepEqual(args.slice(0, 2), ["event_1", "org_1"]);
+            assert.match(sql, /security_can_event\(\$2,\$3,\$4/);
+            assert.deepEqual(args.slice(0, 4), ["event_1", "ORGANIZER", "org_1",1]);
             return { rows: [] };
           } } },
         });

@@ -7,8 +7,8 @@ export async function eventCheckins(eventId: string) {
   const result = await pool.query<{ id: string; ticket_type_name: string; used_at: Date }>(
     `SELECT t.id, t.ticket_type_name, t.used_at FROM tickets t
      WHERE t.event_id=$1 AND t.status='USED'
-       AND EXISTS (SELECT 1 FROM organizer_events oe WHERE oe.event_id=t.event_id AND oe.organizer_id=$2)
-     ORDER BY t.used_at DESC LIMIT 20`, [eventId, access.organizerId],
+       AND security_can_event($2,$3,$4,t.event_id,'scanner.read')
+     ORDER BY t.used_at DESC LIMIT 20`, [eventId, access.actor.kind, access.actor.id, access.actor.version],
   );
   return result.rows.map(row => ({ id: row.id, ticketId: row.id, ticketTypeName: row.ticket_type_name,
     status: "USED", usedAtISO: row.used_at ? new Date(row.used_at).toISOString() : null }));
@@ -24,8 +24,8 @@ export async function eventStats(eventId: string) {
             COUNT(t.id) FILTER (WHERE t.status='USED')::int AS used
      FROM ticket_types tt LEFT JOIN tickets t ON t.event_id=tt.event_id AND t.ticket_type_id=tt.id
      WHERE tt.event_id=$1
-       AND EXISTS (SELECT 1 FROM organizer_events oe WHERE oe.event_id=tt.event_id AND oe.organizer_id=$2)
-     GROUP BY tt.id, tt.name, tt.capacity, tt.sold, tt.held ORDER BY tt.name`, [eventId, access.organizerId],
+       AND security_can_event($2,$3,$4,tt.event_id,'scanner.read')
+     GROUP BY tt.id, tt.name, tt.capacity, tt.sold, tt.held ORDER BY tt.name`, [eventId, access.actor.kind, access.actor.id, access.actor.version],
   );
   const totals = result.rows.reduce((total, row) => ({
     capacity: total.capacity + row.capacity, sold: total.sold + row.sold, held: total.held + row.held,

@@ -1,3 +1,4 @@
+import { enforceHoldBudget } from "@/lib/security/holds.server";
 import type Stripe from "stripe";
 import type { PoolClient } from "pg";
 import { paymentCreator, checkPaymentRetry } from "@/lib/payment-create-access.server";
@@ -114,13 +115,15 @@ export async function POST(req: Request) {
   try {
     await client.query("BEGIN");
 
-    await releaseExpiredHoldsTx(client);
+
 
     let holdId = holdIdFromBody;
     let eventId = eventIdFromBody;
 
     // 1) Si NO viene holdId => crear hold y “reservar” stock (held)
     if (!holdId) {
+      await enforceHoldBudget(client,ownerEmail,itemsFromBody.map(it=>it.qty));
+      await releaseExpiredHoldsTx(client);
       const ids = itemsFromBody.map((x) => x.ticketTypeId);
 
       const ttRes = await client.query(
@@ -159,10 +162,10 @@ export async function POST(req: Request) {
 
       await client.query(
         `
-        INSERT INTO holds (id, event_id, status, created_at, expires_at)
-        VALUES ($1, $2, 'ACTIVE', NOW(), NOW() + ($3 || ' minutes')::interval)
+        INSERT INTO holds (id, event_id, status, created_at, expires_at, owner_email)
+        VALUES ($1, $2, 'ACTIVE', NOW(), NOW() + ($3 || ' minutes')::interval, $4)
         `,
-        [holdId, eventId, String(HOLD_TTL_MINUTES)]
+        [holdId, eventId, String(HOLD_TTL_MINUTES), ownerEmail]
       );
 
       for (const it of itemsFromBody) {
@@ -351,6 +354,7 @@ export async function POST(req: Request) {
     return accessResponse(e);
   } finally {
     await client.query("ROLLBACK").catch(() => undefined);
+    await client.query("ROLLBACK").catch(() => {});
     client.release();
   }
 }

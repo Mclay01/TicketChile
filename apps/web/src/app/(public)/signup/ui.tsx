@@ -63,7 +63,7 @@ export default function SignupClient() {
             const e = email.trim().toLowerCase();
 
             if (!isEmail(e)) return setErr("Email inválido.");
-            if (pass.length < 8) return setErr("Contraseña muy corta (mínimo 8).");
+            if (pass.length < 12) return setErr("Contraseña muy corta (mínimo 8).");
             if (pass !== pass2) return setErr("Las contraseñas no coinciden.");
 
             setLoading(true);
@@ -85,9 +85,9 @@ export default function SignupClient() {
                 throw new Error(msg);
               }
 
-              router.push("/signin?registered=1");
-            } catch (ex: any) {
-              setErr(String(ex?.message || ex));
+              router.push("/security?kind=BUYER&operation=verify-email");
+            } catch (ex: unknown) {
+              setErr(ex instanceof Error?ex.message:"No se pudo completar.");
             } finally {
               setLoading(false);
             }

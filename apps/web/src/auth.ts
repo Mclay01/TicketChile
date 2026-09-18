@@ -1,157 +1,60 @@
-// apps/web/src/auth.ts
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { randomUUID } from "node:crypto";
 import { pool } from "@/lib/db";
-import crypto from "node:crypto";
+import { authenticate,createSession,findIdentity,principal,readSession,revokeSession } from "@/lib/security/identity.server";
+import { verifyMfa } from "@/lib/security/mfa.server";
+import { publicLimit } from "@/lib/security/rate-limit.server";
 
-function isEmail(s: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || "").trim().toLowerCase());
-}
-
-function safeEqual(a: Buffer, b: Buffer) {
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
-}
-
-// Formato guardado: scrypt$<saltHex>$<hashHex>
-function verifyPassword(password: string, stored: string) {
-  const [alg, saltHex, hashHex] = String(stored || "").split("$");
-  if (alg !== "scrypt" || !saltHex || !hashHex) return false;
-
-  const salt = Buffer.from(saltHex, "hex");
-  const expected = Buffer.from(hashHex, "hex");
-  const got = crypto.scryptSync(password, salt, expected.length);
-
-  return safeEqual(got, expected);
-}
-
-function pickString(v: any) {
-  return typeof v === "string" ? v.trim() : "";
-}
-
-const googleClientId = (process.env.GOOGLE_CLIENT_ID || process.env.AUTH_GOOGLE_ID || "").trim();
-const googleClientSecret = (process.env.GOOGLE_CLIENT_SECRET || process.env.AUTH_GOOGLE_SECRET || "").trim();
-
-async function upsertUsuarioByEmail(args: { email: string; nombre?: string }) {
-  const email = String(args.email || "").trim().toLowerCase();
-  const nombre = pickString(args.nombre) || "Usuario";
-
-  if (!email || !isEmail(email)) return null;
-
-  // 1) Buscar
-  const r = await pool.query(
-    `SELECT id, email, nombre
-       FROM usuarios
-      WHERE email = $1
-      LIMIT 1`,
-    [email]
-  );
-
-  // ✅ TS fix: rowCount puede ser null
-  if ((r.rowCount ?? 0) > 0) {
-    return {
-      id: String(r.rows[0].id),
-      email: String(r.rows[0].email),
-      nombre: String(r.rows[0].nombre || ""),
-    };
-  }
-
-  // 2) Crear (UUID real)
-  const id = crypto.randomUUID();
-
-  // Nota: tu tabla requiere updated_at NOT NULL
-  await pool.query(
-    `INSERT INTO usuarios (id, nombre, email, password_hash, created_at, updated_at)
-     VALUES ($1, $2, $3, '', NOW(), NOW())`,
-    [id, nombre, email]
-  );
-
-  return { id, email, nombre };
-}
-
-export const authOptions: NextAuthOptions = {
-  secret: (process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "").trim(),
-  session: { strategy: "jwt" },
-  pages: { signIn: "/signin" },
-
-  providers: [
-    GoogleProvider({
-      clientId: googleClientId,
-      clientSecret: googleClientSecret,
-    }),
-
-    CredentialsProvider({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(creds) {
-        const email = String(creds?.email ?? "").trim().toLowerCase();
-        const password = String(creds?.password ?? "");
-
-        if (!email || !isEmail(email) || !password) return null;
-
-        // ✅ Tabla real: usuarios (uuid) + bloqueo si no verificado
-        const r = await pool.query(
-          `SELECT id, email, password_hash, email_verified_at
-             FROM usuarios
-            WHERE email = $1
-            LIMIT 1`,
-          [email]
-        );
-
-        // ✅ TS fix: rowCount puede ser null
-        if ((r.rowCount ?? 0) === 0) return null;
-
-        const u = r.rows[0];
-
-        // ✅ Debe estar verificado por email (solo para Credentials)
-        if (!u.email_verified_at) return null;
-
-        // Debe tener password_hash (si es Google-only, es '')
-        const stored = String(u.password_hash || "");
-        if (!stored) return null;
-
-        const ok = verifyPassword(password, stored);
-        if (!ok) return null;
-
-        return { id: String(u.id), email: String(u.email) };
-      },
-    }),
+export const authOptions:NextAuthOptions={
+  secret:(process.env.NEXTAUTH_SECRET||process.env.AUTH_SECRET||"").trim(),
+  session:{strategy:"jwt",maxAge:604800},pages:{signIn:"/signin"},
+  providers:[
+    GoogleProvider({clientId:process.env.GOOGLE_CLIENT_ID||process.env.AUTH_GOOGLE_ID||"",
+      clientSecret:process.env.GOOGLE_CLIENT_SECRET||process.env.AUTH_GOOGLE_SECRET||""}),
+    CredentialsProvider({name:"credentials",credentials:{email:{label:"Email",type:"email"},
+      password:{label:"Password",type:"password"},code:{label:"MFA",type:"text"}},
+    async authorize(credentials,request){
+      const email=String(credentials?.email||"").trim().toLowerCase();
+      await publicLimit(new Request("http://localhost/auth",{headers:request.headers as Record<string,string>}),"login:BUYER",email,{hits:15,seconds:900});
+      const p=await authenticate("BUYER",email,String(credentials?.password||"")); if(!p)return null;
+      if(p.mfa_enabled)await verifyMfa(p,String(credentials?.code||""));
+      const sid=await createSession(p,p.mfa_enabled);
+      return {id:p.id,email:p.email,name:p.name,securitySid:sid};
+    }}),
   ],
-
-  callbacks: {
-    // ✅ Aseguramos que Google también quede amarrado a tu tabla usuarios (uuid)
-    async jwt({ token, user, account, profile }) {
-      // Si viene credentials (authorize ya devuelve uuid)
-      if (user?.id) {
-        (token as any).uid = String(user.id);
+  callbacks:{
+    async signIn({account,profile,user}){
+      if(account?.provider!=="google")return true;
+      const verified=(profile as {email_verified?:boolean}|undefined)?.email_verified===true;
+      if(!verified||!user.email)return false;
+      const p=await findIdentity("BUYER",user.email);
+      // Google is not a substitute for this application's enrolled second factor.
+      // Enrolled buyers use password+TOTP/recovery-code login.
+      return !p || (!p.disabled&&p.active&&!p.mfa_enabled);
+    },
+    async jwt({token,user,account}){
+      if(user && account?.provider==="credentials")token.securitySid=(user as typeof user & {securitySid:string}).securitySid;
+      if(user && account?.provider==="google"){
+        const email=String(user.email||"").trim().toLowerCase();
+        const row=await pool.query<{id:string}>(`INSERT INTO usuarios(id,nombre,email,password_hash,email_verified_at)
+          VALUES($1,$2,$3,'',NOW()) ON CONFLICT(email) DO UPDATE SET email_verified_at=COALESCE(usuarios.email_verified_at,NOW()) RETURNING id`,
+        [randomUUID(),user.name||"Usuario",email]);
+        const p=await principal("BUYER",row.rows[0].id);
+        if(p&&!p.disabled&&p.active&&!p.mfa_enabled)token.securitySid=await createSession(p);
       }
-
-      // Si viene Google: user.id NO es uuid (es el "sub"). Lo reemplazamos por el uuid en DB.
-      const isGoogle = account?.provider === "google";
-      const email = String(token?.email || user?.email || "").trim().toLowerCase();
-
-      if (isGoogle && email && !(token as any).uid) {
-        const nombre =
-          pickString((profile as any)?.name) ||
-          pickString((profile as any)?.given_name) ||
-          "Usuario";
-
-        const dbUser = await upsertUsuarioByEmail({ email, nombre });
-        if (dbUser?.id) (token as any).uid = dbUser.id;
-      }
-
+      // Never mint a fresh persisted session for an existing JWT during refresh.
       return token;
     },
-
-    async session({ session, token }) {
-      if (session.user && (token as any)?.uid) {
-        (session.user as any).id = (token as any).uid;
-      }
+    async session({session,token}){
+      const p=await readSession(typeof token.securitySid==="string"?token.securitySid:"","BUYER");
+      if(!p){session.user=undefined;return session;}
+      session.user={name:p.name,email:p.email,image:session.user?.image};
+      (session.user as typeof session.user & {id:string}).id=p.id;
+      (session.user as typeof session.user & {securityVersion:number}).securityVersion=p.version;
       return session;
     },
   },
+  events:{async signOut({token}){if(typeof token?.securitySid==="string")await revokeSession(token.securitySid);}},
 };

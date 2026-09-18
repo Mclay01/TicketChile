@@ -1,3 +1,5 @@
+import { expireHoldsTx } from "@/lib/hold.pg.server";
+import { enforceHoldBudget } from "@/lib/security/holds.server";
 import { appBaseUrl } from "@/lib/stripe.server";
 import { paymentCreator } from "@/lib/payment-create-access.server";
 import { accessResponse } from "@/lib/access.server";
@@ -156,6 +158,8 @@ export async function POST(req: NextRequest) {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
+      await enforceHoldBudget(client,ownerEmail,items.map(it=>it.qty));
+      await expireHoldsTx(client);
 
       // Event (DB source of truth)
       const ev = await client.query(`SELECT id, title FROM events WHERE id = $1`, [eventId]);
@@ -299,9 +303,9 @@ export async function POST(req: NextRequest) {
       const expiresAt = new Date(Date.now() + HOLD_TTL_MINUTES * 60_000).toISOString();
 
       await client.query(
-        `INSERT INTO holds (id, event_id, status, expires_at)
-         VALUES ($1, $2, 'ACTIVE', $3)`,
-        [holdId, eventId, expiresAt]
+        `INSERT INTO holds (id, event_id, status, expires_at, owner_email)
+         VALUES ($1, $2, 'ACTIVE', $3, $4)`,
+        [holdId, eventId, expiresAt, ownerEmail]
       );
 
       // Reservar held + hold_items

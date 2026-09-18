@@ -1,7 +1,9 @@
-import { pool } from "@/lib/db";
+import { pool, withTx } from "@/lib/db";
 import { verifyTicketToken } from "@/lib/qr-token.server";
 import { requireEventAccess } from "@/lib/event-access.server";
 import { AccessError, accessResponse, identifier, privateJson, requireSameOrigin } from "@/lib/access.server";
+import { audit } from "@/lib/security/audit.server";
+import { limit } from "@/lib/security/rate-limit.server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -13,7 +15,8 @@ export async function POST(request: Request) {
     const body: unknown = await request.json().catch(() => null);
     if (!body || typeof body !== "object" || !("eventId" in body)) throw new AccessError(400, "INVALID_INPUT", "Solicitud inválida.");
     const eventId = identifier(body.eventId);
-    const access = await requireEventAccess(eventId);
+    const access = await requireEventAccess(eventId, "scanner.checkin");
+    await limit("scanner",`${access.actor.kind}:${access.actor.id}:${eventId}`,{hits:600,seconds:60});
     const qrText = "qrText" in body && typeof body.qrText === "string" ? body.qrText.trim() : "";
     const manualId = "ticketId" in body ? identifier(body.ticketId) : "";
     let ticketId = "";
@@ -30,13 +33,17 @@ export async function POST(request: Request) {
 
     // Atomic compare-and-set. Repeat ownership in the write predicate so an
     // event reassignment between authorization and mutation cannot grant access.
-    const result = await pool.query<CheckinRow>(
+    const result = await withTx(async client => {
+      const changed = await client.query<CheckinRow>(
       `UPDATE tickets t SET status='USED', used_at=NOW()
        WHERE t.id=$1 AND t.event_id=$2 AND t.status='VALID'
-         AND EXISTS (SELECT 1 FROM organizer_events oe WHERE oe.event_id=t.event_id AND oe.organizer_id=$3)
+         AND security_can_event($3,$4,$5,t.event_id,'scanner.checkin')
        RETURNING t.id, t.ticket_type_name, t.status, t.used_at`,
-      [ticketId, eventId, access.organizerId],
+      [ticketId, eventId, access.actor.kind, access.actor.id, access.actor.version],
     );
+      if (changed.rowCount) await audit(client,{actor:access.actor,organizerId:access.organizerId,eventId,action:"ticket.checked_in",targetType:"ticket",targetId:ticketId});
+      return changed;
+    });
     if (result.rows[0]) {
       const row = result.rows[0];
       return privateJson(200, { ok: true, code: "VALID", ticket: {
@@ -47,8 +54,8 @@ export async function POST(request: Request) {
     const existing = await pool.query<CheckinRow>(
       `SELECT t.id, t.ticket_type_name, t.status, t.used_at FROM tickets t
        WHERE t.id=$1 AND t.event_id=$2
-         AND EXISTS (SELECT 1 FROM organizer_events oe WHERE oe.event_id=t.event_id AND oe.organizer_id=$3)`,
-      [ticketId, eventId, access.organizerId],
+         AND security_can_event($3,$4,$5,t.event_id,'scanner.checkin')`,
+      [ticketId, eventId, access.actor.kind, access.actor.id, access.actor.version],
     );
     const row = existing.rows[0];
     if (!row) throw new AccessError(404, "UNKNOWN_TICKET", "Entrada no encontrada.");

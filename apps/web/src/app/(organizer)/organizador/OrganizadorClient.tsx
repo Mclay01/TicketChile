@@ -55,7 +55,7 @@ export default function OrganizadorClient({
   const [statsByEvent, setStatsByEvent] = useState<StatsByEvent>(initialStatsByEvent);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [lastSyncAt, setLastSyncAt] = useState<number>(Date.now());
+  const [lastSyncAt, setLastSyncAt] = useState<number>(()=>Date.now());
 
   const inflightRef = useRef<AbortController | null>(null);
 
@@ -83,9 +83,9 @@ export default function OrganizadorClient({
 
       setStatsByEvent(json.statsByEvent ?? {});
       setLastSyncAt(Date.now());
-    } catch (e: any) {
-      if (e?.name !== "AbortError") {
-        setErr(String(e?.message || e) + ` (reason=${reason})`);
+    } catch (e: unknown) {
+      if (!(e instanceof Error && e.name === "AbortError")) {
+        setErr((e instanceof Error?e.message:"No se pudo completar.") + ` (reason=${reason})`);
       }
     } finally {
       inflightRef.current = null;
@@ -114,7 +114,6 @@ export default function OrganizadorClient({
       inflightRef.current?.abort();
       inflightRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshMs]);
 
   useEffect(() => {
@@ -133,7 +132,6 @@ export default function OrganizadorClient({
         bc?.close();
       } catch {}
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const lastSyncLabel = useMemo(() => msAgoLabel(Date.now() - lastSyncAt), [lastSyncAt]);
@@ -189,7 +187,7 @@ export default function OrganizadorClient({
             Dashboard pagos
           </Link>
 
-          <form action="/organizador/logout" method="GET">
+          <form action="/api/organizador/logout" method="POST">
             <button
               type="submit"
               className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/85 hover:bg-white/10"

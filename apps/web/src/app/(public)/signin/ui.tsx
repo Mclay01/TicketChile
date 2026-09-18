@@ -20,6 +20,7 @@ export default function SignInClient() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code,setCode]=useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -30,7 +31,7 @@ export default function SignInClient() {
 
   const callbackUrl = useMemo(() => {
     const raw = sp.get("callbackUrl");
-    if (raw && raw.startsWith("/") && !isBlockedCallback(raw)) return raw; // evita open-redirect + evita organizador
+    if (raw && raw.startsWith("/") && !raw.startsWith("//") && !/[\\\r\n]/.test(raw) && !isBlockedCallback(raw)) return raw; // evita open-redirect + evita organizador
     return "/mis-tickets";
   }, [sp]);
 
@@ -45,6 +46,7 @@ export default function SignInClient() {
       redirect: false,
       email: cleanEmail,
       password,
+      code,
       callbackUrl,
     });
 
@@ -55,7 +57,7 @@ export default function SignInClient() {
       return;
     }
 
-    router.push(`/mis-tickets?email=${encodeURIComponent(cleanEmail)}`);
+    router.push(callbackUrl);
   }
 
   async function onGoogle() {
@@ -121,12 +123,14 @@ export default function SignInClient() {
             required
           />
 
+          <label className="block text-sm">Codigo TOTP o recuperacion (si esta activo)<input className="w-full rounded border border-current bg-transparent px-3 py-2" value={code} onChange={e=>setCode(e.target.value)} autoComplete="one-time-code" /></label>
           <button
             disabled={busy}
             className="w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-60"
           >
             {busy ? "Entrando..." : "Entrar"}
           </button>
+        <a className="block text-sm underline" href="/security?kind=BUYER">Recuperar acceso / seguridad</a>
         </form>
 
         <div className="my-5 flex items-center gap-3">

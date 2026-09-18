@@ -26,7 +26,7 @@ export default async function OrganizerPanelLayout({ children }: { children: Rea
   const org = await getOrganizerFromSession(sid);
 
   if (!org) {
-    redirect(`/organizador/logout?from=${encodeURIComponent(from)}&reason=invalid`);
+    redirect(loginUrl(from,"invalid"));
   }
 
   if (!org.verified) redirect(loginUrl(from, "unverified"));
@@ -68,7 +68,7 @@ export default async function OrganizerPanelLayout({ children }: { children: Rea
               Crear Evento
             </Link>
 
-            <form action="/organizador/logout" method="GET">
+            <form action="/api/organizador/logout" method="POST">
               <button type="submit" className="text-sm font-medium text-red-400 hover:text-red-300">
                 Salir
               </button>

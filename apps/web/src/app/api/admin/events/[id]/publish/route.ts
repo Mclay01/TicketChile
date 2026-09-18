@@ -10,6 +10,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const gate = await requireAdmin(req);
   if (!gate.ok) return gate.response;
   const { id } = await ctx.params;
-  await adminSetPublishedDb(String(id), true);
+  await adminSetPublishedDb(String(id), true, {kind:"ADMIN",id:gate.admin.id});
   return NextResponse.json({ ok: true });
 }

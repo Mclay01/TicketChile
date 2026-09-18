@@ -1,3 +1,5 @@
+import { publicLimit } from "@/lib/security/rate-limit.server";
+import { AccessError,accessResponse,requireSameOrigin } from "@/lib/access.server";
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { sendTicketEmail } from "@/lib/tickets.email";
@@ -28,9 +30,11 @@ type TicketEmailRow = {
 
 export async function POST(req: Request) {
   try {
+    requireSameOrigin(req);
     const sessionEmail = await getBuyerEmail();
     if (!sessionEmail) return json(401, { ok: false, error: "No autenticado." });
 
+    await publicLimit(req,"ticket-resend",sessionEmail,{hits:10,seconds:900});
     const body: unknown = await req.json().catch(() => null);
     const ticketId = body && typeof body === "object" && "ticketId" in body &&
       typeof body.ticketId === "string" ? body.ticketId.trim() : "";
@@ -81,7 +85,8 @@ export async function POST(req: Request) {
       },
     });
     return json(200, { ok: true, sentTo: [sessionEmail], failedTo: [], qrIncluded: true });
-  } catch {
+  } catch(error) {
+    if(error instanceof AccessError)return accessResponse(error);
     return json(500, { ok: false, error: "No se pudo reenviar la entrada. Intenta nuevamente." });
   }
 }

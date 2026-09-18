@@ -1,3 +1,4 @@
+import { audit } from "@/lib/security/audit.server";
 // apps/web/src/app/api/admin/events/[id]/approve/route.ts
 import { NextResponse, type NextRequest } from "next/server";
 import { pool } from "@/lib/db";
@@ -157,6 +158,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       [submissionId]
     );
 
+    await audit(client,{actor:{kind:"ADMIN",id:gate.admin.id},organizerId,eventId,action:"event.approved_published",targetType:"submission",targetId:submissionId});
     await client.query("COMMIT");
 
     return NextResponse.json({

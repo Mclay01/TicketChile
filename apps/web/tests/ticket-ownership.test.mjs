@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { loadSource } from "./load-source.mjs";
+import { loadSource as loadRawSource } from "./load-source.mjs";
+// M1/M2 route contracts isolate rate storage; real atomic limits are covered by security.integration.
+const loadSource=(entry,overrides={})=>loadRawSource(entry,{
+  "@/lib/security/rate-limit.server":{limit:async()=>{},publicLimit:async()=>{}},...overrides,
+});
 
 function session(email) {
   return {

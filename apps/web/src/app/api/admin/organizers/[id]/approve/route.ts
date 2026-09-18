@@ -1,6 +1,7 @@
+import { audit } from "@/lib/security/audit.server";
 // apps/web/src/app/api/admin/organizers/[id]/approve/route.ts
 import { NextResponse, type NextRequest } from "next/server";
-import { pool } from "@/lib/db";
+import { pool,withTx } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-guard.server";
 
 export const runtime = "nodejs";
@@ -17,7 +18,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   // ✅ Solo aprueba si ya verificó (profesional)
-  const r = await pool.query(
+  const r = await withTx(async client=>{
+    const result = await client.query(
     `
     UPDATE organizer_users
     SET approved = true
@@ -28,6 +30,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     [organizerId]
   );
 
+    if(result.rowCount)await audit(client,{actor:{kind:"ADMIN",id:gate.admin.id},organizerId,action:"organizer.approved",targetType:"organizer",targetId:organizerId});
+    return result;
+  });
   if (r.rowCount === 0) {
     // Puede ser: no existe, o existe pero no verified
     const check = await pool.query(
