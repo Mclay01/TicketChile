@@ -13,6 +13,7 @@ It is an explicitly reconstructed development contract, **not proof of the deplo
 | `0001_runtime_baseline.sql` | Fresh-local legacy/runtime tables: usuarios, verification tokens, admin/organizer users and legacy sessions, organizer submissions/event ownership, events/ticket types, holds/items, orders/tickets, payments/webhook events; runtime additive columns listed above |
 | `0002_identity_security.sql` | Admin active/role/recovery-email fields; buyer active state; identity_accounts/principals view/insert triggers, hashed identity_sessions and identity_tokens, encrypted identity_mfa and security_outbox; organizer_staff and organizer_invites; security_rate_limits; append-only security_audit; holds.owner_email and supporting indexes |
 | `0003_capability_policy.sql` | Role capability function, membership/invitation capability-subset constraints and live tenant/event authorization function |
+| `0004_payment_lifecycle.sql` | Durable provider verification/creation/fulfillment fields, request/intent uniqueness, payment_evidence, ticket issuance slots and encrypted delivery job ledger |
 
 The runner stores `schema_migrations(version, checksum, applied_at)`, uses an advisory lock and per-file transaction with a five-second lock timeout. Checksums normalize CRLF to LF so Windows/Linux checkouts agree. Applied-file edits, unknown ledger versions and out-of-order insertions fail. A failed migration rolls back its DDL and ledger row. No automatic down migrations exist.
 
@@ -49,4 +50,15 @@ There is no destructive rollback. Prefer forward repairs; do not revert into ret
 
 Production assumptions remain untested: deployed schema drift, data quality, lock/index cost, database version/extensions, runtime versus migration privileges, trigger protection, key management, trusted proxy configuration, MFA onboarding, recovery-email proof, email worker and retention. Audit triggers deter application UPDATE/DELETE but cannot constrain a database owner/TRUNCATE; use restricted runtime grants and external archival. Load-test scrypt memory and DB-backed rate counters. Local verification used PostgreSQL 18.1 only.
 
-Future migrations append new numbered files; never edit an applied migration. Financial policy and payment/finalization consolidation are M4, not part of this adoption work.
+Future migrations append new numbered files; never edit an applied migration. Financial policy remains pending; M4 lifecycle migration details follow.
+
+
+## M4 additive migration and adoption risks
+
+`0004_payment_lifecycle.sql` appends to the unchanged M1-M3 migration files. New payment fields separate verified evidence, fulfillment and uncertain creation; request-key and provider-intent uniqueness are partial indexes. `payment_evidence` deduplicates provider observations. Existing ticket IDs are preserved; deterministic row-number backfill assigns issuance slots, then a unique order/type/slot index prevents duplicate new issuance. `mail_jobs` stores source references, recipient, encrypted payload snapshot, lease/fencing state, attempt timestamps and explicit TEST/RESEND delivery transport. Existing `security_outbox` remains intact.
+
+The migration deliberately does not certify old PAID rows by filling `verified_at`. Existing linked paid orders are marked ISSUED; provider references imply READY creation, while other legacy attempts remain UNKNOWN. Legacy pending manual transfers are not automatically paid or approved. No buyer/hold owners, provider references or historical financial evidence are fabricated. Application rollout requires schema first and coordinated retirement of every old inventory/payment writer.
+
+Rehearse the ticket backfill and unique index lock/cost on a restored authorized catalog. Check inconsistent owner/hold/payment/event links, existing oversold/negative inventory, duplicate type slots and out-of-band tickets before adoption. Strict finalization rejects inconsistent records rather than masking them with GREATEST or rewriting owners. Review pending legacy Stripe sessions (client-reference/metadata binding), unknown create outcomes and active provider returns before deploying the new callback validation. Existing transactions may require a reviewed provider-backed reconciliation; never simply stamp them verified.
+
+Production scheduler installation, merchant configuration, verified mail sender, review/refund operations and pending-message retention/key management remain prerequisites, not performed migrations. This milestone ran only disposable local PostgreSQL 18.1 databases; no production catalog was read or changed. See [PAYMENTS.md](PAYMENTS.md) for the operational sequence and compatibility limits.

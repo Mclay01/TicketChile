@@ -1,4 +1,4 @@
-# Authorization boundaries ? current through M3
+# Authorization boundaries ? current through M4
 
 M1 (`39a0931`) and M2 (`319cb5f`) remain implemented. M3 extends their server guards with the shared persisted identity and staff model; client roles, cookie presence, event codes and knowledge of identifiers never authorize access. Full identity/session/recovery/MFA/delivery/rate/audit details are in [IDENTITY-SECURITY.md](IDENTITY-SECURITY.md).
 
@@ -49,7 +49,7 @@ No staff role receives staff.manage, refund, settlement, bank-account or publica
 
 The existing HMAC-SHA256 `tc1` signer and timing-safe verification remain unchanged. Buyer QR/wallet reads require ownership in addition to a valid signature. Scanner validation requires authorized event operation plus signature/event/ticket state. Already-issued QR tokens are not rotated or revoked by an ownership transfer in this milestone; a transfer/key-rotation design remains future work.
 
-Payment email paths no longer fetch a public QR URL, use request-derived hosts or forward cookies. `deliverPaidOrder` requires persisted PAID evidence for the order, claims only VALID tickets, rereads the current owner and renders each QR locally. It sends only to that owner. The original buyer/contact does not receive a credential after an ownership change. Missing legacy email columns skip automatic delivery; resend remains available to the owner. The claim-before-send mechanism is not a durable outbox and still has crash/retry limitations for M4.
+Payment email paths no longer fetch a public QR URL, use request-derived hosts or forward cookies. `deliverPaidOrder` requires persisted PAID evidence for the order, claims only VALID tickets, rereads the current owner and renders each QR locally. It sends only to that owner. The original buyer/contact does not receive a credential after an ownership change. Missing legacy email columns skip automatic delivery; resend remains available to the owner. M4 supersedes this historical claim mechanism with durable jobs, encrypted snapshots, leases and bounded retries; see the M4 section below.
 
 New checkout requires login even when the provider browser return has no cookie. The form return redirects to a same-site GET so the session can be restored. Legacy guest orders are accessible only after login with their persisted owner email (buyer email fallback only when owner is blank). Checkout copy now distinguishes contact email from entry ownership/delivery. Organizer payment UI refreshes its scoped list; it no longer attempts buyer-only confirmation or reconciliation shortcuts.
 
@@ -65,9 +65,21 @@ Admin bootstrap, organizer bootstrap/create-user and organizer SSO return 410 at
 
 - Email-based ticket ownership, guest-order reconciliation, transfer/revocation of already-issued QR/Wallet credentials and key rotation still need explicit product/security design.
 - Versioned local migrations are tested, but no production catalog is certified. Old sessions are intentionally invalidated; privileged MFA onboarding, recovery-email proof, SUPERADMIN provisioning, data-key management and a restricted DB role are deployment prerequisites.
-- Security delivery is encrypted/queued only. External delivery worker/retries, key rotation and retention are unfinished. The payment ticket-email claim mechanism remains a distinct M4 reliability concern.
-- New hold ownership/rate/quotas mitigate abuse. Publication rules, all callback bindings/replay windows, finalization idempotency, row-lock ordering under mixed provider traffic and full financial invariants remain M4.
+- Security delivery is encrypted/queued only. M4 implements shared delivery worker services and retries; production scheduling, sender rehearsal, key rotation and retention remain operational prerequisites.
+- New hold ownership/rate/quotas mitigate abuse. M4 adds publication/quantity rules, callback verification, idempotent finalization and shared inventory locking; production concurrency/load and merchant end-to-end certification remain unverified.
 - Audit UPDATE/DELETE is rejected, but database owner/TRUNCATE/trigger changes need restricted grants and external archival. Staff UI, non-scanner capability workflows and export pagination/volume controls remain later milestones. Refund/settlement/bank mutations are not implemented.
 - Local PostgreSQL proves session expiry/revocation, tenant/grant policy, token single-use, TOTP replay, quotas and concurrent check-in. M1/M2 route/provider contracts still use explicit doubles. Browser/mobile/camera/Google OAuth, actual email/Wallet/provider sandboxes, distributed load and production infrastructure have not been exercised.
 
-No production credentials/data/deployment were used. M4 is next; M3 does not certify payment or complete-platform production readiness.
+No production credentials/data/deployment were used. M5 is next after M4; local milestone verification does not certify complete-platform production readiness.
+
+
+## M4 payment and delivery boundaries (supersedes historical lifecycle details above)
+
+- Stripe/Webpay/Flow create handlers share verified buyer, same-origin, rate, server-price, hold-owner and durable retry-key guards. Manual transfer returns unavailable until a reviewed approval workflow exists; it does not present bank details. Fintoc create and webhook return 410. No disabled-provider callback can reach an issuer.
+- Only provider adapters produce trusted payment observations. Stripe SDK verifies the raw webhook signature and timestamp; required merchant-mode/session/client-reference/metadata/amount/currency/intent bindings must match. Webpay authenticates commit/status and matches exact stored buy order, hold session and CLP amount. Flow independently retrieves signed merchant API status for the stored token and verifies commerce order, amount/currency/state and Flow order. Identifiers alone never authorize finalization or buyer reads.
+- Payment evidence commits separately from fulfillment. The single issuer requires verified PAID, matching hold/payment owner/event, canonical total and active inventory. Unique order/hold and ticket issuance slots back idempotency. Late-paid/expired inventory goes to REVIEW without issuing or inventing refunds. Even a legacy PAID label cannot be certified by a pending provider response.
+- Public `/api/demo/availability`, `/api/demo/remaining`, `/api/remaining` share one published-event inventory service. They no longer return attendee email/check-ins or use a separate expiry writer. Operational scanner statistics still require the M3 capability guard.
+- Owner-scoped status/confirmation and all Flow/Webpay/Stripe compatibility routes remain. The guest PRD review found no explicit guest checkout requirement; the existing verified buyer model is preserved. Browser redirects, provider tokens and contact email do not grant ticket access. An explicit guest capability lifecycle remains future product/security work.
+- Finalization queues unique mail jobs; status polling sends nothing. Resend requires current ownership, VALID ticket and persisted paid order, queues with HTTP 202 and cannot add recipients. The worker rechecks that authority before local QR rendering/delivery, preserving M2 signing primitives. Security outbox messages use the same worker with expiry checks. Failures do not roll back purchases; jobs retry under lease/provider idempotency or move to review after uncertainty exceeds the safe retry window.
+
+No public worker/cron endpoint or refund authority was introduced. Internal service scheduling and a restricted runtime DB role are deployment prerequisites. Full configuration, state model, provider limitations and migration risks: [PAYMENTS.md](PAYMENTS.md), [MIGRATION-PLAN.md](MIGRATION-PLAN.md). Existing QR/Wallet transfer and key rotation limitations remain unchanged.

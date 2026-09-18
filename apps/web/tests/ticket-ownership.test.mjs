@@ -36,42 +36,25 @@ for (const path of ["tickets", "demo/tickets"]) {
   });
 }
 
-for (const scenario of ["anonymous", "foreign", "cancelled", "owned", "email-failure"]) {
-  test(`resend ${scenario}: authorization precedes QR signing and delivery`, async () => {
-    const signed = [], sent = [];
-    let reads = 0;
-    const route = loadSource("app/api/tickets/resend/route.ts", {
-      ...session(scenario === "anonymous" ? null : "owner@test.cl"),
-      "@/lib/db": { pool: { query: async (sql, args) => {
-        reads++;
-        assert.match(sql, /WHERE t.id = \$1 AND LOWER\(COALESCE/);
-        assert.deepEqual(args, ["ticket-1", "owner@test.cl"]);
-        return { rows: scenario === "foreign" ? [] : [{
-          ticket_id: "ticket-1", ticket_status: scenario === "cancelled" ? "CANCELLED" : "VALID",
-          ticket_type_name: "General", order_id: "order-1", buyer_name: "Buyer",
-          buyer_email: "original-buyer@test.cl", event_id: "event-1", event_title: "Event",
-        }] };
-      } } },
-      "@/lib/qr-token.server": { signTicketToken: payload => { signed.push(payload); return "signed-token"; } },
-      qrcode: { toBuffer: async token => { assert.equal(token, "signed-token"); return Buffer.from("local-png"); } },
-      "@/lib/tickets.email": { sendTicketEmail: async args => {
-        if (scenario === "email-failure") throw new Error("secret provider failure");
-        sent.push(args);
-      } },
-    });
-    const response = await route.POST(new Request("https://ticketchile.test/api/tickets/resend", {
-      method: "POST", headers: { "content-type": "application/json", "x-forwarded-host": "attacker.test" },
-      body: JSON.stringify({ ticketId: "ticket-1", email: "attacker@test.cl", to: ["attacker@test.cl"] }),
-    }));
-    const expected = { anonymous: 401, foreign: 404, cancelled: 409, owned: 200, "email-failure": 500 };
-    assert.equal(response.status, expected[scenario]);
-    assert.equal(reads, scenario === "anonymous" ? 0 : 1);
-    assert.equal(signed.length, ["owned", "email-failure"].includes(scenario) ? 1 : 0);
-    assert.equal(sent.length, scenario === "owned" ? 1 : 0);
-    if (scenario === "owned") {
-      assert.deepEqual(sent[0].to, ["owner@test.cl"]);
-      assert.ok(sent[0].ticket.qrPngBase64);
+for (const scenario of ['anonymous','foreign','cancelled','owned','queue-failure']) {
+ test(`resend ${scenario}: authenticated owner queues, never directly sends`,async()=>{
+  let reads=0,queued=0;
+  const route=loadSource('app/api/tickets/resend/route.ts',{
+   ...session(scenario==='anonymous'?null:'owner@test.cl'),
+   '@/lib/tickets.email':{},
+   '@/lib/mail/transport.server':{},
+   '@/lib/db':{pool:{query:async(sql,args)=>{
+    if(sql.startsWith('INSERT INTO mail_jobs')) {
+     queued++;if(scenario==='queue-failure')throw new Error('secret provider failure');return {rows:[{state:'PENDING'}]};
     }
-    assert.doesNotMatch(await response.text(), /secret|original-buyer|attacker/);
+    reads++;assert.match(sql,/t.status='VALID'/);assert.match(sql,/p.status='PAID'/);
+    assert.deepEqual(args,['ticket-1','owner@test.cl']);
+    return {rows:['foreign','cancelled'].includes(scenario)?[]:[{id:'ticket-1'}]};
+   }}},
   });
+  const response=await route.POST(new Request('https://ticketchile.test/api/tickets/resend',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ticketId:'ticket-1',email:'attacker@test.cl'})}));
+  assert.equal(response.status,{anonymous:401,foreign:404,cancelled:404,owned:202,'queue-failure':503}[scenario]);
+  assert.equal(reads,scenario==='anonymous'?0:1);assert.equal(queued,['owned','queue-failure'].includes(scenario)?1:0);
+  assert.doesNotMatch(await response.text(),/secret|attacker|sentTo/);
+ });
 }

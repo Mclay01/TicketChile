@@ -1,5 +1,5 @@
 // apps/web/src/lib/tickets.email.ts
-import { Resend } from "resend";
+import { sendTransactionalMail, type Mail } from '@/lib/mail/transport.server';
 
 type TicketEmailItem = {
   id: string;
@@ -30,13 +30,7 @@ type SendTicketEmailArgs = {
   };
 };
 
-function mustEnv(name: string) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Falta env ${name}`);
-  return v;
-}
-
-function esc(s: any) {
+function esc(s: unknown) {
   return String(s ?? "").replace(/[<>&"]/g, (c) => {
     switch (c) {
       case "<":
@@ -64,11 +58,8 @@ function cidForTicket(ticketId: string) {
   return `qr-${safe}`;
 }
 
-export async function sendTicketEmail(args: SendTicketEmailArgs) {
-  const apiKey = mustEnv("RESEND_API_KEY");
-  const from = process.env.FROM_EMAIL || "Ticket Chile <tickets@ticketchile.com>";
-  const resend = new Resend(apiKey);
-
+export function buildTicketEmail(args: SendTicketEmailArgs): Mail {
+  const from = process.env.FROM_EMAIL || '';
   const subject = `Tus entradas — ${args.event.title || "TicketChile"}`;
 
   const tickets: TicketEmailItem[] = Array.isArray(args.tickets)
@@ -153,14 +144,16 @@ export async function sendTicketEmail(args: SendTicketEmailArgs) {
     </div>
   `;
 
-  const out = await resend.emails.send({
+  return {
     from,
     to: args.to,
     subject,
     html,
     // ✅ inline images via attachments
     attachments: attachments.length ? attachments : undefined,
-  });
+  };
+}
 
-  return out;
+export async function sendTicketEmail(args: SendTicketEmailArgs, key: string) {
+  return sendTransactionalMail(buildTicketEmail(args), key);
 }

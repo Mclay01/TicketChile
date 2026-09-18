@@ -10,8 +10,8 @@ export type FlowStatus = {
   currency: string;
   amount: number;
   payer: string;
-  optional?: any;
-  paymentData?: any;
+  optional?: unknown;
+  paymentData?: unknown;
 };
 
 function mustEnv(name: string) {
@@ -25,7 +25,9 @@ export function flowBaseUrl() {
   // - prod:    https://www.flow.cl/api  (clásico)
   // - sandbox: https://sandbox.flow.cl/api
   // En tu código venías usando https://api.flow.cl (alias).
-  return process.env.FLOW_BASE_URL || "https://api.flow.cl";
+  const base = process.env.FLOW_BASE_URL;
+  if (!base || !['https://www.flow.cl/api','https://sandbox.flow.cl/api'].includes(base)) throw new Error('Provider unavailable');
+  return base;
 }
 
 export function flowSign(params: Record<string, string>) {
@@ -93,7 +95,7 @@ export async function flowCreatePayment(args: {
   urlReturn: string;
   urlConfirmation: string;
   timeoutSeconds?: number; // ej 900
-  optional?: any; // object -> JSON
+  optional?: unknown; // object -> JSON
 }) {
   const apiKey = mustEnv("FLOW_API_KEY");
   const base = flowBaseUrl();
@@ -120,10 +122,11 @@ export async function flowCreatePayment(args: {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
+    signal: AbortSignal.timeout(15000),
   });
 
   const raw = await r.text();
-  let data: any = null;
+  let data: Record<string, unknown> | null = null;
   try {
     data = raw ? JSON.parse(raw) : null;
   } catch {
@@ -131,8 +134,7 @@ export async function flowCreatePayment(args: {
   }
 
   if (!r.ok) {
-    const msg = data?.message || data?.error?.message || raw || `HTTP ${r.status}`;
-    throw new Error(`Flow create failed: ${msg}`);
+    throw new Error('Flow unavailable');
   }
 
   const url = String(data?.url || "");
@@ -152,10 +154,10 @@ export async function flowGetStatus(token: string): Promise<FlowStatus> {
   params.s = flowSign(params);
 
   const qs = new URLSearchParams(params).toString();
-  const r = await fetch(`${base}/payment/getStatus?${qs}`, { method: "GET" });
+  const r = await fetch(`${base}/payment/getStatus?${qs}`, { method: "GET", cache: "no-store", signal: AbortSignal.timeout(15000) });
 
   const raw = await r.text();
-  let data: any = null;
+  let data: Record<string, unknown> | null = null;
   try {
     data = raw ? JSON.parse(raw) : null;
   } catch {
@@ -163,9 +165,8 @@ export async function flowGetStatus(token: string): Promise<FlowStatus> {
   }
 
   if (!r.ok) {
-    const msg = data?.message || data?.error?.message || raw || `HTTP ${r.status}`;
-    throw new Error(`Flow getStatus failed: ${msg}`);
+    throw new Error('Flow unavailable');
   }
 
-  return data as FlowStatus;
+  return data as unknown as FlowStatus;
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import type { Event } from "@/lib/events";
 import { formatCLP } from "@/lib/events";
 
 type HoldItem = { ticketTypeId: string; qty: number };
-type PayMethod = "webpay" | "flow" | "fintoc" | "transfer";
+type PayMethod = "webpay" | "flow" | "stripe";
 
 /* ----------------------------
    Validaciones / Normalización
@@ -204,8 +204,8 @@ function parseCartParam(s: string) {
    Component
 ----------------------------- */
 
-export default function CheckoutBuyerForm({ event }: { event: Event }) {
-  const router = useRouter();
+export default function CheckoutBuyerForm({ event, methods }: { event: Event; methods: PayMethod[] }) {
+  const attempt = useRef<{payload:string;key:string} | null>(null);
   const sp = useSearchParams();
   const canceled = sp.get("canceled") === "1";
 
@@ -234,7 +234,7 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
 
   const emailLocked = !!sessionEmail && !useOtherEmail;
 
-  const [payMethod, setPayMethod] = useState<PayMethod>("webpay");
+  const [payMethod, setPayMethod] = useState<PayMethod>(methods[0] || "webpay");
   const [paying, setPaying] = useState(false);
   const [payErr, setPayErr] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
@@ -300,7 +300,7 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
 
   const addressOk = buyerRegion.trim().length > 0 && buyerComuna.trim().length > 0 && buyerAddress1.trim().length >= 5;
 
-  const canPay =
+  const canPay = methods.includes(payMethod) &&
     !paying &&
     totalQty > 0 &&
     subtotal > 0 &&
@@ -342,136 +342,35 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
     };
   }
 
-  async function payWithWebpay() {
-    setPayErr(null);
-    setOkMsg(null);
+  async function onPay() {
     if (!canPay) return;
-
-    setPaying(true);
+    setPayErr(null);setOkMsg(null);setPaying(true);
     try {
-      setOkMsg("Abriendo Webpay…");
-
-      const res = await fetch(`/api/payments/webpay/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify(payloadBase()),
+      const payload = JSON.stringify(payloadBase());
+      const signature = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(payMethod+payload))))
+        .map(byte=>byte.toString(16).padStart(2,'0')).join('');
+      const storageKey = `checkout-attempt:${event.id}`;
+      if (!attempt.current) {
+        try { attempt.current = JSON.parse(sessionStorage.getItem(storageKey) || 'null'); } catch { /* new attempt */ }
+      }
+      if (attempt.current?.payload !== signature) {
+        attempt.current = {payload:signature,key:crypto.randomUUID()};
+        sessionStorage.setItem(storageKey,JSON.stringify(attempt.current));
+      }
+      const res = await fetch(`/api/payments/${payMethod}/create`, {
+        method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':attempt.current.key},
+        cache:'no-store',body:payload,
       });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
-
-      const url = String(data?.webpay?.url || "");
-      const token = String(data?.webpay?.token || "");
-      if (!url || !token) throw new Error("Webpay no devolvió url/token.");
-
-      submitWebpayForm(url, token);
-    } catch (e) {
-      setPayErr(e instanceof Error ? e.message : "No se pudo iniciar el pago.");
-      setOkMsg(null);
-      setPaying(false);
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data?.error === 'string' ? data.error : data?.error?.message || 'No se pudo iniciar el pago.');
+      if (data.status === 'PAID') {window.location.href=`/checkout/confirm?payment_id=${encodeURIComponent(data.paymentId)}`;return;}
+      if (payMethod === 'webpay') submitWebpayForm(data.webpay.url,data.webpay.token);
+      else if (data.checkoutUrl) window.location.href=data.checkoutUrl;
+      else throw new Error('Pago pendiente de revision.');
+    } catch (error) {
+      setPayErr(error instanceof Error ? error.message : 'No se pudo iniciar el pago.');setPaying(false);
     }
   }
-
-  async function payWithFlow() {
-    setPayErr(null);
-    setOkMsg(null);
-    if (!canPay) return;
-
-    setPaying(true);
-    try {
-      setOkMsg("Abriendo Flow…");
-
-      const res = await fetch(`/api/payments/flow/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify(payloadBase()),
-      });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || data?.detail || `Error ${res.status}`);
-
-      const checkoutUrl = String(data?.checkoutUrl || "");
-      if (!checkoutUrl) throw new Error("Flow no devolvió checkoutUrl.");
-
-      window.location.href = checkoutUrl;
-    } catch (e) {
-      setPayErr(e instanceof Error ? e.message : "No se pudo iniciar el pago.");
-      setOkMsg(null);
-      setPaying(false);
-    }
-  }
-
-  async function payWithFintoc() {
-    setPayErr(null);
-    setOkMsg(null);
-    if (!canPay) return;
-
-    setPaying(true);
-    try {
-      setOkMsg("Abriendo Fintoc…");
-
-      const res = await fetch(`/api/payments/fintoc/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify(payloadBase()),
-      });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
-
-      const checkoutUrl = String(data?.checkoutUrl || "");
-      if (!checkoutUrl) throw new Error("Fintoc no devolvió checkoutUrl.");
-
-      window.location.href = checkoutUrl;
-    } catch (e) {
-      setPayErr(e instanceof Error ? e.message : "No se pudo iniciar el pago.");
-      setOkMsg(null);
-      setPaying(false);
-    }
-  }
-
-  async function payWithTransfer() {
-    setPayErr(null);
-    setOkMsg(null);
-    if (!canPay) return;
-
-    setPaying(true);
-    try {
-      setOkMsg("Generando datos de transferencia…");
-
-      const res = await fetch(`/api/payments/transfer/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify(payloadBase()),
-      });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
-
-      const confirmUrl = typeof data?.confirmUrl === "string" ? data.confirmUrl : "";
-      if (!confirmUrl) throw new Error("No se pudo iniciar transferencia.");
-
-      router.push(confirmUrl);
-    } catch (e) {
-      setPayErr(e instanceof Error ? e.message : "No se pudo iniciar el pago.");
-      setOkMsg(null);
-    } finally {
-      setPaying(false);
-    }
-  }
-
-  const onPay =
-    payMethod === "webpay"
-      ? payWithWebpay
-      : payMethod === "flow"
-        ? payWithFlow
-        : payMethod === "fintoc"
-          ? payWithFintoc
-          : payWithTransfer;
 
   const payBtnText = paying ? "Procesando..." : payMethod === "flow" ? "Pagar con Flow" : "Pagar";
 
@@ -637,61 +536,11 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
             <p className="text-xs font-semibold text-white/70">Método de pago</p>
 
             <div className="mt-2 grid gap-2">
-              <label className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="payMethod"
-                    checked={payMethod === "webpay"}
-                    onChange={() => setPayMethod("webpay")}
-                    disabled={paying}
-                  />
-                  <span className="text-sm text-white/85">Tarjeta (Webpay)</span>
-                </div>
-                <span className="text-xs text-white/55">Instantáneo</span>
-              </label>
-
-              <label className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="payMethod"
-                    checked={payMethod === "flow"}
-                    onChange={() => setPayMethod("flow")}
-                    disabled={paying}
-                  />
-                  <span className="text-sm text-white/85">Transferencia (Flow)</span>
-                </div>
-                <span className="text-xs text-white/55">Banco</span>
-              </label>
-
-              <label className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="payMethod"
-                    checked={payMethod === "fintoc"}
-                    onChange={() => setPayMethod("fintoc")}
-                    disabled={paying}
-                  />
-                  <span className="text-sm text-white/85">Transferencia (Fintoc)</span>
-                </div>
-                <span className="text-xs text-white/55">Banco</span>
-              </label>
-
-              <label className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="payMethod"
-                    checked={payMethod === "transfer"}
-                    onChange={() => setPayMethod("transfer")}
-                    disabled={paying}
-                  />
-                  <span className="text-sm text-white/85">Transferencia (manual)</span>
-                </div>
-                <span className="text-xs text-white/55">Con referencia</span>
-              </label>
+              {methods.map(method => <label key={method} className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                <input type="radio" name="payMethod" checked={payMethod === method} onChange={() => setPayMethod(method)} disabled={paying} />
+                <span>{method === 'webpay' ? 'Webpay' : method === 'stripe' ? 'Tarjeta (Stripe)' : 'Flow'}</span>
+              </label>)}
+              {!methods.length && <p className="text-sm text-white/70">Los pagos no estan disponibles por el momento.</p>}
             </div>
           </div>
 

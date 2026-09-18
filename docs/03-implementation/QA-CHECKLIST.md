@@ -56,7 +56,7 @@ Record executed results in ASTRA-PROGRESS.md. Unchecked items are not accepted a
 - [ ] Guest-order migration, transfer/key rotation and previously issued Wallet object lifecycle have explicit product/security rules.
 - [ ] M4 verifies all provider callback bindings/replay limits, expired holds, inventory, transaction retries and durable email outbox; no financial-invariant certification in M2.
 
-Full route inventory and guest/callback exceptions: [AUTHORIZATION.md](AUTHORIZATION.md). Stop after M3; next is M4 payment/hold/finalization consolidation, provider availability and email.
+Full route inventory and guest/callback exceptions: [AUTHORIZATION.md](AUTHORIZATION.md). M4 is now implemented; stop after its commit. Next is M5: 1D primitives/shells, media boundary, public discovery and account.
 
 ## M3 verification and release prerequisites
 
@@ -81,3 +81,26 @@ Full route inventory and guest/callback exceptions: [AUTHORIZATION.md](AUTHORIZA
 - [ ] Operational staff/finance/support screens, export pagination/volume controls and future refund/settlement/bank audit consumers.
 
 Historical M1/M2 counts above remain their original evidence. Final M3 combined test/check counts and commands are recorded in [ASTRA-PROGRESS.md](ASTRA-PROGRESS.md). Whole-repository lint is not claimed clean.
+
+
+## M4 payment verification and outstanding release checks
+
+- [x] Shared provider creation, server-only availability and explicit fee configuration; no fabricated bank details or prototype fees.
+- [x] Canonical server prices, tampered total rejection, integer/per-type/account quantity limits and published-event validation.
+- [x] Owned holds/payment retries, persisted request fingerprint/key, cross-buyer denial and no provider switching.
+- [x] Disposable PostgreSQL concurrent create, last-unit inventory, duplicate callbacks/webhooks/finalization, release-once cancellation and expiry tests.
+- [x] Verified evidence survives an injected issuance rollback; recovery issues exactly once with database order/hold and ticket-slot uniqueness.
+- [x] Amount/currency/order/reference/intent mismatch and invalid Stripe signature denial; Webpay commit/status recovery; Flow token substitution and callback aliases.
+- [x] Fintoc create/webhook retired, manual transfer unavailable and existing pending/manual payments cannot automatically issue tickets.
+- [x] Expired/late-paid holds enter review without overselling; Stripe reservation/session expiration aligned and stable on retry.
+- [x] Status/success retries cannot reissue or recover transferred tickets; legacy PAID alone is not trusted evidence.
+- [x] Durable encrypted mail snapshots, concurrent leases, simulated response-loss dedupe, crash recovery, expired uncertainty review, owner-authorized resend and explicit TEST transport recording.
+- [x] M3 security outbox expiry/import/acknowledgement uses the same delivery boundary; disabled mail honestly remains queued.
+- [x] All public availability aliases return published inventory only; no attendee/check-in feed or duplicate inventory writer.
+- [x] M4 migration, TypeScript, scoped lint, isolated production build and root diff whitespace check are required before commit; final evidence is recorded in ASTRA-PROGRESS.
+- [ ] Actual Stripe/Webpay/Flow merchant sandbox, browser redirects, external mail sender/delivery and worker scheduling rehearsal. Local tests use explicit provider doubles.
+- [ ] Fintoc complete adapter/validation/certification; manual transfer bank/approval/evidence workflow and operational policy.
+- [ ] Existing production catalog adoption, legacy active-payment reconciliation, backups, DB privileges, throughput/lock testing, monitoring and review runbooks.
+- [ ] Guest capability policy, QR/Wallet credential transfer/revocation/key rotation, nonzero fee/refund/settlement policies and operations.
+
+Historical M2 SQL-contract payment/mail tests were replaced where their implementation no longer exists with stronger actual-PostgreSQL behavior coverage. Existing identity/QR/wallet/scanner/owner boundaries remain tested; historical counts are not added to the current total. Whole-repository lint remains outside the clean claim.

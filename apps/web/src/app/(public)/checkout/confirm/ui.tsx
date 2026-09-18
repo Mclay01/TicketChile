@@ -19,6 +19,7 @@ type StatusPayload = {
     holdId: string;
     orderId: string;
     provider?: string;
+    fulfillmentStatus?: string;
     status: string;
     buyerName: string;
     buyerEmail: string;
@@ -110,9 +111,9 @@ export default function CheckoutConfirmClient() {
 
         setData(j);
         return j as StatusPayload;
-      } catch (e: any) {
-        if (e?.name === "AbortError") return null;
-        setErr(String(e?.message || e));
+      } catch (e: unknown) {
+        if (e instanceof Error && e.name === "AbortError") return null;
+        setErr(e instanceof Error ? e.message : "No se pudo completar la solicitud.");
         setData(null);
         return null;
       } finally {
@@ -241,81 +242,31 @@ export default function CheckoutConfirmClient() {
     setSending(true);
     setSendMsg(null);
 
-    const sent = new Set<string>();
-    const failed: Array<{ ticketId: string; error: string }> = [];
-
+    let queued = 0;
     try {
       for (const tk of tickets) {
-        const r = await fetch("/api/tickets/resend", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          cache: "no-store",
-          body: JSON.stringify({ ticketId: tk.id }),
-        });
-
-        const j = await r.json().catch(() => null);
-
-        if (!r.ok) {
-          failed.push({ ticketId: tk.id, error: j?.error || `Error ${r.status}` });
-          continue;
-        }
-
-        const sentTo = Array.isArray(j?.sentTo) ? j.sentTo : [];
-        for (const e of sentTo) sent.add(String(e));
+        const response = await fetch('/api/tickets/resend', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticketId:tk.id})});
+        if (response.ok) queued++;
       }
-
-      if (sent.size > 0) {
-        const list = Array.from(sent);
-        setSendMsg(
-          `Listo ✅ Reenviado a: ${list.join(", ")}${
-            failed.length ? ` (fallaron ${failed.length} ticket(s))` : ""
-          }`
-        );
-      } else {
-        const detail = failed[0]?.error || "Falló el envío.";
-        setSendMsg(`No se pudo reenviar: ${detail}`);
-      }
-    } catch (e: any) {
-      setSendMsg(`No se pudo reenviar: ${String(e?.message || e)}`);
+      setSendMsg(queued ? `Reenvio solicitado para ${queued} entrada(s). La entrega puede tardar unos minutos.` : 'No se pudo solicitar el reenvio.');
+    } catch {
+      setSendMsg('No se pudo solicitar el reenvio.');
     } finally {
       setSending(false);
     }
   }
 
-  async function addGoogleWallet() {
-    const first = data?.tickets?.[0];
-    if (!first) return;
-
-    const r = await fetch(`/api/wallet/google/save-url?ticket_id=${encodeURIComponent(first.id)}`, {
-      cache: "no-store",
-    });
-
-    const j = await r.json().catch(() => null);
-    if (!r.ok) {
-      alert(j?.error || "No se pudo generar Google Wallet.");
-      return;
-    }
-
-    const url = String(j?.saveUrl || "");
-    if (!url) {
-      alert("No se pudo generar Google Wallet.");
-      return;
-    }
-
-    window.open(url, "_blank", "noopener,noreferrer");
-  }
 
   const ready = Boolean(data?.tickets?.length);
-  const provider = String(data?.payment?.provider || "").toLowerCase();
+  const provider = String(data?.payment?.provider || '').toLowerCase();
   const statusUpper = String(data?.payment?.status || "").toUpperCase();
 
   const waitingText = (() => {
-    if (!data?.payment) return "Estamos esperando confirmación para emitir tus tickets.";
-    if (provider === "webpay") return "Webpay confirmó el pago; estamos emitiendo tus tickets.";
-    if (provider === "fintoc") return "Estamos esperando confirmación de la transferencia para emitir tus tickets.";
-    if (provider === "transfer") return "Estamos procesando la transferencia para emitir tus tickets.";
-    if (provider === "flow") return "Flow confirmó/está confirmando el pago; estamos emitiendo tus tickets.";
-    return "Estamos procesando tu pago y emitiendo tickets.";
+    if (data?.payment.fulfillmentStatus === 'REVIEW') return 'Pago recibido. La reserva vencio y la compra necesita revision. Tus tickets aun no fueron emitidos.';
+    if (statusUpper === 'FAILED' || statusUpper === 'CANCELLED') return 'El pago no fue completado.';
+    if (statusUpper === 'PAID') return 'Pago recibido. La emision de tus tickets esta pendiente.';
+    if (provider === 'transfer') return 'Transferencia pendiente de revision manual. No se han emitido tickets.';
+    return 'Esperando la confirmacion del proveedor. No se han emitido tickets.';
   })();
 
   return (
@@ -359,7 +310,7 @@ export default function CheckoutConfirmClient() {
 
             {!ready ? (
               <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-                <p className="font-semibold text-white/90">Emitiendo tickets…</p>
+                <p className="font-semibold text-white/90">{waitingText}</p>
                 <p className="mt-1 text-sm text-white/70">
                   {polling ? (
                     <>

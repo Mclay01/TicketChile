@@ -19,7 +19,7 @@ Updated: 2026-09-18. Branch: `astra/ticketchile-v2`. Starting commit: `6104fd9`.
 
 ## Current work
 
-M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df1875d392abc7b7ad60a67`. Both were verified before M3 and were extended rather than reimplemented. M3 is complete in the commit containing the M3 entry below. No deployment, production credentials/data, provider calls, merge or push.
+M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df1875d392abc7b7ad60a67`. Both were verified before M3 and were extended rather than reimplemented. M3 is complete in `fd48fc02df1408a299157d7308b644b102a532cd`. M4 is complete in the commit containing the M4 entry below. No deployment, production credentials/data, provider calls, merge or push.
 
 ## M2 completed
 
@@ -129,6 +129,42 @@ Whole-repository lint was not rerun or claimed clean. The historical M1 baseline
 
 Not executed/certified: existing/production schema adoption, secure production key and DB-role operations, external security delivery worker, browser MFA/Google OAuth/camera/Wallet/provider sandboxes, distributed abuse/load tests, payment financial invariants or final product UI. Security email is durably queued/encrypted, not externally delivered; production identity provisioning/onboarding still requires a reviewed runbook. Full residual details are in the linked security and migration documents.
 
+## M4 completed
+
+Starting point: clean `astra/ticketchile-v2` at M3 `fd48fc0`. Read the latest M4 request, progress/implementation/migration/authorization records, PRD checkout requirements and root Git history before editing. M1, M2 and M3 were preserved and extended, not restarted. No unrelated UI redesign or M5 work was undertaken.
+
+- Mapped all provider create/status/confirm/return/webhook routes, compatibility aliases, inventory writers, ticket issuers, resend and security delivery. Recorded the map and provider documentation review in [PAYMENTS.md](PAYMENTS.md).
+- Consolidated Stripe/Webpay/Flow creation behind server availability, explicit fee policy, canonical database prices, validated quantities/publication, owned holds and durable buyer/request-key retries. Persist attempts before provider I/O; uncertain creation cannot blindly create duplicate payments. Manual bank fallback details were removed. Fintoc create and its formerly active webhook are unavailable. Manual transfer remains unavailable pending an authorized review workflow; legacy pending transfers cannot automatically issue tickets.
+- Shared provider adapters validate actual provider state and exact payment/hold/reference/amount/currency bindings. Stripe also requires session metadata/client reference/mode and durable PaymentIntent binding, with raw SDK signature verification. Webpay recovers uncertain commits via status; Flow independently retrieves authenticated status. Browser redirects and IDs cannot grant buyer access or mark payments paid.
+- One paid-evidence recorder and one transactional issuer replace all old provider-specific finalization paths and the unused demo-paid issuer. Durable evidence survives issuance failures. Unique order/hold and ticket issuance slots, atomic inventory consumption and unique initial mail jobs make repeated callbacks, webhooks and status/success reloads idempotent. A legacy PAID label alone is not trusted. Expired/late-paid purchases enter review, without overselling or invented refunds.
+- All active inventory expiry/release writers now share a transaction advisory lock and release-once service. Account quotas remain; published-event/per-type quantity guards added. Stripe holds align with the provider session's fixed expiration without retry extension. Public availability aliases no longer expose attendee/check-in data or run a separate inventory writer.
+- Added durable encrypted mail snapshots, leases/fencing, bounded retries and provider idempotency keys. Email failure never rolls back purchases. Owner-authorized resend queues with 202, deduplicates requests and rechecks ownership/VALID/paid state at delivery. M3 security outbox messages use the same worker with expiry/acknowledgement. Disabled mail remains queued; fixture delivery explicitly records TEST. No actual email was sent.
+- Added internal reconciliation and delivery worker boundaries, review/audit states and an operational runbook. No public cron, refund, approval or scheduler endpoint was introduced. External worker scheduling and merchant/sender certification remain deployment prerequisites.
+- PRD section 10 does not explicitly define guest checkout. M4 preserves the existing verified-account boundary; it adds no guest ID-based access. Current ticket ownership still filters confirmation results. Product UI changes are limited to real provider availability, durable retry keys, accurate queued-mail and payment/issuance states.
+- Updated [QA-CHECKLIST.md](QA-CHECKLIST.md), [MIGRATION-PLAN.md](MIGRATION-PLAN.md), [AUTHORIZATION.md](AUTHORIZATION.md), [IDENTITY-SECURITY.md](IDENTITY-SECURITY.md) and [PAYMENTS.md](PAYMENTS.md).
+
+## M4 verification
+
+Run from `apps/web` unless noted:
+
+| Check | Result |
+| --- | --- |
+| `node --test --experimental-test-isolation=none --test-reporter=spec tests/*.test.mjs` | PASS: 242 tests, zero failures/skips; includes 58 actual-PostgreSQL M4 behavior cases, retained identity/QR/wallet/scanner/owner contracts and updated delivery/payment contracts |
+| `node node_modules/typescript/bin/tsc --noEmit --incremental false` | PASS |
+| `node scripts/lint-changed.mjs` | PASS: all 39 changed/new code/test/script files, zero errors/warnings |
+| `node scripts/verify-build.mjs` | PASS: optimized compile, TypeScript, static generation and route collection, with inert credentials and unreachable loopback DB |
+| Root `git -c core.safecrlf=false diff --check` | PASS |
+
+M4 tests include canonical amounts/tampering, quantity and publication validation, concurrent create retry keys, owned/expired holds, last-unit stock races, wrong provider/order/session/currency/amount/intent, signature failures, webhook/callback replay, injected issuance failure/recovery, legacy unverified state, cancellation/release, expired-paid review, transferred-ticket filtering, provider availability, no automatic manual transfer issuance, pending reconciliation without browser, encrypted mail failure/response loss, concurrent workers, expired leases/security tokens, deduplication-window review, resend ownership and all public availability aliases.
+
+Historical M2 payment/mail SQL-shape tests for deleted implementations were replaced with stronger actual-PostgreSQL behavior tests; historical test counts are not simply added to the current total. Applied M1-M3 migration files are unchanged. M4 appends `0004_payment_lifecycle.sql`; test databases are newly named disposable fixtures and earlier intermediate databases are retained, not reused or dropped.
+
+The isolated PostgreSQL cluster uses only `127.0.0.1:55439` and synthetic data; test commands never load application env files. The build helper clears provider/mail/checkout variables and substitutes inert credentials; Next prints `.env.local` discovery but its keys are overridden before build. Local fixture logs/data/build artifacts are ignored. No production credentials/data, real provider/email/Wallet calls, deployment, merge or push occurred. Local cluster stopped after verification, retaining its files.
+
+Intermediate test syntax/mock-boundary and TypeScript errors were corrected before final gates. Scoped lint exposed an inherited unused confirmation helper and TicketCard type/image warnings; only the touched code was corrected. The final review added a regression against certifying a legacy PAID label from PENDING evidence. No whole-repository lint run or clean claim: the historical baseline remains 287 errors and 35 warnings.
+
+Remaining limits: actual merchant sandbox/browser/email end-to-end, scheduler installation, monitored uncertain-create/late-paid review, Fintoc integration, manual transfer approval/bank policy, nonzero fee/refund/settlement operations, guest capability design, existing QR/Wallet transfer/key rotation, production catalog/legacy-payment adoption, DB privilege/retention/key management and load/throughput rehearsal. Unknown Webpay/Flow create outcomes still need provider-backed operator reconciliation; no blind retry is performed. Production readiness is not claimed.
+
 ## Exact next milestone
 
-**M4: Payment/hold/finalization consolidation, provider availability and email.** Completion evidence: idempotency, expiry, amount and issuance tests. Continue from M3; preserve the persisted authorization/security boundaries and do not restart M1/M2. M4 has not begun. Stop after the coherent M3 commit; do not deploy.
+**M5: 1D primitives/shells, media boundary, public discovery and account.** Completion evidence: responsive visual QA and real data. Continue from M4; do not restart M1-M4. Stop after the coherent M4 commit. Do not deploy or begin M5 in this task.

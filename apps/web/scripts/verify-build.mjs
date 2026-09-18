@@ -14,7 +14,7 @@ for (const name of [".env", ".env.local", ".env.production", ".env.production.lo
 }
 // Clear inherited provider settings as well as file-loaded settings.
 for (const key of Object.keys(env)) {
-  if (/^(STRIPE_|FLOW_|WEBPAY_|FINTOC_|RESEND_|GOOGLE_|AUTH_|SECURITY_|NEXTAUTH_|TRANSFER_|ORGANIZER_|ADMIN_BOOTSTRAP_|APP_|NEXT_PUBLIC_)/.test(key)) env[key] = "";
+  if (/^(STRIPE_|FLOW_|WEBPAY_|FINTOC_|RESEND_|MAIL_|CHECKOUT_|FROM_EMAIL$|GOOGLE_|AUTH_|SECURITY_|NEXTAUTH_|TRANSFER_|ORGANIZER_|ADMIN_BOOTSTRAP_|APP_|NEXT_PUBLIC_)/.test(key)) env[key] = "";
 }
 for (const key of ["TICKETCHILE_DB_POSTGRES_URL", "TICKETCHILE_DB_POSTGRES_URL_NON_POOLING", "POSTGRES_URL", "POSTGRES_URL_NON_POOLING", "POSTGRES_PRISMA_URL", "DATABASE_URL"]) {
   env[key] = "postgresql://local:local@127.0.0.1:1/ticketchile_build";

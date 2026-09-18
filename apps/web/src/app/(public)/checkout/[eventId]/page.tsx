@@ -1,3 +1,4 @@
+import { availability } from '@/lib/payments/config.server';
 import Link from "next/link";
 import { getBuyerEmail } from "@/lib/buyer-guard.server";
 import { notFound, redirect } from "next/navigation";
@@ -51,7 +52,7 @@ export default async function CheckoutPage({ params }: Props) {
         </div>
       </div>
 
-      <CheckoutBuyerForm event={event} />
+      <CheckoutBuyerForm event={event} methods={(['stripe','webpay','flow'] as const).filter(provider => availability(provider).available)} />
     </div>
   );
 }

@@ -51,10 +51,9 @@ export default function TicketCard({ t }: { t: TicketCardTicket }) {
         throw new Error(data?.error || `Error ${r.status}`);
       }
 
-      const sentTo = Array.isArray(data?.sentTo) ? data.sentTo : [];
-      setInfo(sentTo.length ? `Enviado a: ${sentTo.join(", ")}` : "Enviado.");
-    } catch (e: any) {
-      setError(`No se pudo reenviar: ${String(e?.message || e)}`);
+      setInfo("Reenvio solicitado. La entrega puede tardar unos minutos.");
+    } catch (e: unknown) {
+      setError(`No se pudo reenviar: ${e instanceof Error ? e.message : "No se pudo solicitar el reenvio."}`);
     } finally {
       setSending(false);
     }
@@ -86,6 +85,8 @@ export default function TicketCard({ t }: { t: TicketCardTicket }) {
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-4">
+        {/* QR is a private authenticated image, not a public optimized asset. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={qrUrl}
           alt="QR Ticket"

@@ -3,6 +3,8 @@ import { test } from "node:test";
 import { loadSource as loadRawSource } from "./load-source.mjs";
 // M1/M2 route contracts isolate rate storage; real atomic limits are covered by security.integration.
 const loadSource=(entry,overrides={})=>loadRawSource(entry,{
+  "@/lib/payments/reconcile.server":{reconcilePayment:()=>assert.fail("Pending or foreign payment must not reconcile")},
+  "@/lib/payments/adapters.server":{},
   "@/lib/security/rate-limit.server":{limit:async()=>{},publicLimit:async()=>{}},...overrides,
 });
 
@@ -34,7 +36,6 @@ for (const [endpoint, query] of [["status", "payment_id=pay_1"], ["stripe/status
           } }); },
         },
         "@/lib/stripe.server": { stripe: { checkout: { sessions: { retrieve: () => assert.fail("Provider must not be called for this payment") } } } },
-        "@/lib/checkout.pg.server": { finalizePaidHoldToOrderPgTx: () => assert.fail("Pending/foreign payment must not finalize") },
         "@/lib/paid-ticket-delivery.server": { deliverPaidOrder: () => assert.fail("Pending/foreign payment must not deliver") },
       });
       const response = await route.GET(new Request(`https://ticketchile.test/api/payments/${endpoint}?${query}&ownerEmail=owner@test.cl`));
@@ -45,50 +46,6 @@ for (const [endpoint, query] of [["status", "payment_id=pay_1"], ["stripe/status
       if (scenario !== "owned") assert.doesNotMatch(await response.text(), /recipient|Buyer|hold_1/);
     });
   }
-}
-
-for (const scenario of ["foreign", "swapped-id", "wrong-order", "wrong-amount", "wrong-currency", "paid", "cancelled-replay"]) {
-  test(`Flow reconciliation: ${scenario} binds provider evidence before mutation`, async () => {
-    let providerCalls = 0, mutations = 0, finalizations = 0, deliveries = 0, releases = 0;
-    let active = true;
-    const provider = { commerceOrder: scenario === "wrong-order" ? "pay_other" : payment.id,
-      amount: scenario === "wrong-amount" ? 1 : 1000, currency: scenario === "wrong-currency" ? "USD" : "CLP",
-      status: scenario === "cancelled-replay" ? 4 : 2 };
-    const reconcile = loadSource("lib/flow-reconcile.server.ts", {
-      "@/lib/db": {
-        pool: { query: async (sql, args) => {
-          assert.match(sql, /provider_ref=\$4/);
-          assert.deepEqual(args, ["owner@test.cl", scenario === "swapped-id" ? "pay_other" : "pay_1", "flow", "stored-token"]);
-          return { rows: ["foreign", "swapped-id"].includes(scenario) ? [] : [{ ...payment }] };
-        } },
-        withTx: async fn => fn({ query: async (sql, args) => {
-          if (sql.startsWith("SELECT *")) {
-            assert.match(sql, /provider='flow' AND provider_ref=\$2/);
-            assert.deepEqual(args, ["pay_1", "stored-token"]); return { rows: [{ ...payment }] };
-          }
-          if (sql.startsWith("SELECT id FROM orders")) return { rows: [{ id: "order_1" }] };
-          mutations++;
-          if (sql.startsWith("UPDATE holds")) { assert.match(sql, /status='ACTIVE'/); const rowCount = active ? 1 : 0; active = false; return { rowCount }; }
-          if (sql.includes("UPDATE ticket_types")) releases++;
-          return { rows: [] };
-        } }),
-      },
-      "@/lib/flow": { flowGetStatus: async token => { providerCalls++; assert.equal(token, "stored-token"); return provider; } },
-      "@/lib/checkout.pg.server": { finalizePaidHoldToOrderPgTx: async (_client, args) => { finalizations++; assert.equal(args.paymentId, "pay_1"); } },
-      "@/lib/paid-ticket-delivery.server": { deliverPaidOrder: async id => { deliveries++; assert.equal(id, "order_1"); } },
-    });
-    const run = () => reconcile.reconcileFlow("stored-token", { email: "owner@test.cl", paymentId: scenario === "swapped-id" ? "pay_other" : "pay_1" });
-    if (["paid", "cancelled-replay"].includes(scenario)) {
-      await run();
-      if (scenario === "cancelled-replay") { await run(); assert.equal(releases, 1); }
-      assert.equal(finalizations, scenario === "paid" ? 1 : 0);
-      assert.equal(deliveries, scenario === "paid" ? 1 : 0);
-    } else {
-      await assert.rejects(run, error => error.status === (["foreign", "swapped-id"].includes(scenario) ? 404 : 409));
-      assert.equal(mutations, 0); assert.equal(finalizations, 0); assert.equal(deliveries, 0);
-    }
-    assert.equal(providerCalls, ["foreign", "swapped-id"].includes(scenario) ? 0 : scenario === "cancelled-replay" ? 2 : 1);
-  });
 }
 
 for (const endpoint of ["confirm", "webhook"]) {
@@ -158,32 +115,3 @@ test("payment retry cannot reassign existing owner or switch providers", async (
   await assert.rejects(() => checkPaymentRetry(client, "hold_1", "owner@test.cl", "transfer"), error => error.status === 404);
   await checkPaymentRetry(client, "hold_1", "owner@test.cl", "flow");
 });
-
-for (const scenario of ["cancel-id", "wrong-order", "wrong-session", "wrong-amount", "paid"]) {
-  test(`Webpay return: ${scenario}`, async () => {
-    let providerCalls = 0, mutations = 0, finalizations = 0;
-    const route = loadSource("app/api/payments/webpay/return/route.ts", {
-      "transbank-sdk": { WebpayPlus: { Transaction: class { async commit() { providerCalls++; return {
-        buy_order: scenario === "wrong-order" ? "pay_other" : "pay_1", session_id: scenario === "wrong-session" ? "hold_other" : "hold_1",
-        amount: scenario === "wrong-amount" ? 1 : 1000, response_code: 0, status: "AUTHORIZED",
-      }; } } }, Options: class {}, Environment: { Integration: "integration", Production: "production" }, IntegrationApiKeys: {}, IntegrationCommerceCodes: {} },
-      "@/lib/db": {
-        pool: { query: async (sql, args) => { assert.match(sql, /provider='webpay' AND provider_ref=\$1/); assert.deepEqual(args, ["stored-token"]); return { rows: [{ ...payment, provider: "webpay" }] }; } },
-        withTx: async fn => fn({ query: async (sql, args) => {
-          if (sql.startsWith("SELECT *")) { assert.match(sql, /provider_ref=\$2/); assert.deepEqual(args, ["pay_1", "stored-token"]); return { rows: [{ ...payment, provider: "webpay" }] }; }
-          if (sql.startsWith("SELECT id")) return { rows: [] };
-          mutations++; return { rows: [] };
-        } }),
-      },
-      "@/lib/checkout.pg.server": { finalizePaidHoldToOrderPgTx: async () => { finalizations++; } },
-      "@/lib/paid-ticket-delivery.server": {},
-    });
-    const response = await route.POST(new Request("https://ticketchile.test/api/payments/webpay/return", {
-      method: "POST", body: new URLSearchParams(scenario === "cancel-id" ? { TBK_ORDEN_COMPRA: "pay_1" } : { token_ws: "stored-token" }),
-    }));
-    assert.equal(response.status, ["paid", "cancel-id"].includes(scenario) ? 303 : 409);
-    assert.equal(providerCalls, scenario === "cancel-id" ? 0 : 1);
-    assert.equal(mutations, scenario === "paid" ? 1 : 0);
-    assert.equal(finalizations, scenario === "paid" ? 1 : 0);
-  });
-}

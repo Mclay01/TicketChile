@@ -2,7 +2,8 @@ import "server-only";
 import type { PoolClient } from "pg";
 import { AccessError } from "@/lib/access.server";
 export const HOLD_TTL_SECONDS=480;
-/** Call before inventory locks, within the same transaction as hold insertion. */
+/** Call after the shared inventory advisory lock and before ticket row locks,
+ * within the same transaction as hold insertion. */
 export async function enforceHoldBudget(client:PoolClient,email:string,quantities:number[]){
   if(!email)throw new AccessError(401,"UNAUTHENTICATED","Inicia sesion para reservar.");
   if(!quantities.length||quantities.length>10||!quantities.every(q=>Number.isSafeInteger(q)&&q>0)||quantities.reduce((a,b)=>a+b,0)>10)

@@ -1,5 +1,7 @@
 import { pool } from "@/lib/db";
-import type { PoolClient } from "pg";
+import type { PoolClient } from 'pg';
+import { expireHoldsTx, lockInventory } from "@/lib/payments/inventory.server";
+export { expireHoldsTx } from "@/lib/payments/inventory.server";
 import { enforceHoldBudget,HOLD_TTL_SECONDS } from "@/lib/security/holds.server";
 import crypto from "node:crypto";
 
@@ -25,51 +27,11 @@ function newId(prefix: string) {
   return `${prefix}_${a}_${b}`;
 }
 
-export async function expireHoldsTx(client: PoolClient) {
-  // 1) marca expirados
-  const expired = await client.query(
-    `
-    WITH expired AS (
-      UPDATE holds
-      SET status = 'EXPIRED'
-      WHERE status = 'ACTIVE' AND expires_at < NOW()
-      RETURNING id
-    )
-    SELECT id FROM expired
-    `
-  );
-
-  const ids: string[] = expired.rows.map((r: {id:string}) => r.id);
-  if (ids.length === 0) return;
-
-  // 2) descuenta held en ticket_types
-  const sums = await client.query(
-    `
-    SELECT event_id, ticket_type_id, SUM(qty)::int AS qty
-    FROM hold_items
-    WHERE hold_id = ANY($1)
-    GROUP BY event_id, ticket_type_id
-    `,
-    [ids]
-  );
-
-  for (const row of sums.rows) {
-    await client.query(
-      `
-      UPDATE ticket_types
-      SET held = GREATEST(held - $3, 0)
-      WHERE event_id = $1 AND id = $2
-      `,
-      [row.event_id, row.ticket_type_id, row.qty]
-    );
-  }
-}
-
 export async function createHoldPgServer(args: {
   eventId: string;
   requested: { ticketTypeId: string; qty: number }[];
   ownerEmail: string;
-}): Promise<{ hold: Hold }> {
+}, transaction?: PoolClient): Promise<{ hold: Hold }> {
   const { eventId } = args;
 
   // clamp TTL razonable
@@ -82,19 +44,20 @@ export async function createHoldPgServer(args: {
   }
   const requested = [...byId.entries()].map(([ticketTypeId, qty]) => ({ ticketTypeId, qty }));
 
-  const client = await pool.connect();
+  const client = transaction || await pool.connect();
   try {
-    await client.query("BEGIN");
+    if (!transaction) await client.query("BEGIN");
 
+    await lockInventory(client);
     await enforceHoldBudget(client,args.ownerEmail,args.requested.map(it=>it.qty));
 
     // limpieza: expira holds y libera held
     await expireHoldsTx(client);
 
     // validar evento existe
-    const ev = await client.query(`SELECT id FROM events WHERE id = $1`, [eventId]);
+    const ev = await client.query(`SELECT id FROM events WHERE id = $1 AND is_published=true`, [eventId]);
     if (ev.rowCount === 0) {
-      await client.query("ROLLBACK");
+      if (!transaction) await client.query("ROLLBACK");
       throw new Error("Evento no existe.");
     }
 
@@ -103,20 +66,20 @@ export async function createHoldPgServer(args: {
     // lock rows para evitar sobreventa
     const ttRes = await client.query(
       `
-      SELECT id, name, price_clp, capacity, sold, held
+      SELECT id, name, price_clp, capacity, sold, held, max_per_order
       FROM ticket_types
       WHERE event_id = $1 AND id = ANY($2)
-      FOR UPDATE
+      ORDER BY id FOR UPDATE
       `,
       [eventId, ids]
     );
 
     if (ttRes.rowCount !== ids.length) {
-      await client.query("ROLLBACK");
+      if (!transaction) await client.query("ROLLBACK");
       throw new Error("TicketType inválido (uno o más).");
     }
 
-    const ttById = new Map<string, {id:string;name:string;price_clp:number;capacity:number;sold:number;held:number}>();
+    const ttById = new Map<string, {id:string;name:string;price_clp:number;capacity:number;sold:number;held:number;max_per_order:number|null}>();
     for (const row of ttRes.rows) ttById.set(row.id, row);
 
     const items: HoldItemCanon[] = requested.map((r) => {
@@ -134,12 +97,14 @@ export async function createHoldPgServer(args: {
       const row = ttById.get(it.ticketTypeId)!;
       const remaining = Math.max(Number(row.capacity) - Number(row.sold) - Number(row.held), 0);
 
+      if (row.max_per_order !== null && row.max_per_order !== undefined && it.qty > row.max_per_order) throw new Error('Limite por compra excedido.');
+
       if (it.qty > remaining) {
-        await client.query("ROLLBACK");
+        if (!transaction) await client.query("ROLLBACK");
         throw new Error(`Stock insuficiente para "${it.ticketTypeName}". Quedan ${remaining}.`);
       }
       if (!Number.isFinite(it.unitPriceCLP) || it.unitPriceCLP <= 0) {
-        await client.query("ROLLBACK");
+        if (!transaction) await client.query("ROLLBACK");
         throw new Error(`Precio inválido para "${it.ticketTypeName}".`);
       }
     }
@@ -175,7 +140,7 @@ export async function createHoldPgServer(args: {
       );
     }
 
-    await client.query("COMMIT");
+    if (!transaction) await client.query("COMMIT");
 
     return {
       hold: {
@@ -189,10 +154,10 @@ export async function createHoldPgServer(args: {
     };
   } catch (e) {
     try {
-      await client.query("ROLLBACK");
+      if (!transaction) await client.query("ROLLBACK");
     } catch {}
     throw e;
   } finally {
-    client.release();
+    if (!transaction) client.release();
   }
 }
