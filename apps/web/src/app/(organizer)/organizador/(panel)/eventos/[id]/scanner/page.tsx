@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { EVENTS } from "@/lib/events";
+import { requireEventAccess } from "@/lib/event-access.server";
+import { AccessError } from "@/lib/access.server";
 import ScannerClient from "./ui";
 
 export const runtime = "nodejs";
@@ -10,8 +11,11 @@ type Props = { params: Promise<{ id: string }> };
 export default async function ScannerPage({ params }: Props) {
   const { id } = await params;
 
-  const event = EVENTS.find((e) => e.id === id);
-  if (!event) return notFound();
+  const access = await requireEventAccess(id).catch(error => {
+    if (error instanceof AccessError) return notFound();
+    throw error;
+  });
+  const { event } = access;
 
   return (
     <ScannerClient

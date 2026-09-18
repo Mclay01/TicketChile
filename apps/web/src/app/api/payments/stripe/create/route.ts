@@ -1,3 +1,7 @@
+import type Stripe from "stripe";
+import type { PoolClient } from "pg";
+import { paymentCreator, checkPaymentRetry } from "@/lib/payment-create-access.server";
+import { accessResponse } from "@/lib/access.server";
 // apps/web/src/app/api/payments/stripe/create/route.ts
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
@@ -9,14 +13,14 @@ export const dynamic = "force-dynamic";
 
 const HOLD_TTL_MINUTES = 8;
 
-function json(status: number, payload: any) {
+function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
     headers: { "Cache-Control": "no-store" },
   });
 }
 
-function pickString(v: any) {
+function pickString(v: unknown) {
   return typeof v === "string" ? v.trim() : "";
 }
 
@@ -24,7 +28,7 @@ function makeId(prefix: string) {
   return `${prefix}_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
 }
 
-function parseItems(raw: any) {
+function parseItems(raw: unknown) {
   if (!Array.isArray(raw)) return [];
   const out: { ticketTypeId: string; qty: number }[] = [];
   for (const x of raw) {
@@ -37,7 +41,7 @@ function parseItems(raw: any) {
   return out;
 }
 
-function isOpenSession(s: any) {
+function isOpenSession(s: Stripe.Checkout.Session) {
   const statusOk = s?.status === "open";
   const urlOk = typeof s?.url === "string" && s.url.length > 0;
   const notExpired =
@@ -45,7 +49,7 @@ function isOpenSession(s: any) {
   return statusOk && urlOk && notExpired;
 }
 
-async function releaseExpiredHoldsTx(client: any) {
+async function releaseExpiredHoldsTx(client: PoolClient) {
   const expired = await client.query(`
     WITH expired AS (
       UPDATE holds
@@ -56,7 +60,7 @@ async function releaseExpiredHoldsTx(client: any) {
     SELECT id FROM expired
   `);
 
-  const ids: string[] = expired.rows.map((r: any) => r.id);
+  const ids: string[] = expired.rows.map((r: Record<string, unknown>) => String(r.id));
   if (ids.length === 0) return;
 
   await client.query(
@@ -80,7 +84,9 @@ function normalizeBaseUrl(u: string) {
 }
 
 export async function POST(req: Request) {
-  let body: any;
+  let ownerEmail: string;
+  try { ownerEmail = await paymentCreator(req); } catch (error) { return accessResponse(error); }
+  let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
@@ -131,11 +137,11 @@ export async function POST(req: Request) {
         return json(409, { ok: false, error: "Algún ticket_type_id no existe para este evento." });
       }
 
-      const byId = new Map<string, any>();
+      const byId = new Map<string, Record<string, unknown>>();
       for (const r of ttRes.rows) byId.set(String(r.id), r);
 
       for (const it of itemsFromBody) {
-        const r = byId.get(it.ticketTypeId);
+        const r = byId.get(it.ticketTypeId)!;
         const capacity = Number(r.capacity) || 0;
         const sold = Number(r.sold) || 0;
         const held = Number(r.held) || 0;
@@ -160,7 +166,7 @@ export async function POST(req: Request) {
       );
 
       for (const it of itemsFromBody) {
-        const r = byId.get(it.ticketTypeId);
+        const r = byId.get(it.ticketTypeId)!;
 
         await client.query(
           `
@@ -194,6 +200,7 @@ export async function POST(req: Request) {
 
     if (hRes.rowCount === 0) return json(404, { ok: false, error: "Hold no existe." });
 
+    await checkPaymentRetry(client, holdId, ownerEmail, "stripe");
     const hold = hRes.rows[0];
     eventId = String(hold.event_id);
 
@@ -224,7 +231,7 @@ export async function POST(req: Request) {
     const eventTitle = pickString(evRes.rows?.[0]?.title) || `Evento ${eventId}`;
 
     // 5) line_items + total
-    const lineItems = itemsRes.rows.map((r: any) => {
+    const lineItems = itemsRes.rows.map((r: Record<string, unknown>) => {
       const name = String(r.ticket_type_name);
       const unit = Math.round(Number(r.unit_price_clp) || 0); // CLP entero
       const qty = Math.floor(Number(r.qty) || 0);
@@ -239,22 +246,22 @@ export async function POST(req: Request) {
     const payRes = await client.query(
       `
       INSERT INTO payments
-        (id, hold_id, provider, provider_ref, event_id, event_title, buyer_name, buyer_email, amount_clp, currency, status, created_at, updated_at)
+        (id, hold_id, provider, provider_ref, event_id, event_title, buyer_name, buyer_email, owner_email, amount_clp, currency, status, created_at, updated_at)
       VALUES
-        ($1, $2, 'stripe', NULL, $3, $4, $5, $6, $7, 'CLP', 'CREATED', NOW(), NOW())
-      ON CONFLICT (hold_id) DO UPDATE
-        SET event_id     = EXCLUDED.event_id,
-            event_title  = EXCLUDED.event_title,
-            buyer_name   = EXCLUDED.buyer_name,
-            buyer_email  = EXCLUDED.buyer_email,
-            amount_clp   = EXCLUDED.amount_clp,
-            updated_at   = NOW()
+        ($1, $2, 'stripe', NULL, $3, $4, $5, $6, $8, $7, 'CLP', 'CREATED', NOW(), NOW())
+      ON CONFLICT (hold_id) DO UPDATE SET updated_at=NOW()
+      WHERE LOWER(COALESCE(NULLIF(BTRIM(payments.owner_email), ''), NULLIF(BTRIM(payments.buyer_email), '')))=$8
+        AND payments.provider='stripe'
       RETURNING *
       `,
-      [newPaymentId, holdId, eventId, eventTitle, buyerName, buyerEmail, amountClp]
+      [newPaymentId, holdId, eventId, eventTitle, buyerName, buyerEmail, amountClp, ownerEmail]
     );
 
     const payment = payRes.rows[0];
+    if (!payment) {
+      await client.query("ROLLBACK");
+      return json(404, { ok: false, error: "Pago no encontrado." });
+    }
 
     if (String(payment.status) === "PAID") {
       await client.query("COMMIT");
@@ -275,7 +282,7 @@ export async function POST(req: Request) {
             holdId,
             paymentId: String(payment.id),
             sessionId: existingSessionId,
-            checkoutUrl: (s as any).url,
+            checkoutUrl: s.url,
           });
         }
       } catch {
@@ -335,14 +342,15 @@ export async function POST(req: Request) {
       holdId,
       paymentId: String(payment.id),
       sessionId: session.id,
-      checkoutUrl: (session as any).url || "",
+      checkoutUrl: session.url || "",
     });
-  } catch (e: any) {
+  } catch (e) {
     try {
       await client.query("ROLLBACK");
     } catch {}
-    return json(500, { ok: false, error: String(e?.message || e) });
+    return accessResponse(e);
   } finally {
+    await client.query("ROLLBACK").catch(() => undefined);
     client.release();
   }
 }

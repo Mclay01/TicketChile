@@ -242,7 +242,7 @@ type OrganizerSubmissionRow = {
   id: string;
   organizer_id: string;
   status: string;
-  payload: any;
+  payload: Partial<OrganizerSubmission["payload"]>;
   created_at: Date;
 };
 
@@ -691,210 +691,7 @@ export async function getOrganizerDashboardStatsPgServerByOrganizer(
    EXPORT CSV (compat)
    ============================================================ */
 
-type ExportTicketsCsvOptions = {
-  eventId: string;
-  status?: "ALL" | "VALID" | "USED";
-  ticketTypeId?: string;
-  fromISO?: string;
-  toISO?: string;
-  dateField?: "createdAt" | "usedAt";
-  includeBom?: boolean;
-};
-
-function csvEscapeCell(v: unknown) {
-  let s = String(v ?? "");
-  if (/^[=+\-@]/.test(s)) s = "'" + s;
-  if (/[,"\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
-}
-
-function parseOptionalDate(input?: string) {
-  const s = String(input ?? "").trim();
-  if (!s) return null;
-  const d = new Date(s);
-  return Number.isFinite(d.getTime()) ? d : null;
-}
-
-export async function exportTicketsCsvPgServer(opts: ExportTicketsCsvOptions): Promise<string> {
-  const eventId = String(opts.eventId ?? "").trim();
-  if (!eventId) throw new Error("Falta eventId.");
-
-  const status = (opts.status ?? "ALL").toUpperCase() as "ALL" | "VALID" | "USED";
-  const ticketTypeId = String(opts.ticketTypeId ?? "").trim();
-  const includeBom = opts.includeBom ?? true;
-
-  const dateField = opts.dateField ?? "createdAt";
-  const from = parseOptionalDate(opts.fromISO);
-  const to = parseOptionalDate(opts.toISO);
-
-  const where: string[] = ["t.event_id = $1"];
-  const params: any[] = [eventId];
-  let p = 2;
-
-  if (status !== "ALL") {
-    where.push(`t.status = $${p++}`);
-    params.push(status);
-  }
-
-  if (ticketTypeId) {
-    where.push(`t.ticket_type_id = $${p++}`);
-    params.push(ticketTypeId);
-  }
-
-  const fieldSql = dateField === "usedAt" ? "t.used_at" : "t.created_at";
-
-  if (from) {
-    where.push(`${fieldSql} >= $${p++}`);
-    params.push(from.toISOString());
-  }
-  if (to) {
-    where.push(`${fieldSql} <= $${p++}`);
-    params.push(to.toISOString());
-  }
-
-  if (dateField === "usedAt") {
-    where.push(`t.used_at IS NOT NULL`);
-  }
-
-  const sql = `
-    SELECT
-      t.id AS "ticketId",
-      t.event_id AS "eventId",
-      COALESCE(o.event_title, '') AS "eventTitle",
-      t.ticket_type_id AS "ticketTypeId",
-      t.ticket_type_name AS "ticketTypeName",
-      COALESCE(o.buyer_name, '') AS "buyerName",
-      t.buyer_email AS "buyerEmail",
-      t.status AS "status",
-      t.created_at AS "createdAt",
-      t.used_at AS "usedAt",
-      t.order_id AS "orderId",
-      COALESCE(o.hold_id, '') AS "holdId"
-    FROM tickets t
-    LEFT JOIN orders o ON o.id = t.order_id
-    WHERE ${where.join(" AND ")}
-    ORDER BY t.created_at ASC
-  `;
-
-  const r = await pool.query(sql, params);
-
-  const header = [
-    "ticketId",
-    "eventId",
-    "eventTitle",
-    "ticketTypeId",
-    "ticketTypeName",
-    "buyerName",
-    "buyerEmail",
-    "status",
-    "createdAtISO",
-    "usedAtISO",
-    "orderId",
-    "holdId",
-  ].join(",");
-
-  const lines = r.rows.map((t: any) => {
-    const createdAtISO = t.createdAt ? new Date(t.createdAt).toISOString() : "";
-    const usedAtISO = t.usedAt ? new Date(t.usedAt).toISOString() : "";
-    return [
-      csvEscapeCell(t.ticketId),
-      csvEscapeCell(t.eventId),
-      csvEscapeCell(t.eventTitle),
-      csvEscapeCell(t.ticketTypeId),
-      csvEscapeCell(t.ticketTypeName),
-      csvEscapeCell(t.buyerName),
-      csvEscapeCell(t.buyerEmail),
-      csvEscapeCell(t.status),
-      csvEscapeCell(createdAtISO),
-      csvEscapeCell(usedAtISO),
-      csvEscapeCell(t.orderId ?? ""),
-      csvEscapeCell(t.holdId ?? ""),
-    ].join(",");
-  });
-
-  const bom = includeBom ? "\ufeff" : "";
-  return bom + [header, ...lines].join("\r\n");
-}
-
-export async function exportCheckinsCsvPgServer(opts: {
-  eventId: string;
-  fromISO?: string;
-  toISO?: string;
-  ticketTypeId?: string;
-  includeBom?: boolean;
-}): Promise<string> {
-  const eventId = String(opts.eventId ?? "").trim();
-  if (!eventId) throw new Error("Falta eventId.");
-
-  const ticketTypeId = String(opts.ticketTypeId ?? "").trim();
-  const includeBom = opts.includeBom ?? true;
-
-  const from = parseOptionalDate(opts.fromISO);
-  const to = parseOptionalDate(opts.toISO);
-
-  const where: string[] = ["t.event_id = $1", "t.status = 'USED'", "t.used_at IS NOT NULL"];
-  const params: any[] = [eventId];
-  let p = 2;
-
-  if (ticketTypeId) {
-    where.push(`t.ticket_type_id = $${p++}`);
-    params.push(ticketTypeId);
-  }
-  if (from) {
-    where.push(`t.used_at >= $${p++}`);
-    params.push(from.toISOString());
-  }
-  if (to) {
-    where.push(`t.used_at <= $${p++}`);
-    params.push(to.toISOString());
-  }
-
-  const sql = `
-    SELECT
-      t.id AS "ticketId",
-      t.event_id AS "eventId",
-      COALESCE(o.event_title, '') AS "eventTitle",
-      t.ticket_type_id AS "ticketTypeId",
-      t.ticket_type_name AS "ticketTypeName",
-      COALESCE(o.buyer_name, '') AS "buyerName",
-      t.buyer_email AS "buyerEmail",
-      t.used_at AS "usedAt"
-    FROM tickets t
-    LEFT JOIN orders o ON o.id = t.order_id
-    WHERE ${where.join(" AND ")}
-    ORDER BY t.used_at DESC
-  `;
-
-  const r = await pool.query(sql, params);
-
-  const header = [
-    "ticketId",
-    "eventId",
-    "eventTitle",
-    "ticketTypeId",
-    "ticketTypeName",
-    "buyerName",
-    "buyerEmail",
-    "usedAtISO",
-  ].join(",");
-
-  const lines = r.rows.map((t: any) => {
-    const usedAtISO = t.usedAt ? new Date(t.usedAt).toISOString() : "";
-    return [
-      csvEscapeCell(t.ticketId),
-      csvEscapeCell(t.eventId),
-      csvEscapeCell(t.eventTitle),
-      csvEscapeCell(t.ticketTypeId),
-      csvEscapeCell(t.ticketTypeName),
-      csvEscapeCell(t.buyerName),
-      csvEscapeCell(t.buyerEmail),
-      csvEscapeCell(usedAtISO),
-    ].join(",");
-  });
-
-  const bom = includeBom ? "\ufeff" : "";
-  return bom + [header, ...lines].join("\r\n");
-}
+export { exportTicketsCsvPgServer, exportCheckinsCsvPgServer } from "@/lib/event-export.server";
 
 export type PaymentListRow = {
   paymentId: string;
@@ -1040,7 +837,7 @@ export async function getPaymentsDashboardPgServer(
 
   const listParams = [...params, limit, offset];
 
-  const rowsRes = await pool.query<any>(
+  const rowsRes = await pool.query<PaymentListRow & { created_at: Date; updated_at: Date; paid_at: Date | null }>(
     `
     SELECT
       id AS "paymentId",
@@ -1066,7 +863,7 @@ export async function getPaymentsDashboardPgServer(
     listParams
   );
 
-  const rows: PaymentListRow[] = rowsRes.rows.map((r: any) => ({
+  const rows: PaymentListRow[] = rowsRes.rows.map((r) => ({
     paymentId: String(r.paymentId),
     provider: String(r.provider || ""),
     providerRef: r.providerRef ? String(r.providerRef) : null,
@@ -1086,25 +883,3 @@ export async function getPaymentsDashboardPgServer(
 
   return { total, totals, rows };
 }
-
-export async function resetCheckinsPg(
-  eventId: string
-): Promise<{ ok: true; eventId: string; updated: number }> {
-  const ev = String(eventId ?? "").trim();
-  if (!ev) throw new Error("Falta eventId.");
-
-  const r = await pool.query(
-    `
-    UPDATE tickets
-    SET status = 'VALID',
-        used_at = NULL
-    WHERE event_id = $1
-      AND status = 'USED'
-    `,
-    [ev]
-  );
-
-  return { ok: true, eventId: ev, updated: r.rowCount ?? 0 };
-}
-
-export const resetCheckinsPgServer = resetCheckinsPg;

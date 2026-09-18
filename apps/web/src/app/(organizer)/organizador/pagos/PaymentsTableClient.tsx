@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { formatCLP } from "@/lib/events";
 import type { PaymentListRow } from "@/lib/organizer.pg.server";
@@ -34,26 +33,17 @@ function fmtDate(iso: string) {
 
 function SmallBtn({
   children,
-  href,
   onClick,
   disabled,
   title,
 }: {
   children: React.ReactNode;
-  href?: string;
   onClick?: () => void;
   disabled?: boolean;
   title?: string;
 }) {
   const cls =
     "rounded-lg border border-black/10 bg-white px-3 py-1.5 text-xs text-black/80 hover:bg-black/5 disabled:opacity-50";
-  if (href) {
-    return (
-      <Link href={href} className={cls} aria-disabled={disabled} title={title}>
-        {children}
-      </Link>
-    );
-  }
   return (
     <button type="button" className={cls} onClick={onClick} disabled={disabled} title={title}>
       {children}
@@ -64,43 +54,7 @@ function SmallBtn({
 export default function PaymentsTableClient({ rows }: { rows: PaymentListRow[] }) {
   const router = useRouter();
 
-  const [busyKey, setBusyKey] = useState<string>("");
-  const [msgById, setMsgById] = useState<Record<string, string>>({});
-
   const canCopy = useMemo(() => typeof navigator !== "undefined" && !!navigator.clipboard, []);
-
-  async function reconcileStripe(paymentId: string, sessionId: string) {
-    setBusyKey(paymentId);
-    setMsgById((m) => ({ ...m, [paymentId]: "Revisando en DB…" }));
-
-    try {
-      const r = await fetch(
-        `/api/payments/stripe/status?sessionId=${encodeURIComponent(sessionId)}`,
-        { cache: "no-store" }
-      );
-      const data = await r.json().catch(() => null);
-
-      if (!r.ok) throw new Error(data?.error || `Error ${r.status}`);
-
-      const done = !!data?.payment?.done;
-      const ticketsCount = Number(data?.payment?.ticketsCount ?? 0);
-
-      if (done) {
-        setMsgById((m) => ({ ...m, [paymentId]: `✅ Tickets emitidos (${ticketsCount}). Refrescando…` }));
-        router.refresh();
-        return;
-      }
-
-      setMsgById((m) => ({
-        ...m,
-        [paymentId]: `⏳ Aún no hay tickets (ticketsCount=${ticketsCount}). Dale 2-5s y reintenta.`,
-      }));
-    } catch (e: any) {
-      setMsgById((m) => ({ ...m, [paymentId]: `❌ ${String(e?.message || e)}` }));
-    } finally {
-      setBusyKey("");
-    }
-  }
 
   if (!rows.length) {
     return (
@@ -113,15 +67,7 @@ export default function PaymentsTableClient({ rows }: { rows: PaymentListRow[] }
   return (
     <div className="space-y-3">
       {rows.map((x) => {
-        const isStripe = (x.provider || "").toLowerCase() === "stripe";
         const sessionId = x.providerRef || "";
-
-        const canReconcile =
-          isStripe &&
-          sessionId.startsWith("cs_") &&
-          (x.status === "CREATED" || x.status === "PENDING" || x.status === "PAID");
-
-        const hint = msgById[x.paymentId] || "";
 
         return (
           <div
@@ -166,11 +112,6 @@ export default function PaymentsTableClient({ rows }: { rows: PaymentListRow[] }
                   </div>
                 ) : null}
 
-                {hint ? (
-                  <div className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs text-black/70">
-                    {hint}
-                  </div>
-                ) : null}
               </div>
 
               <div className="flex flex-col items-end gap-3">
@@ -185,22 +126,6 @@ export default function PaymentsTableClient({ rows }: { rows: PaymentListRow[] }
                 </div>
 
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  <SmallBtn
-                    href={`/mis-tickets?email=${encodeURIComponent(x.buyerEmail)}`}
-                    title="Abrir mis-tickets con el email del cliente"
-                  >
-                    Ver tickets
-                  </SmallBtn>
-
-                  {sessionId ? (
-                    <SmallBtn
-                      href={`/checkout/success?session_id=${encodeURIComponent(sessionId)}`}
-                      title="Abrir la página success con esta session"
-                    >
-                      Ver success
-                    </SmallBtn>
-                  ) : null}
-
                   {sessionId ? (
                     <SmallBtn
                       disabled={!canCopy}
@@ -215,23 +140,9 @@ export default function PaymentsTableClient({ rows }: { rows: PaymentListRow[] }
                     </SmallBtn>
                   ) : null}
 
-                  <button
-                    disabled={!canReconcile || busyKey === x.paymentId}
-                    onClick={() => reconcileStripe(x.paymentId, sessionId)}
-                    className={[
-                      "rounded-lg px-3 py-1.5 text-xs font-semibold",
-                      canReconcile
-                        ? "bg-black text-white hover:bg-black/90"
-                        : "bg-black/10 text-black/40 cursor-not-allowed",
-                    ].join(" ")}
-                    title={
-                      canReconcile
-                        ? "Consulta /api/payments/stripe/status y refresca si ya hay tickets"
-                        : "No hay sessionId de Stripe o no aplica"
-                    }
-                  >
-                    {busyKey === x.paymentId ? "Revisando…" : "Revisar"}
-                  </button>
+                  <SmallBtn onClick={() => router.refresh()} title="Volver a cargar el estado del pago">
+                    Actualizar
+                  </SmallBtn>
                 </div>
               </div>
             </div>

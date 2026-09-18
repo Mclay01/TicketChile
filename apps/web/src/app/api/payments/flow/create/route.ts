@@ -1,3 +1,6 @@
+import { appBaseUrl } from "@/lib/stripe.server";
+import { paymentCreator } from "@/lib/payment-create-access.server";
+import { accessResponse } from "@/lib/access.server";
 // apps/web/src/app/api/payments/flow/create/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
@@ -15,11 +18,11 @@ function mustEnv(name: string) {
   return v;
 }
 
-function pickString(v: any) {
+function pickString(v: unknown) {
   return typeof v === "string" ? v.trim() : "";
 }
 
-function toInt(v: any) {
+function toInt(v: unknown) {
   const n = Number(v);
   if (!Number.isFinite(n)) return 0;
   return Math.floor(n);
@@ -29,21 +32,12 @@ function isEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v || "").trim().toLowerCase());
 }
 
-function getOrigin(req: NextRequest) {
-  const env = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
-  if (env) return env;
-
-  // Solo dev
-  return req.headers.get("origin") || "http://localhost:3000";
-}
-
 type HoldItem = { ticketTypeKey: string; qty: number };
 
 /**
  * Detecta si existe public.ticket_types.slug (cacheado).
  */
 declare global {
-  // eslint-disable-next-line no-var
   var __ticketchile_ticketTypesSlugExists: Promise<boolean> | undefined;
 }
 
@@ -110,46 +104,30 @@ function keyVariants(k: string) {
 }
 
 export async function POST(req: NextRequest) {
+  let ownerEmail: string;
+  try { ownerEmail = await paymentCreator(req); } catch (error) { return accessResponse(error); }
   const reqId = `flow_create_${randomUUID().slice(0, 8)}`;
 
   try {
     mustEnv("FLOW_API_KEY");
     mustEnv("FLOW_SECRET_KEY");
 
-    const body = await req.json().catch(() => ({} as any));
+    const body: Record<string, unknown> = await req.json().catch(() => ({}));
 
     const eventId = pickString(body?.eventId);
     const buyerName = pickString(body?.buyerName);
 
     const buyerEmail = pickString(body?.buyerEmail).toLowerCase();
 
-    // ✅ NUEVO: email dueño (usuario logueado)
-    // OJO: lo tratamos como opcional. Si no viene, cae a buyerEmail.
-    const ownerEmailRaw = pickString(body?.ownerEmail).toLowerCase();
-
     const clientAmount = toInt(body?.amount); // 👈 viene del client, NO se confía
 
     const itemsRaw = Array.isArray(body?.items) ? body.items : [];
     const items: HoldItem[] = itemsRaw
-      .map((x: any): HoldItem => ({
+      .map((x: Record<string, unknown>): HoldItem => ({
         ticketTypeKey: pickString(x?.ticketTypeId || x?.ticketTypeKey || x?.ticketTypeSlug),
         qty: Math.floor(Number(x?.qty)),
       }))
       .filter((x: HoldItem) => x.ticketTypeKey && Number.isFinite(x.qty) && x.qty > 0);
-
-    // ✅ ownerEmail final:
-    // - si viene y es válido => usarlo
-    // - si no viene => usar buyerEmail
-    // - si viene pero es inválido => error (para no ensuciar datos)
-    let ownerEmail = "";
-    if (ownerEmailRaw) {
-      if (!isEmail(ownerEmailRaw)) {
-        return NextResponse.json({ ok: false, error: "ownerEmail_invalid" }, { status: 400 });
-      }
-      ownerEmail = ownerEmailRaw;
-    } else {
-      ownerEmail = buyerEmail;
-    }
 
     console.log("[flow:create][in]", {
       reqId,
@@ -223,7 +201,7 @@ export async function POST(req: NextRequest) {
             [eventId]
           );
 
-      const byKey = new Map<string, any>();
+      const byKey = new Map<string, Record<string, unknown>>();
 
       for (const row of tt.rows) {
         const id = String(row.id);
@@ -239,7 +217,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (hasSlug) {
-          const slug = String((row as any).slug || "").trim();
+          const slug = String(row.slug || "").trim();
           if (slug) {
             byKey.set(slug, row);
             byKey.set(slug.toLowerCase(), row);
@@ -253,12 +231,12 @@ export async function POST(req: NextRequest) {
       }
 
       // Resolver cada item del request
-      const resolved: Array<{ reqKey: string; row: any; qty: number }> = [];
+      const resolved: Array<{ reqKey: string; row: Record<string, unknown>; qty: number }> = [];
       const missing: string[] = [];
 
       for (const it of items) {
         const variants = keyVariants(it.ticketTypeKey);
-        let row: any | undefined;
+        let row: Record<string, unknown> | undefined;
 
         for (const v of variants) {
           row = byKey.get(v);
@@ -276,7 +254,7 @@ export async function POST(req: NextRequest) {
       if (missing.length > 0) {
         const available = tt.rows.map((r) => ({
           id: String(r.id),
-          ...(hasSlug ? { slug: String((r as any).slug || "") } : {}),
+          ...(hasSlug ? { slug: String(r.slug || "") } : {}),
           name: String(r.name || ""),
           price_clp: Number(r.price_clp),
         }));
@@ -379,7 +357,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Flow call (fuera TX)
-    const origin = getOrigin(req);
+    const origin = appBaseUrl();
     const urlConfirmation = `${origin}/api/payments/flow/confirm`;
     const urlReturn = `${origin}/api/payments/flow/kick`;
 
@@ -395,7 +373,7 @@ export async function POST(req: NextRequest) {
         timeoutSeconds: HOLD_TTL_MINUTES * 60,
         optional: { eventId, holdId, paymentId },
       });
-    } catch (err: any) {
+    } catch {
       // cleanup
       const c = await pool.connect();
       try {
@@ -424,7 +402,7 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json(
-        { ok: false, provider: "flow", error: "flow_create_failed", detail: err?.message ?? String(err) },
+        { ok: false, provider: "flow", error: "flow_create_failed", detail: "Proveedor no disponible." },
         { status: 502 }
       );
     }
@@ -454,10 +432,10 @@ export async function POST(req: NextRequest) {
       token: flowRes.token,
       amount: total,
     });
-  } catch (err: any) {
-    console.error("[flow:create][err]", { reqId, err: err?.message ?? String(err) });
+  } catch (err) {
+    console.error("[flow:create][err]", { reqId, error: err instanceof Error ? err.name : "UnknownError" });
     return NextResponse.json(
-      { ok: false, error: "internal_error", detail: err?.message ?? String(err) },
+      { ok: false, error: "internal_error", detail: "Proveedor no disponible." },
       { status: 500 }
     );
   }

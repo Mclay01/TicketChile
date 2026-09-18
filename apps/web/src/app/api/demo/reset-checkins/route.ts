@@ -1,16 +1,3 @@
-// apps/web/src/app/api/demo/reset-checkins/route.ts
-import { NextResponse } from "next/server";
-import { resetCheckinsPg } from "@/lib/organizer.pg.server";
-
+export { retiredDemo as POST } from "@/lib/retired-demo.server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-export async function POST(req: Request) {
-  let body: any = {};
-  try { body = await req.json(); } catch {}
-  const eventId = String(body?.eventId ?? "").trim();
-  if (!eventId) return NextResponse.json({ ok: false, error: "Falta eventId." }, { status: 400 });
-
-  const data = await resetCheckinsPg(eventId);
-  return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } });
-}

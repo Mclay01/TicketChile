@@ -1,3 +1,6 @@
+import type { PoolClient } from "pg";
+import { paymentCreator, checkPaymentRetry } from "@/lib/payment-create-access.server";
+import { accessResponse } from "@/lib/access.server";
 // apps/web/src/app/api/payments/transfer/create/route.ts
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
@@ -6,14 +9,14 @@ import { pool } from "@/lib/db";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function json(status: number, payload: any) {
+function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
     headers: { "Cache-Control": "no-store" },
   });
 }
 
-function pickString(v: any) {
+function pickString(v: unknown) {
   return typeof v === "string" ? v.trim() : "";
 }
 
@@ -26,7 +29,7 @@ function makeId(prefix: string) {
   return `${prefix}_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
 }
 
-async function releaseExpiredHoldsTx(client: any) {
+async function releaseExpiredHoldsTx(client: PoolClient) {
   // Expira holds activos vencidos y libera "held" en ticket_types
   const expired = await client.query(`
     WITH expired AS (
@@ -38,7 +41,7 @@ async function releaseExpiredHoldsTx(client: any) {
     SELECT id FROM expired
   `);
 
-  const ids: string[] = expired.rows.map((r: any) => r.id);
+  const ids: string[] = expired.rows.map((r: Record<string, unknown>) => String(r.id));
   if (ids.length === 0) return;
 
   await client.query(
@@ -58,7 +61,9 @@ async function releaseExpiredHoldsTx(client: any) {
 }
 
 export async function POST(req: Request) {
-  let body: any;
+  let ownerEmail: string;
+  try { ownerEmail = await paymentCreator(req); } catch (error) { return accessResponse(error); }
+  let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
@@ -103,6 +108,7 @@ export async function POST(req: Request) {
 
     if (hRes.rowCount === 0) return json(404, { ok: false, error: "Hold no existe." });
 
+    await checkPaymentRetry(client, holdId, ownerEmail, "transfer");
     const hold = hRes.rows[0];
 
     if (hold.status !== "ACTIVE") {
@@ -127,7 +133,7 @@ export async function POST(req: Request) {
 
     if (itemsRes.rowCount === 0) return json(409, { ok: false, error: "Hold no tiene items." });
 
-    const lineItems = itemsRes.rows.map((r: any) => ({
+    const lineItems = itemsRes.rows.map((r: Record<string, unknown>) => ({
       name: String(r.ticket_type_name),
       unit: Number(r.unit_price_clp) || 0,
       qty: Number(r.qty) || 0,
@@ -147,23 +153,22 @@ export async function POST(req: Request) {
     const payRes = await client.query(
       `
       INSERT INTO payments
-        (id, hold_id, provider, provider_ref, event_id, event_title, buyer_name, buyer_email, amount_clp, currency, status, created_at, updated_at)
+        (id, hold_id, provider, provider_ref, event_id, event_title, buyer_name, buyer_email, owner_email, amount_clp, currency, status, created_at, updated_at)
       VALUES
-        ($1, $2, 'transfer', NULL, $3, $4, $5, $6, $7, 'CLP', 'PENDING', NOW(), NOW())
-      ON CONFLICT (hold_id) DO UPDATE
-        SET provider    = 'transfer',
-            event_id     = EXCLUDED.event_id,
-            event_title  = EXCLUDED.event_title,
-            buyer_name   = EXCLUDED.buyer_name,
-            buyer_email  = EXCLUDED.buyer_email,
-            amount_clp   = EXCLUDED.amount_clp,
-            updated_at   = NOW()
+        ($1, $2, 'transfer', NULL, $3, $4, $5, $6, $8, $7, 'CLP', 'PENDING', NOW(), NOW())
+      ON CONFLICT (hold_id) DO UPDATE SET updated_at=NOW()
+      WHERE LOWER(COALESCE(NULLIF(BTRIM(payments.owner_email), ''), NULLIF(BTRIM(payments.buyer_email), '')))=$8
+        AND payments.provider='transfer'
       RETURNING *
       `,
-      [paymentId, holdId, String(hold.event_id), eventTitle, buyerName, buyerEmail, amountClp]
+      [paymentId, holdId, String(hold.event_id), eventTitle, buyerName, buyerEmail, amountClp, ownerEmail]
     );
 
     const payment = payRes.rows[0];
+    if (!payment) {
+      await client.query("ROLLBACK");
+      return json(404, { ok: false, error: "Pago no encontrado." });
+    }
 
     // Referencia para que el usuario la ponga en la transferencia
     const reference = `TC-${String(payment.id).slice(-6).toUpperCase()}`;
@@ -181,12 +186,13 @@ export async function POST(req: Request) {
       bank,
       note: "Usa la referencia EXACTA en el comentario de la transferencia.",
     });
-  } catch (e: any) {
+  } catch (e) {
     try {
       await client.query("ROLLBACK");
     } catch {}
-    return json(500, { ok: false, error: String(e?.message || e) });
+    return accessResponse(e);
   } finally {
+    await client.query("ROLLBACK").catch(() => undefined);
     client.release();
   }
 }

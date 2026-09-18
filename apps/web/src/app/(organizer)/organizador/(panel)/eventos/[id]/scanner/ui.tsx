@@ -7,7 +7,7 @@ import QRScanner from "@/components/QRScanner";
 type CheckinTicket = {
   id: string;
   ticketTypeName: string;
-  buyerEmail: string;
+  buyerEmail?: string;
   status: "VALID" | "USED";
   usedAtISO?: string;
 };
@@ -30,12 +30,12 @@ type Stats = {
   soldCounter: number; // ticket_types.sold (debug)
 };
 
-function pickNumber(v: any) {
+function pickNumber(v: unknown) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
 
-function mapStats(s: any): Stats {
+function mapStats(s: Record<string, unknown> & { totals?: Record<string, unknown> }): Stats {
   const capacity = pickNumber(s?.totals?.capacity ?? s?.capacity);
   const held = pickNumber(s?.totals?.held ?? s?.held);
 
@@ -52,11 +52,10 @@ function mapStats(s: any): Stats {
 }
 
 function looksLikeTicketId(raw: string) {
-  return /^tix_[a-z0-9]+$/i.test(raw);
+  return /^(?:tix|tkt)_[a-z0-9_-]+$/i.test(raw);
 }
 
 /** ====== UI atoms (white cards on dark shell) ====== */
-const cardBase = "rounded-xl border border-black/10 bg-white shadow-sm";
 const subText = "text-black/60";
 const hairline = "border-black/10";
 
@@ -154,11 +153,11 @@ export default function ScannerUI({
   const [err, setErr] = useState<string | null>(null);
 
   const exportAllHref = useMemo(
-    () => `/api/demo/export?eventId=${encodeURIComponent(eventId)}`,
+    () => `/api/scanner/export?eventId=${encodeURIComponent(eventId)}`,
     [eventId]
   );
   const exportUsedHref = useMemo(
-    () => `/api/demo/export?eventId=${encodeURIComponent(eventId)}&status=USED`,
+    () => `/api/scanner/export?eventId=${encodeURIComponent(eventId)}&status=USED`,
     [eventId]
   );
 
@@ -193,10 +192,10 @@ export default function ScannerUI({
 
     try {
       const [s, c] = await Promise.all([
-        fetch(`/api/demo/event-stats?eventId=${encodeURIComponent(eventId)}`, {
+        fetch(`/api/scanner/event-stats?eventId=${encodeURIComponent(eventId)}`, {
           cache: "no-store",
         }).then((r) => r.json()),
-        fetch(`/api/demo/event-checkins?eventId=${encodeURIComponent(eventId)}`, {
+        fetch(`/api/scanner/event-checkins?eventId=${encodeURIComponent(eventId)}`, {
           cache: "no-store",
         }).then((r) => r.json()),
       ]);
@@ -206,8 +205,8 @@ export default function ScannerUI({
 
       setStats(mapStats(s));
       setCheckins(Array.isArray(c.checkins) ? c.checkins : []);
-    } catch (e: any) {
-      setErr(String(e?.message || e));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "No se pudo cargar el scanner.");
     } finally {
       setLoading(false);
     }
@@ -230,7 +229,7 @@ export default function ScannerUI({
     try {
       const payload = looksLikeTicketId(raw) ? { eventId, ticketId: raw } : { eventId, qrText: raw };
 
-      const r = await fetch("/api/demo/checkin", {
+      const r = await fetch("/api/scanner/checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -363,7 +362,7 @@ export default function ScannerUI({
             <input
               value={manual}
               onChange={(e) => setManual(e.target.value)}
-              placeholder="Pega tc1..., URL, JSON o ticketId (tix_...)"
+              placeholder="Pega el QR firmado (tc1...) o el identificador de la entrada"
               className={`w-full rounded-lg border ${hairline} bg-white px-4 py-3 text-sm text-black outline-none placeholder:text-black/40`}
             />
 
@@ -398,7 +397,7 @@ export default function ScannerUI({
               >
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-black">{t.ticketTypeName}</p>
-                  <p className={`text-xs ${subText} break-all`}>{t.buyerEmail}</p>
+
                 </div>
 
                 <div className="text-right">

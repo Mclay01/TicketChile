@@ -328,15 +328,11 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
   function payloadBase() {
     const normalizedBuyerEmail = normalizeEmail(buyerEmail);
 
-    // ✅ NUEVO: dueño del ticket (usuario logueado). Si no hay sesión, cae al buyerEmail.
-    const ownerEmail = sessionEmail || normalizedBuyerEmail;
-
     return {
       eventId: event.id,
       items,
       buyerName: buyerName.trim(),
       buyerEmail: normalizedBuyerEmail,
-      ownerEmail, // ✅ clave para que "Mis tickets" funcione con el usuario logueado
       buyerPhone: normalizePhoneCL(buyerPhone),
       buyerRut: buyerRut.trim() ? rutFormat(buyerRut.trim()) : "",
       buyerRegion: buyerRegion.trim(),
@@ -370,8 +366,8 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
       if (!url || !token) throw new Error("Webpay no devolvió url/token.");
 
       submitWebpayForm(url, token);
-    } catch (e: any) {
-      setPayErr(String(e?.message || e));
+    } catch (e) {
+      setPayErr(e instanceof Error ? e.message : "No se pudo iniciar el pago.");
       setOkMsg(null);
       setPaying(false);
     }
@@ -400,8 +396,8 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
       if (!checkoutUrl) throw new Error("Flow no devolvió checkoutUrl.");
 
       window.location.href = checkoutUrl;
-    } catch (e: any) {
-      setPayErr(String(e?.message || e));
+    } catch (e) {
+      setPayErr(e instanceof Error ? e.message : "No se pudo iniciar el pago.");
       setOkMsg(null);
       setPaying(false);
     }
@@ -430,8 +426,8 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
       if (!checkoutUrl) throw new Error("Fintoc no devolvió checkoutUrl.");
 
       window.location.href = checkoutUrl;
-    } catch (e: any) {
-      setPayErr(String(e?.message || e));
+    } catch (e) {
+      setPayErr(e instanceof Error ? e.message : "No se pudo iniciar el pago.");
       setOkMsg(null);
       setPaying(false);
     }
@@ -460,8 +456,8 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
       if (!confirmUrl) throw new Error("No se pudo iniciar transferencia.");
 
       router.push(confirmUrl);
-    } catch (e: any) {
-      setPayErr(String(e?.message || e));
+    } catch (e) {
+      setPayErr(e instanceof Error ? e.message : "No se pudo iniciar el pago.");
       setOkMsg(null);
     } finally {
       setPaying(false);
@@ -504,7 +500,7 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
         ) : null}
 
         <h2 className="text-lg font-semibold text-white">Datos del comprador</h2>
-        <p className="mt-1 text-sm text-white/60">El QR y la confirmación se enviarán a este correo.</p>
+        <p className="mt-1 text-sm text-white/60">Las entradas y sus QR se enviarán al correo de tu cuenta.</p>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <input
@@ -532,13 +528,13 @@ export default function CheckoutBuyerForm({ event }: { event: Event }) {
                   onChange={(e) => setUseOtherEmail(e.target.checked)}
                   disabled={paying}
                 />
-                Comprar para otro correo
+                Usar otro correo de contacto
               </label>
 
               <span className="text-white/50">
                 {!useOtherEmail
                   ? `Usando correo de sesión: ${sessionEmail}`
-                  : "Ojo: el correo de arriba recibirá el ticket por email, pero el dueño (Mis tickets) será el usuario logueado."}
+                  : "Este correo se usará como contacto de la compra. Las entradas quedarán en tu cuenta y se enviarán al correo de tu sesión."}
               </span>
             </div>
           ) : null}

@@ -10,10 +10,13 @@ Record executed results in ASTRA-PROGRESS.md. Unchecked items are not accepted a
 - [x] Organizer dashboard, payment count, totals, rows and filters carry tenant scope (SQL contract tests; actual PostgreSQL isolation pending).
 - [x] Unverified/pending organizers cannot access the dashboard; payments page authenticates before reads.
 - [x] Ticket lookup and resend reject anonymous/foreign requests; resend signs/sends only after owner-scoped lookup, to the current owner.
-- [ ] Ticket resend/lookup/QR/wallet deny unauthenticated users and unrelated buyers.
-- [ ] Arbitrary identifiers cannot produce signed tickets or deliver another buyer's QR.
-- [ ] Scanner, statistics and CSV verify owner/staff event permissions; CSV formula escaping preserved.
-- [ ] Demo/reset/seed routes cannot mutate production state or simulate paid success.
+- [x] Ticket resend/lookup/QR/wallet deny unauthenticated users and unrelated buyers, including signed-token and compatibility lookup forms (isolated handler tests).
+- [x] Arbitrary identifiers cannot produce signed tickets or deliver another buyer's QR; internal paid delivery requires DB evidence and current owner. Used/cancelled QR/Wallet requests denied.
+- [x] Scanner, statistics and CSV verify persisted event ownership; non-owner staff claims are denied until a grant model exists. Canonical/demo aliases share guards. CSV formula escaping covered.
+- [x] Demo reset/paid-order/cart mutation routes return 410 without writes; production seed returns 403 before seeder call. Public real inventory holds remain M4 abuse-hardening work.
+- [x] Buyer payment status/confirmation requires session ownership; returned tickets carry current-owner filtering.
+- [x] Flow token/payment substitution and Webpay order-ID-only cancellation denied; provider reference/order/amount/currency checks covered with doubles.
+- [x] Scanner page resolves real DB event after organizer authorization; explicit manual check-in cannot bypass an invalid signed QR.
 
 ## High-risk workflows
 
@@ -28,9 +31,9 @@ Record executed results in ASTRA-PROGRESS.md. Unchecked items are not accepted a
 ## Build and implementation
 
 - [x] Initial typecheck passes on the existing checkout.
-- [x] Final typecheck and isolated production build pass after M1 changes.
-- [x] New security modules/handlers/tests and scoped lint pass; remaining modified legacy service/client lint debt is recorded separately.
-- [x] 36 automated tests pass with isolated dependencies, no production connection.
+- [x] Final typecheck and isolated production build pass after M2 changes.
+- [x] ESLint passes on every M2 changed/new source/test file with zero warnings; whole-repository legacy debt remains, not claimed clean.
+- [x] 177 automated tests pass (36 M1 + 141 M2) with isolated dependencies and explicit SDK doubles, no production connection.
 - [ ] Disposable PostgreSQL migration/concurrency tests pass.
 - [ ] CI can reproduce checks without real provider credentials.
 
@@ -44,3 +47,13 @@ Record executed results in ASTRA-PROGRESS.md. Unchecked items are not accepted a
 - [ ] Keyboard, labels, focus, contrast, reduced motion and safe areas.
 - [ ] Loading/empty/error/forbidden/offline/not-found states are meaningful.
 - [ ] Real analytics only; provisional legal/fee/payout rules not presented as approved facts.
+
+## M2 validation limits and follow-up
+
+- [ ] Disposable PostgreSQL proves atomic concurrent check-in, tenant isolation and callback single issuance (unit tests verify SQL scope/state contracts only).
+- [ ] Persisted staff event grants, action permissions and check-in actor audit (M3 foundation, M8 operations); M2 allows owner only.
+- [ ] Browser login/return/camera flows and an actual Wallet save pass in a safe test environment.
+- [ ] Guest-order migration, transfer/key rotation and previously issued Wallet object lifecycle have explicit product/security rules.
+- [ ] M4 verifies all provider callback bindings/replay limits, expired holds, inventory, transaction retries and durable email outbox; no financial-invariant certification in M2.
+
+Full route inventory and guest/callback exceptions: [AUTHORIZATION.md](AUTHORIZATION.md). Stop after M2; next is M3, not UI redesign.

@@ -1,19 +1,12 @@
-import { NextResponse } from "next/server";
-import { flowGet, getFlowConfig } from "../_lib/flow";
-
+import { requireBuyerEmail } from "@/lib/ticket-access.server";
+import { buyerPaymentStatus } from "@/lib/payment-status.server";
+import { accessResponse, privateJson } from "@/lib/access.server";
 export const runtime = "nodejs";
-export const preferredRegion = ["gru1"];
-
+export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const token = String(searchParams.get("token") || "").trim();
-    if (!token) return NextResponse.json({ ok: false, error: "Missing token" }, { status: 400 });
-
-    const { apiKey } = getFlowConfig();
-    const status = await flowGet("/payment/getStatus", { apiKey, token }); // :contentReference[oaicite:11]{index=11}
-    return NextResponse.json({ ok: true, status });
-  } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err?.message || "Status error" }, { status: 500 });
-  }
+    const email = await requireBuyerEmail();
+    const params = new URL(req.url).searchParams;
+    return privateJson(200, await buyerPaymentStatus(email, { provider: "flow", token: params.get("token") || "" }, false));
+  } catch (error) { return accessResponse(error); }
 }

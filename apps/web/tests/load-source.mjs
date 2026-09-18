@@ -15,7 +15,10 @@ const require = createRequire(import.meta.url);
 export function loadSource(entry, overrides = {}) {
   const cache = new Map();
   const mocks = { "server-only": {}, ...overrides };
-  const blocked = new Set(["@/lib/db", "@/auth", "@/lib/tickets.email"]);
+  const blocked = new Set([
+    "@/lib/db", "@/auth", "@/lib/tickets.email", "@/lib/flow", "@/lib/stripe.server",
+    "pg", "stripe", "resend", "transbank-sdk",
+  ]);
   function load(filename) {
     if (cache.has(filename)) return cache.get(filename).exports;
     const loadedModule = { exports: {} };

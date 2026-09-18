@@ -19,11 +19,22 @@ Updated: 2026-09-18. Branch: `astra/ticketchile-v2`. Starting commit: `6104fd9`.
 
 ## Current work
 
-M1 implementation and local verification complete. Next execution target is M2. The coherent commit for this work is titled `security: enforce admin and ticket ownership boundaries`. No deployment or external messages were sent.
+M1 remains complete in `39a0931` and was not reimplemented. M2 is complete in the commit containing this entry. Its starting tree was clean. Work stops here as requested; M3 has not begun. No deployment, production credentials, production data mutations or provider API calls.
+
+## M2 completed
+
+- Both QR endpoints and all Wallet lookup forms require the logged-in current ticket owner and VALID state. A signature, ticket ID, order ID or payment ID alone never authorizes buyer access. Existing HMAC signing primitives are preserved.
+- Payment email paths use authorized local QR rendering with persisted paid-order evidence and current-owner-only delivery. No public QR fetch, request-host inference or cookie forwarding remains in these paths.
+- Canonical scanner handlers and every demo compatibility alias use server-side persisted organizer/event ownership. Scanner page resolves real DB events. Check-in atomically changes VALID to USED with repeated event/owner predicates; scanner feeds omit buyer email. Statistics and CSV services carry the same scope; CSV formulas are escaped.
+- Retired demo reset/check-in reset/paid-order/cart mutation/global-statistics handlers return 410. Existing HTTP seeding is still denied in production.
+- Payment status and browser confirmation now require buyer login and persisted payment ownership; returned tickets are separately filtered by current owner. Checkout creation derives owner from session and blocks cross-owner/provider retries. Guest browser Flow returns only navigate; authenticated kick and verified Flow/Webpay callbacks bind provider evidence before mutation. Webpay cancellation by order ID alone was removed.
+- Minimal related client changes: scanner uses canonical endpoints, checkout explains account delivery, organizer payment list refresh replaces obsolete buyer-only shortcuts. No visual redesign.
+- Added 141 M2 regression cases, retaining all 36 M1 cases (177 total), plus provider/SDK blocking in the isolated test loader.
+- Complete route/alias inventory, guest policy and remaining limitations are in [AUTHORIZATION.md](AUTHORIZATION.md).
 
 ## Pending
 
-All M2–M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). No redesign, schema migration, real provider flow, staff model, recovery or MFA has been delivered yet. The full platform remains incomplete and is not production-ready.
+M3-M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). No schema migration, staff assignment model, recovery, MFA, real provider flow or design milestone has been delivered. The full platform remains incomplete and is not production-ready.
 
 ## Decisions
 
@@ -32,8 +43,8 @@ All M2–M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). No
 - Tenant ownership comes from `organizer_events`, buyer ownership from persisted tickets and authenticated identity.
 - No automatic production operations, external emails, migration execution or credential use.
 - Approved 1D designs determine visual language; fees/legal/settlement examples are not policy.
-- The current owner alone receives a ticket resend: the original buyer must not receive a credential after ownership changes. Initial purchase delivery behavior was not modified.
-- M1 authorization and its exceptions are documented in [AUTHORIZATION.md](AUTHORIZATION.md). Bootstrap/provisioning/login/logout still use their legacy mechanisms and need the identity hardening milestone.
+- The current owner alone receives QR email delivery, including initial payment delivery and resend. Checkout contact email is not ticket ownership. Guest buyer read access is not preserved.
+- M1/M2 authorization and their exceptions are documented in [AUTHORIZATION.md](AUTHORIZATION.md). Bootstrap/provisioning/login/logout still use their legacy mechanisms and need the identity hardening milestone.
 
 ## Blockers and constraints
 
@@ -41,10 +52,10 @@ All M2–M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). No
 - Runtime database schema diverges from SQL; no local database fixture has been verified. No remote DB inspection attempted.
 - Three bundled design HTMLs contain their real markup in `__bundler/template`; inspect the template, not the loading thumbnail.
 - Existing root package/config and lint debt need dedicated follow-up.
-- Critical remaining exposures: unauthenticated QR signing, wallet fallback, scanner/check-in and cross-event statistics/exports; demo reset/paid-order paths; payment status/confirmation ownership. Fix these next, including all compatibility aliases.
+- Remaining exposures: legacy provisioning/bootstrap and identity controls; rate limits and public hold abuse; incomplete staff/audit/transfer/key-rotation models; legacy Stripe/Fintoc callback binding/replay-window review; inventory/finalization and email-outbox reliability. M2 closes the previously listed public ticket/scanner/payment-read bypasses but does not certify financial or identity workflows.
 - Tests use infrastructure doubles and validate SQL scope contracts; persisted-session expiry, tenant isolation against actual PostgreSQL, row-lock concurrency and provider/browser end-to-end flows have not been executed.
 
-## Changed areas / tests / build
+## M1 verification (historical)
 
 Changed areas: admin operational API handlers and route-group layout, organizer dashboard/payments service/page, buyer ticket lookup/resend, shared guards, resend tooltip, test harness, package scripts, isolated build directory configuration and implementation documentation. Existing `pg` services and payment finalizers otherwise retained.
 
@@ -66,6 +77,24 @@ Build notes: original `.next` writes were denied in the sandbox; verification us
 
 Scoped lint excludes the large pre-existing organizer service/client UI debt; whole-`src` lint still fails and must not be described as clean. No migration or responsive/browser QA was run in this security-only milestone.
 
-## Next milestone
+## M2 verification
 
-M2: secure both QR endpoints and wallet ticket lookup; replace server-to-server public QR fetches in payment email paths with authorized internal rendering; enforce owner/staff event scope on scanner/check-in/statistics/CSV; resolve scanner events from DB and retire unsafe demo mutations. Inspect payment status/confirmation before preserving guest access: never use knowledge of a ticket/payment ID as ownership. Continue with the existing plan; do not restart M0 or reimplement M1.
+Commands run from `apps/web` unless stated otherwise:
+
+| Check | Result |
+| --- | --- |
+| `node --test --experimental-test-isolation=none --test-reporter=dot tests/*.test.mjs` | PASS: 177 tests (36 M1 + 141 M2), explicit database/session/provider/email doubles |
+| `node node_modules/typescript/bin/tsc --noEmit --incremental false` | PASS |
+| ESLint on every changed/new `.ts`, `.tsx`, `.mjs` file, `--max-warnings 0` | PASS: 0 errors, 0 warnings; includes touched legacy create routes, organizer service and clients |
+| `node scripts/verify-build.mjs` | PASS: optimized production compilation, TypeScript, static generation and route collection, including canonical scanner routes and aliases |
+| Root `git -c core.safecrlf=false diff --check` | PASS |
+
+Tests cover anonymous/foreign/owner QR and Wallet access, signed-token tampering, inactive tickets, fabricated/unverified/pending organizer sessions, cross-event/manual/duplicate/cancelled check-in, cross-origin denial, scoped feeds/CSV and formula escaping, retired mutations/production seed denial, real scanner page lookup, payment ownership and token substitution, provider amount/currency/reference mismatch, repeated Flow cancellation, order-ID-only Webpay cancellation denial and current-owner internal QR delivery.
+
+Whole-repository lint was not rerun or claimed clean in M2; the M1 baseline above records 287 legacy errors and 35 warnings across `src`. The initial M2 scoped run exposed inherited errors in touched files; these were corrected before the final scoped pass. Build ran via the existing isolation script with inert credentials and unreachable loopback PostgreSQL. Next prints `.env.local` as discovered, but the script overrides its variables before starting Next. Windows sandbox ACLs required elevated local permissions for some workspace writes and the build. No deployment occurred.
+
+Not executed: real PostgreSQL migrations/tenant/concurrency tests, provider sandbox end-to-end, actual email/Wallet calls, browser/mobile/camera QA. Schema divergence and these validation gaps remain explicit, not waived.
+
+## Exact next milestone
+
+**M3: versioned local schema, identity/RBAC, recovery, rate limits, MFA and audit.** Completion evidence: local migrations plus authorization/recovery integration tests. Establish a disposable local database before those tests; do not inspect/mutate production. Persist event grants before admitting staff (operational staff/scanner workflow remains M8). Continue from M2; do not restart M0 or reimplement M1/M2.

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { getBuyerEmail } from "@/lib/buyer-guard.server";
+import { notFound, redirect } from "next/navigation";
 import { getEventByIdDb } from "@/lib/events.server";
 import CheckoutBuyerForm from "@/components/CheckoutBuyerForm";
 
@@ -24,6 +25,7 @@ function formatTimeOnly(dateISO: string) {
 
 export default async function CheckoutPage({ params }: Props) {
   const { eventId } = await params;
+  if (!await getBuyerEmail()) redirect(`/signin?callbackUrl=${encodeURIComponent(`/checkout/${eventId}`)}`);
 
   // ✅ DB manda
   const event = await getEventByIdDb(eventId);

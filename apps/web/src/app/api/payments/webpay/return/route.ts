@@ -1,5 +1,8 @@
+import { AccessError, accessResponse } from "@/lib/access.server";
+import { deliverPaidOrder } from "@/lib/paid-ticket-delivery.server";
+import type { PaymentRow } from "@/lib/payment-access.server";
 import { NextResponse } from "next/server";
-import { pool } from "@/lib/db";
+import { pool, withTx } from "@/lib/db";
 import {
   WebpayPlus,
   Options,
@@ -47,131 +50,49 @@ function webpayOptions(): Options {
 
 async function handleReturn(req: Request, payload: { tokenWs: string; tbkToken: string; tbkOrder: string }) {
   const base = baseUrlFromRequest(req);
-
-  const tokenWs = (payload.tokenWs || "").trim();
-  const tbkToken = (payload.tbkToken || "").trim();
-  const tbkOrder = (payload.tbkOrder || "").trim();
-
-  // Flujos de anulación / abandono (Transbank envía TBK_*)
-  // Si no viene token_ws o viene TBK_TOKEN => cancelado
-  if (!tokenWs || tbkToken) {
-    if (tbkOrder) {
-      const client = await pool.connect();
-      try {
-        await client.query(
-          `
-          UPDATE payments
-          SET status = CASE WHEN status='PAID' THEN 'PAID' ELSE 'CANCELLED' END,
-              updated_at=NOW()
-          WHERE id=$1 AND provider='webpay'
-          `,
-          [tbkOrder]
-        );
-      } finally {
-        client.release();
-      }
-
-      const ev = await pool.query(`SELECT event_id FROM payments WHERE id=$1`, [tbkOrder]).catch(() => null);
-      const eventId = ev?.rows?.[0]?.event_id ? String(ev.rows[0].event_id) : "";
-      return NextResponse.redirect(`${base}/checkout/${encodeURIComponent(eventId || "")}?canceled=1`);
-    }
-
-    return NextResponse.redirect(`${base}/checkout?canceled=1`);
-  }
-
-  // Commit (servidor)
-  const tx = new WebpayPlus.Transaction(webpayOptions());
-  const resp = await tx.commit(tokenWs);
-
-  const approved = Number((resp as any)?.response_code) === 0;
-  const paymentId = String((resp as any)?.buy_order || "").trim();
-
-  if (!paymentId) {
-    return new NextResponse("missing buy_order from webpay commit", { status: 500 });
-  }
-
-  const client = await pool.connect();
+  const token = payload.tokenWs.trim();
+  // Browser cancellation fields are not evidence: never mutate by order ID.
+  if (!token || payload.tbkToken) return NextResponse.redirect(`${base}/?canceled=1`, 303);
   try {
-    await client.query("BEGIN");
-
-    const pRes = await client.query(
-      `
-      SELECT id, hold_id, status, buyer_name, buyer_email, event_title, amount_clp
-      FROM payments
-      WHERE id=$1 AND provider='webpay'
-      FOR UPDATE
-      `,
-      [paymentId]
-    );
-
-    if (pRes.rowCount === 0) {
-      await client.query("ROLLBACK");
-      return new NextResponse("payment not found", { status: 404 });
-    }
-
-    const p = pRes.rows[0];
-
-    if (!approved) {
-      await client.query(
-        `UPDATE payments SET status='CANCELLED', updated_at=NOW(), provider_ref=COALESCE(provider_ref,$2) WHERE id=$1`,
-        [paymentId, tokenWs]
+    if (token.length > 512) throw new AccessError(400, "INVALID_INPUT", "Token invalido.");
+    const known = await pool.query<PaymentRow>(`SELECT * FROM payments WHERE provider='webpay' AND provider_ref=$1`, [token]);
+    if (!known.rows[0]) throw new AccessError(404, "NOT_FOUND", "Pago no encontrado.");
+    const transaction = new WebpayPlus.Transaction(webpayOptions());
+    const response = await transaction.commit(token);
+    const outcome = await withTx(async client => {
+      const result = await client.query<PaymentRow>(
+        `SELECT * FROM payments WHERE id=$1 AND provider='webpay' AND provider_ref=$2 FOR UPDATE`, [known.rows[0].id, token],
       );
-      await client.query("COMMIT");
-
-      const evId = await client.query(`SELECT event_id FROM payments WHERE id=$1`, [paymentId]);
-      const eventId = evId.rows?.[0]?.event_id ? String(evId.rows[0].event_id) : "";
-      return NextResponse.redirect(`${base}/checkout/${encodeURIComponent(eventId)}?canceled=1`);
-    }
-
-    await client.query(
-      `
-      UPDATE payments
-      SET status='PAID',
-          provider_ref = COALESCE(provider_ref, $2),
-          paid_at = COALESCE(paid_at, NOW()),
-          updated_at = NOW()
-      WHERE id=$1
-      `,
-      [paymentId, tokenWs]
-    );
-
-    await finalizePaidHoldToOrderPgTx(client, {
-      holdId: String(p.hold_id),
-      eventTitle: String(p.event_title || ""),
-      buyerName: String(p.buyer_name || ""),
-      buyerEmail: String(p.buyer_email || ""),
-      paymentId: String(p.id),
+      const payment = result.rows[0];
+      if (!payment || response.buy_order !== payment.id || response.session_id !== payment.hold_id ||
+          Number(response.amount) !== Number(payment.amount_clp) || payment.currency !== "CLP") {
+        throw new AccessError(409, "PAYMENT_MISMATCH", "No se pudo verificar el pago.");
+      }
+      const approved = response.response_code === 0 && response.status === "AUTHORIZED";
+      if (!approved && payment.status !== "PAID") {
+        await client.query(`UPDATE payments SET status='CANCELLED', updated_at=NOW() WHERE id=$1`, [payment.id]);
+        return { paymentId: payment.id, orderId: "" };
+      }
+      await client.query(`UPDATE payments SET status='PAID', paid_at=COALESCE(paid_at,NOW()), updated_at=NOW() WHERE id=$1`, [payment.id]);
+      await finalizePaidHoldToOrderPgTx(client, { holdId: payment.hold_id, paymentId: payment.id,
+        eventTitle: payment.event_title, buyerName: payment.buyer_name, buyerEmail: payment.buyer_email });
+      const order = await client.query<{ id: string }>(`SELECT id FROM orders WHERE hold_id=$1`, [payment.hold_id]);
+      return { paymentId: payment.id, orderId: order.rows[0]?.id || "" };
     });
-
-    await client.query("COMMIT");
-  } catch (e: any) {
-    try {
-      await client.query("ROLLBACK");
-    } catch {}
-    return new NextResponse(`webpay return error: ${String(e?.message || e)}`, { status: 500 });
-  } finally {
-    client.release();
-  }
-
-  // ✅ confirm canónico por payment_id
-  return NextResponse.redirect(`${base}/checkout/confirm?payment_id=${encodeURIComponent(paymentId)}`);
+    if (outcome.orderId) await deliverPaidOrder(outcome.orderId).catch(() => undefined);
+    const redirect = NextResponse.redirect(`${base}/checkout/confirm?payment_id=${encodeURIComponent(outcome.paymentId)}`, 303);
+    redirect.headers.set("Cache-Control", "private, no-store");
+    redirect.headers.set("Referrer-Policy", "no-referrer");
+    return redirect;
+  } catch (error) { return accessResponse(error); }
 }
-
-// ✅ Webpay puede llegar por POST (normal) o por GET (cuando te redirige con token_ws en query)
 export async function POST(req: Request) {
-  const fd = await req.formData();
-  return handleReturn(req, {
-    tokenWs: String(fd.get("token_ws") || ""),
-    tbkToken: String(fd.get("TBK_TOKEN") || ""),
-    tbkOrder: String(fd.get("TBK_ORDEN_COMPRA") || ""),
-  });
+  const form = await req.formData();
+  return handleReturn(req, { tokenWs: String(form.get("token_ws") || ""),
+    tbkToken: String(form.get("TBK_TOKEN") || ""), tbkOrder: String(form.get("TBK_ORDEN_COMPRA") || "") });
 }
-
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  return handleReturn(req, {
-    tokenWs: String(searchParams.get("token_ws") || ""),
-    tbkToken: String(searchParams.get("TBK_TOKEN") || ""),
-    tbkOrder: String(searchParams.get("TBK_ORDEN_COMPRA") || ""),
-  });
+  const params = new URL(req.url).searchParams;
+  return handleReturn(req, { tokenWs: params.get("token_ws") || "",
+    tbkToken: params.get("TBK_TOKEN") || "", tbkOrder: params.get("TBK_ORDEN_COMPRA") || "" });
 }
