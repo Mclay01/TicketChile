@@ -1,4 +1,4 @@
-# Authorization boundaries ? current through M4
+# Authorization boundaries ? current through M5
 
 M1 (`39a0931`) and M2 (`319cb5f`) remain implemented. M3 extends their server guards with the shared persisted identity and staff model; client roles, cookie presence, event codes and knowledge of identifiers never authorize access. Full identity/session/recovery/MFA/delivery/rate/audit details are in [IDENTITY-SECURITY.md](IDENTITY-SECURITY.md).
 
@@ -83,3 +83,16 @@ No production credentials/data/deployment were used. M5 is next after M4; local 
 - Finalization queues unique mail jobs; status polling sends nothing. Resend requires current ownership, VALID ticket and persisted paid order, queues with HTTP 202 and cannot add recipients. The worker rechecks that authority before local QR rendering/delivery, preserving M2 signing primitives. Security outbox messages use the same worker with expiry checks. Failures do not roll back purchases; jobs retry under lease/provider idempotency or move to review after uncertainty exceeds the safe retry window.
 
 No public worker/cron endpoint or refund authority was introduced. Internal service scheduling and a restricted runtime DB role are deployment prerequisites. Full configuration, state model, provider limitations and migration risks: [PAYMENTS.md](PAYMENTS.md), [MIGRATION-PLAN.md](MIGRATION-PLAN.md). Existing QR/Wallet transfer and key rotation limitations remain unchanged.
+
+
+## M5 public/account/media surfaces
+
+Public Home, catalog, category, detail and the three `/api/events` lookup/list aliases now share the published-event database service. Unpublished-event ID/slug knowledge does not grant public access. Search inputs are bounded parameters, and sort fragments are fixed allowlisted strings.
+
+New account page services independently resolve the live buyer identity. Ticket lists/detail use the existing current-owner SQL precedence; original order/buyer identity does not recover a transferred ticket. Orders and their payment summaries use separate persisted owner predicates. No provider references, privileged identity state or original purchaser PII are exposed. QR/Wallet/resend continue through the unchanged M2/M4 owner/state services; UI visibility does not replace their guards. Anonymous pages redirect to login, while foreign ticket IDs yield not-found. No transfer mutation or guest ID capability was introduced.
+
+`POST /api/media` requires same-origin, persisted rate limits and live event `event.edit` or tenant-wide capability. A simple UUID, tenant ID or event code is never upload authority. Normalization rejects active/unsupported image types and bounds bytes/pixels; writes use immutable generated keys. Metadata and audit commit together. New organizer submissions require the current owner capability and only accept media references from their own tenant; the bounded submission and its audit commit together.
+
+`GET /api/media/:id` reads a draft only with live event/tenant capability. Public access requires an actual reference from a published event; unpublishing removes that grant on subsequent reads. Responses are private/no-store. Legacy `/api/event-media/:id/:slot` exposes only a fixed raster field on a published event and normalizes it to bounded binary output. The local media adapter is unavailable in production; an explicit production adapter remains a deployment prerequisite.
+
+M5 adds no public QR fetching, client pricing authority, scanner role shortcut, export bypass or payment confirmation path. Earlier identity/payment/production-operation limits remain in force. Profile editing, safe ticket transfer, production media lifecycle and related revocation/key policy remain pending.

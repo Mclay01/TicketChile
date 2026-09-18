@@ -1,0 +1,9 @@
+{
+  "source": "Loopback synthetic preview only; inventory error injected in browser, auth endpoints real",
+  "results": [
+    "Stock error has retry feedback and disables selection/continuation",
+    "Registration uses real M3 endpoint; verification is queued, no external mail",
+    "Recovery uses real M3 endpoint and nonenumerating response",
+    "Invalid reset token renders safe error without claiming success"
+  ]
+}

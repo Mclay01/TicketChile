@@ -1,5 +1,5 @@
 import { pool } from "./db";
-import { EVENTS } from "./events";
+import { EVENTS } from "@/fixtures/events";
 
 export async function seedFromEvents() {
   const client = await pool.connect();

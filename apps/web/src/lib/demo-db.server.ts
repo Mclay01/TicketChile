@@ -272,7 +272,7 @@ export function getSoldByTicketTypeIdServer(eventId: string): Record<string, num
   return map;
 }
 
-import { EVENTS } from "@/lib/events";
+import { EVENTS } from "@/fixtures/events";
 
 type TicketTypeAvail = {
   ticketTypeId: string;
@@ -302,7 +302,7 @@ type EventAvail = {
   soldOut: boolean;
 };
 
-function getCapacity(tt: any): number {
+function getCapacity(tt: {capacity?:number;stock?:number;qty?:number;maxQty?:number;limit?:number;inventory?:number}): number {
   const n =
     tt?.capacity ??
     tt?.stock ??
@@ -315,7 +315,7 @@ function getCapacity(tt: any): number {
   return Number.isFinite(cap) ? cap : 0;
 }
 
-function computeEventAvail(db: any, eventId: string): EventAvail {
+function computeEventAvail(db: DB, eventId: string): EventAvail {
   const ev = EVENTS.find((e) => e.id === eventId);
   if (!ev) {
     return {
@@ -371,7 +371,7 @@ function computeEventAvail(db: any, eventId: string): EventAvail {
   recentUsed.sort((a, b) => (a.usedAtISO < b.usedAtISO ? 1 : -1));
   const recentUsedTop = recentUsed.slice(0, 10);
 
-  const byType: TicketTypeAvail[] = ev.ticketTypes.map((tt: any) => {
+  const byType: TicketTypeAvail[] = ev.ticketTypes.map((tt) => {
     const capacity = getCapacity(tt);
     const sold =
       (soldById[tt.id] ?? 0) + (tt?.name ? soldByName[tt.name] ?? 0 : 0);
@@ -482,7 +482,7 @@ export function exportEventTicketsCsvServer(eventId: string) {
     "usedAtISO",
   ].join(",");
 
-  const esc = (v: any) => {
+  const esc = (v: unknown) => {
     const s = String(v ?? "");
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };

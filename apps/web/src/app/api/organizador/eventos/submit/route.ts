@@ -1,79 +1,31 @@
-// apps/web/src/app/api/organizador/eventos/submit/route.ts
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { pool } from "@/lib/db";
-import crypto from "crypto";
-import { getOrganizerFromSession } from "@/lib/organizer-auth.pg.server";
-
+import { randomUUID } from "node:crypto";
+import { withTx } from "@/lib/db";
+import { audit } from "@/lib/security/audit.server";
+import { organizerActor, requireOrganizerCapability } from "@/lib/security/capabilities.server";
+import { ownedMediaReference } from "@/lib/media-access.server";
+import { accessResponse, AccessError, requireSameOrigin } from "@/lib/access.server";
+import { limit } from "@/lib/security/rate-limit.server";
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-function pickString(v: any) {
-  return typeof v === "string" ? v.trim() : "";
-}
-
-function pickInt(v: any) {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.floor(n) : 0;
-}
-
-export async function POST(req: Request) {
-  const ck = await cookies();
-
-  // ✅ ÚNICA fuente de verdad: sesión DB
-  const sid =
-    ck.get("tc_org_sess")?.value ??
-    ck.get("organizer_session")?.value ??
-    ck.get("tc_org_session")?.value ??
-    "";
-
-  const organizer = sid ? await getOrganizerFromSession(sid) : null;
-  const organizerId = organizer?.id ?? null;
-
-  if (!organizerId) {
-    return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
-  }
-
-  // ✅ Gate: verificado + aprobado (misma regla que login/dashboard)
-  const gate = await pool.query<{ verified: boolean; approved: boolean }>(
-    `SELECT verified, approved FROM organizer_users WHERE id = $1 LIMIT 1`,
-    [organizerId]
-  );
-
-  const row = gate.rows?.[0];
-  if (!row) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
-  if (!row.verified) return NextResponse.json({ ok: false, error: "Debes verificar tu correo primero." }, { status: 403 });
-  if (!row.approved) return NextResponse.json({ ok: false, error: "Tu cuenta está pendiente de aprobación." }, { status: 403 });
-
-  const fd = await req.formData();
-
-  const payload = {
-    title: pickString(fd.get("title")),
-    city: pickString(fd.get("city")),
-    venue: pickString(fd.get("venue")),
-    dateISO: pickString(fd.get("dateISO")),
-    image: pickString(fd.get("image")),
-    description: pickString(fd.get("description")),
-    ticketType: {
-      name: pickString(fd.get("tt_name")),
-      priceClp: pickInt(fd.get("tt_price")),
-      capacity: pickInt(fd.get("tt_capacity")),
-    },
-  };
-
-  if (!payload.title || !payload.city || !payload.venue || !payload.dateISO || !payload.description) {
-    return NextResponse.json({ ok: false, error: "Faltan campos requeridos." }, { status: 400 });
-  }
-
-  const id = "sub_" + crypto.randomBytes(12).toString("hex");
-
-  await pool.query(
-    `
-    INSERT INTO organizer_event_submissions (id, organizer_id, status, payload)
-    VALUES ($1, $2, 'IN_REVIEW', $3::jsonb)
-    `,
-    [id, organizerId, JSON.stringify(payload)]
-  );
-
-  return new NextResponse(null, { status: 303, headers: { Location: "/organizador" } });
+export async function POST(request: Request) {
+  try {
+    requireSameOrigin(request);
+    const actor = await organizerActor();
+    if (actor.kind !== "ORGANIZER") throw new AccessError(403, "FORBIDDEN", "Acceso de organizador requerido.");
+    await requireOrganizerCapability(actor.id, "event.edit", actor);
+    await limit("event-submit", actor.id, { hits: 20, seconds: 3600 });
+    // Bound the stream before multipart parsing; image bytes have their own endpoint.
+    const reader = request.body?.getReader(); const chunks: Uint8Array[] = []; let size = 0;
+    if (reader) try { for (;;) { const { done, value } = await reader.read(); if (done) break; size += value.length; if (size > 32768) { await reader.cancel(); throw new AccessError(413, "TOO_LARGE", "Solicitud demasiado grande."); } chunks.push(value); } } finally { reader.releaseLock(); }
+    const fd = await new Request(request.url, { method: "POST", headers: request.headers, body: Buffer.concat(chunks) }).formData();
+    const field = (name: string, max = 200) => String(fd.get(name) || "").trim().slice(0, max);
+    const payload = { title: field("title"), city: field("city"), venue: field("venue"), dateISO: field("dateISO"), description: field("description", 10000),
+      image: await ownedMediaReference(field("image", 500), actor.id), ticketType: { name: field("tt_name"), priceClp: Number(field("tt_price")), capacity: Number(field("tt_capacity")) } };
+    if (!payload.title || !payload.city || !payload.venue || !payload.description || !Number.isFinite(Date.parse(payload.dateISO)) || !Number.isSafeInteger(payload.ticketType.priceClp) || payload.ticketType.priceClp < 0 || !Number.isSafeInteger(payload.ticketType.capacity) || payload.ticketType.capacity < 1) throw new AccessError(400, "INVALID_INPUT", "Revisa los datos del evento.");
+    await withTx(async client => {
+      const id = `sub_${randomUUID()}`;
+      await client.query("INSERT INTO organizer_event_submissions(id,organizer_id,status,payload) VALUES($1,$2,'IN_REVIEW',$3::jsonb)", [id, actor.id, JSON.stringify(payload)]);
+      await audit(client, { actor, action: "event.submitted", targetType: "submission", targetId: id, organizerId: actor.id });
+    });
+    return new Response(null, { status: 303, headers: { Location: "/organizador" } });
+  } catch (error) { return accessResponse(error); }
 }

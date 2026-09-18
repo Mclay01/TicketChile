@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -130,7 +131,7 @@ function EventPreviewCard({
     <div className="mx-auto w-full max-w-[300px] overflow-hidden rounded-[22px] border border-white/10 bg-black/30 shadow-[0_18px_45px_rgba(0,0,0,.35)] backdrop-blur">
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-white/5">
         {image ? (
-          <img src={image} alt="Poster" className="h-full w-full object-cover" loading="lazy" />
+          <Image unoptimized width={600} height={800} src={image} alt="Poster" className="h-full w-full object-cover" loading="lazy" />
         ) : (
           <div className="h-full w-full bg-gradient-to-b from-white/10 to-transparent" />
         )}
@@ -197,15 +198,6 @@ function buildISOFromLocal(date: string, time: string) {
   )}:${pad(d.getMinutes())}:00${sign}${offH}:${offM}`;
 }
 
-async function fileToDataUrl(file: File): Promise<string> {
-  return await new Promise((resolve, reject) => {
-    const fr = new FileReader();
-    fr.onload = () => resolve(String(fr.result || ""));
-    fr.onerror = reject;
-    fr.readAsDataURL(file);
-  });
-}
-
 export default function NuevoEventoClient() {
   const formRef = useRef<HTMLFormElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -261,7 +253,7 @@ export default function NuevoEventoClient() {
     if (!v.tt_capacity.trim()) e.tt_capacity = "Capacidad requerida.";
     else if (!Number.isFinite(cap) || cap <= 0) e.tt_capacity = "Capacidad inválida.";
 
-    if (v.image.trim() && !v.image.startsWith("data:image/")) {
+    if (v.image.trim() && !/^\/api\/media\/[a-f0-9-]{36}$/.test(v.image)) {
       e.image = "La imagen no es válida.";
     }
 
@@ -306,7 +298,9 @@ export default function NuevoEventoClient() {
 
     setImgBusy(true);
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const response = await fetch("/api/media", { method: "POST", headers: { "Content-Type": file.type }, body: file });
+      if (!response.ok) throw new Error("Upload unavailable");
+      const { url: dataUrl } = await response.json();
       setV((x) => ({ ...x, image: dataUrl }));
     } catch {
       setTopErr("No se pudo leer la imagen.");
@@ -364,8 +358,8 @@ export default function NuevoEventoClient() {
       if (!r.ok || !j?.ok) throw new Error(j?.error || `No se pudo enviar (${r.status}).`);
 
       window.location.href = "/organizador";
-    } catch (e: any) {
-      setTopErr(String(e?.message || e));
+    } catch (e: unknown) {
+      setTopErr(e instanceof Error ? e.message : "No se pudo completar");
     } finally {
       setBusy(false);
     }
@@ -501,7 +495,7 @@ export default function NuevoEventoClient() {
 
                   {v.image ? (
                     <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-2">
-                      <img src={v.image} alt="Preview" className="mx-auto max-h-40 rounded-lg object-cover" />
+                      <Image unoptimized width={400} height={300} src={v.image} alt="Preview" className="mx-auto max-h-40 rounded-lg object-cover" />
                       <button
                         type="button"
                         onClick={() => setV((x) => ({ ...x, image: "" }))}

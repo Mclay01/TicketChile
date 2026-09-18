@@ -31,89 +31,11 @@ export type Event = {
 
   description: string;
   ticketTypes: TicketType[];
+  ended?: boolean;
+  category?: string;
+  categoryName?: string;
+  organizerName?: string;
 };
-
-/**
- * ⚠️ Fallback/demo ONLY.
- * Se mantiene para no romper organizer/demo/seed mientras migras todo a DB.
- * Checkout real + detalle real ya deben venir desde events.server.ts.
- */
-export const EVENTS: Event[] = [
-  {
-    id: "evt_001",
-    slug: "fiesta-verano",
-    title: "Fiesta Verano",
-    city: "Santiago",
-    venue: "Ubicación por confirmar",
-    dateISO: "2026-01-15T01:00:00-03:00",
-    image: "/events/fiesta-verano.jpg",
-    hero: {
-      desktop: "/banners/1400x450/fiesta-verano.jpg",
-      mobile: "/banners/800x400/fiesta-verano.jpg",
-    },
-    description: `DJ – Tragos – Música.
-
-Acceso por QR. +18. Cupos limitados.`,
-    ticketTypes: [{ id: "tt_general", name: "Entrada", priceCLP: 5500, maxPerOrder: 10 }],
-  },
-  {
-    id: "evt_002",
-    slug: "sunset-party",
-    title: "La Frida — Sunset Party",
-    city: "Santiago",
-    venue: "Disco Bar La Frida",
-    dateISO: "2026-04-22T17:00:00-03:00",
-    image: "/events/sunset-party.jpg",
-    hero: {
-      desktop: "/banners/1400x450/sunset-party.jpg",
-      mobile: "/banners/800x400/sunset-party.jpg",
-    },
-    description: `Sunset + after party.
-
-Acceso por QR. +18. Producción completa.`,
-    ticketTypes: [
-      { id: "tt_preventa", name: "Preventa", priceCLP: 10000, maxPerOrder: 10 },
-      { id: "tt_general", name: "General", priceCLP: 12000, maxPerOrder: 10 },
-    ],
-  },
-  {
-    id: "evt_003",
-    slug: "noche-rock",
-    title: "Noche de Rock",
-    city: "Santiago",
-    venue: "Calle Cualquiera 123",
-    dateISO: "2026-06-20T21:00:00-03:00",
-    image: "/events/noche-rock.jpg",
-    hero: {
-      desktop: "/banners/1400x450/noche-rock.jpg",
-      mobile: "/banners/800x400/noche-rock.jpg",
-    },
-    description: `Bandas en vivo + energía de la buena.
-
-Acceso por QR. +18.`,
-    ticketTypes: [{ id: "tt_general", name: "Entrada General", priceCLP: 12000, maxPerOrder: 10 }],
-  },
-];
-
-function pickString(v: any) {
-  return typeof v === "string" ? v.trim() : "";
-}
-
-/**
- * ⚠️ Legacy fallback: NO DB, NO API. Solo EVENTS.
- * Se mantiene para imports existentes (organizer/demo/seed/fintoc viejo).
- */
-export async function getEventBySlug(slug: string): Promise<Event | undefined> {
-  const s = pickString(slug);
-  if (!s) return undefined;
-  return EVENTS.find((e) => e.slug === s);
-}
-
-export async function getEventById(id: string): Promise<Event | undefined> {
-  const s = pickString(id);
-  if (!s) return undefined;
-  return EVENTS.find((e) => e.id === s);
-}
 
 // formatea SOLO número (sin $) porque tu UI pone "$" afuera
 export function formatCLP(value: number) {
@@ -131,13 +53,14 @@ export function formatEventDateLabel(dateISO: string) {
     day: "2-digit",
     month: "long",
     year: "numeric",
+    timeZone: "America/Santiago",
   });
   return titleCaseEs(raw);
 }
 
 export function formatEventTimeLabel(dateISO: string) {
   const d = new Date(dateISO);
-  const t = d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+  const t = d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", timeZone: "America/Santiago" });
   return `${t} hrs`;
 }
 
@@ -158,42 +81,42 @@ export function parseCartString(cartString: string): Record<string, number> {
 
 export function buildCartString(cart: Record<string, number>): string {
   return Object.entries(cart)
-    .filter(([_, q]) => Number(q) > 0)
+    .filter(([, q]) => Number(q) > 0)
     .map(([id, q]) => `${id}:${Math.floor(Number(q))}`)
     .join(",");
 }
 
 // --- Compat helpers ---
 
-export function remainingFor(tt: any) {
+export function remainingFor(tt: TicketType) {
   const capRaw = tt?.capacity;
   if (capRaw === undefined || capRaw === null) return 999999;
 
   const cap = Number(capRaw);
-  if (!Number.isFinite(cap) || cap <= 0) return 999999;
+  if (!Number.isFinite(cap)) return 0;
 
   const sold = Number(tt?.sold ?? 0);
   const held = Number(tt?.held ?? 0);
   return Math.max(0, cap - sold - held);
 }
 
-export function eventRemaining(event: any) {
-  return (event?.ticketTypes ?? []).reduce((acc: number, tt: any) => acc + remainingFor(tt), 0);
+export function eventRemaining(event: Event) {
+  return (event?.ticketTypes ?? []).reduce((acc: number, tt: TicketType) => acc + remainingFor(tt), 0);
 }
 
-export function eventIsSoldOut(event: any) {
+export function eventIsSoldOut(event: Event) {
   return eventRemaining(event) <= 0;
 }
 
-export function eventPriceFrom(event: any) {
+export function eventPriceFrom(event: Event) {
   const tts = event?.ticketTypes ?? [];
   if (!tts.length) return 0;
 
-  const available = tts.filter((t: any) => remainingFor(t) > 0);
+  const available = tts.filter((t: TicketType) => remainingFor(t) > 0);
   const list = available.length ? available : tts;
 
   const prices = list
-    .map((t: any) => Number(t?.priceCLP ?? t?.price ?? 0))
+    .map((t: TicketType) => Number(t.priceCLP ?? 0))
     .filter((n: number) => Number.isFinite(n));
 
   return prices.length ? Math.min(...prices) : 0;
@@ -206,6 +129,7 @@ export function formatDateLong(dateISO: string) {
     day: "2-digit",
     month: "long",
     year: "numeric",
+    timeZone: "America/Santiago",
     hour: "2-digit",
     minute: "2-digit",
   });

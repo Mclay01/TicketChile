@@ -36,7 +36,9 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     ".next-astra/types/**/*.ts",
-    ".next-astra/dev/types/**/*.ts"
+    ".next-astra/dev/types/**/*.ts",
+    ".next-m5-qa/types/**/*.ts",
+    ".next-m5-qa/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

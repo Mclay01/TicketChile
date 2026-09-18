@@ -19,7 +19,7 @@ Updated: 2026-09-18. Branch: `astra/ticketchile-v2`. Starting commit: `6104fd9`.
 
 ## Current work
 
-M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df1875d392abc7b7ad60a67`. Both were verified before M3 and were extended rather than reimplemented. M3 is complete in `fd48fc02df1408a299157d7308b644b102a532cd`. M4 is complete in the commit containing the M4 entry below. No deployment, production credentials/data, provider calls, merge or push.
+M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df1875d392abc7b7ad60a67`. Both were verified before M3 and were extended rather than reimplemented. M3 is complete in `fd48fc02df1408a299157d7308b644b102a532cd`. M4 is complete in `9e4466e34a69192761a36a918c56e430c849c9be`. M5 is complete in the commit containing the M5 entry below. No deployment, production credentials/data, provider calls, merge or push.
 
 ## M2 completed
 
@@ -34,7 +34,7 @@ M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df187
 
 ## Pending
 
-M4-M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). M3 delivers the versioned local schema, persisted staff/security foundation, recovery, MFA, rates and audit. No production schema adoption, external security delivery worker, real provider end-to-end flow or design milestone is claimed. The full platform remains incomplete and is not production-ready.
+M6-M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). M1-M5 are complete locally. Production schema adoption, external worker installation, provider end-to-end certification and the remaining product milestones are pending. The full platform remains incomplete and is not production-ready.
 
 ## Decisions
 
@@ -48,12 +48,12 @@ M4-M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). M3 deliv
 
 ## Blockers and constraints
 
-- `pnpm` is absent from PATH; installed Node 22.15.1 and local dependencies allow direct CLI checks.
+- `pnpm` is absent from PATH; direct Node CLI checks work. M5 used cached Corepack pnpm with auto-pin disabled and --ignore-workspace to add Sharp without changing parent workspace configuration.
 - The reconstructed local schema is verified on disposable PostgreSQL 18.1. The actual production schema is still unknown and requires catalog reconciliation; no remote DB inspection was attempted.
 - Three bundled design HTMLs contain their real markup in `__bundler/template`; inspect the template, not the loading thumbnail.
 - Existing root package/config and lint debt need dedicated follow-up.
-- Remaining exposures: unverified production catalog/infrastructure, privileged onboarding/key management/recovery-email proof, security delivery worker and retention/archival, distributed abuse/load controls, email-based ticket ownership and transfer/key rotation, legacy Stripe/Fintoc callback binding/replay-window review, and payment/inventory/finalization/email reliability. M3 closes the scoped identity/rate/hold/staff/audit gaps; it does not certify production or financial workflows.
-- M1/M2 tests retain isolated provider/session/DB doubles; M3 additionally executes real PostgreSQL migrations, persisted expiry/revocation/grants, token/MFA/rate/hold/check-in concurrency and audit. Browser/provider/email/Wallet end-to-end and distributed load remain unexecuted.
+- Remaining exposures: unverified production catalog/infrastructure, privileged onboarding/key management, scheduler installation and recovery/mail delivery proof, review/refund operations, production object storage/legacy media transition, distributed abuse/load controls, and ticket transfer/QR/Wallet key rotation. M1-M5 local completion does not certify production readiness.
+- M1/M2 retain isolated provider/session/DB doubles; M3-M5 additionally execute actual PostgreSQL migration/identity/permission/payment/media/ownership cases. M5 adds local Chrome public/account QA. External merchant, Google OAuth, Wallet, email-delivery, physical-device and distributed-load end-to-end remain unexecuted.
 
 ## M1 verification (historical)
 
@@ -165,6 +165,41 @@ Intermediate test syntax/mock-boundary and TypeScript errors were corrected befo
 
 Remaining limits: actual merchant sandbox/browser/email end-to-end, scheduler installation, monitored uncertain-create/late-paid review, Fintoc integration, manual transfer approval/bank policy, nonzero fee/refund/settlement operations, guest capability design, existing QR/Wallet transfer/key rotation, production catalog/legacy-payment adoption, DB privilege/retention/key management and load/throughput rehearsal. Unknown Webpay/Flow create outcomes still need provider-backed operator reconciliation; no blind retry is performed. Production readiness is not claimed.
 
+## M5 completed
+
+Starting point: clean `astra/ticketchile-v2` at M4 `9e4466e`. The latest user attachment explicitly requested M5. Read progress, implementation plan, authorization/payment records, DESIGN-BRIEF and all four approved design templates. M1-M4 remain complete; their security/payment services were preserved. Applied the local redesign audit skill, without subagents or external production access.
+
+- Implemented the approved 1D token/component foundation: local Manrope/IBM Plex Mono fonts with licenses, dark graphite/red palette, fine borders, restrained ticket perforations, semantic responsive public shell, account navigation, fields/buttons/notices/status/empty/loading/error states, native dialog and quantity controls.
+- Home now reads real published database events. Bounded catalog/search/city/category/date/sort/pagination and real facets replace hardcoded public arrays and N+1 loading. Event detail uses real organizer metadata, Chile-local dates and canonical ticket types. Selection submits IDs/quantities into M4; no client price or new hold/payment authority was introduced.
+- Replaced all three public event compatibility API readers with the same publication boundary. Previously unpublished rows could leak through these legacy readers. Retired unused fixture checkout/quick-buy/My Tickets/Home/filter/card/organizer clients; fixture arrays moved to an explicit fixtures module for legacy development helpers only.
+- Added current-owner profile, upcoming/past/cancelled tickets, ticket detail and owned purchase history. QR/Wallet reuse M2 endpoints and remain owner/state guarded; Wallet only appears when configured. Resend queues through M4; transfer remains explicitly unavailable. Buyer auth/recovery/reset call M3 services with real labels and nonenumerating feedback.
+- Added FAQ/contact/provisional legal and a non-generating AI simulator foundation. No final legal/transfer/fee policy, fictional event counts or fake AI output was copied from the prototypes.
+- Added a binary media boundary: bounded decode, resize, metadata removal and WebP normalization; immutable local development objects; tenant/event-authorized upload/read and new submission references; transactional metadata/audit. Production storage remains unavailable until an explicit object adapter exists. Existing base64 fields remain intact and have a publication-checked binary compatibility reader. No production media migration or deletion occurred.
+- Appended `0005_discovery_media.sql` for configured categories, nullable event category, discovery indexes and media metadata. Applied migrations 0001-0004 are unchanged. Added an app-specific lockfile for reproducible dependencies, including explicit Sharp.
+- Implementation architecture, deviations and media transition are documented in [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md), [MIGRATION-PLAN.md](MIGRATION-PLAN.md), [AUTHORIZATION.md](AUTHORIZATION.md), [QA-CHECKLIST.md](QA-CHECKLIST.md) and [qa/m5/README.md](qa/m5/README.md).
+
+## M5 verification
+
+Run from `apps/web` unless noted:
+
+| Check | Result |
+| --- | --- |
+| `node --test --experimental-test-isolation=none --test-reporter=spec tests/*.test.mjs` | PASS: 259 tests, zero failures/skips; all 242 retained M1-M4 tests plus 17 M5 tests |
+| `node node_modules/typescript/bin/tsc --noEmit --incremental false` | PASS |
+| `node scripts/lint-changed.mjs` | PASS: 64 changed/new code/test/script files; zero errors/warnings |
+| `node scripts/verify-build.mjs` | PASS: optimized production compilation, type validation, static generation and route collection; inert credentials/unreachable loopback DB |
+| `node scripts/m5-visual-qa.mjs` | PASS: 90 combinations (18 public/account states at 390/430/768/1024/1440), labels/images/overflow plus real buyer login, native dialog, reduced motion and quantity-only checkout navigation |
+| `node scripts/m5-state-qa.mjs` | PASS: stock error blocks continuation; real M3 registration/recovery queue; invalid-reset error |
+| Root `git -c core.safecrlf=false diff --check` | PASS |
+
+M5 tests execute actual PostgreSQL filtering/mapping/publication/pagination/ownership behavior, every public event API alias, legacy raster reads, foreign/transferred tickets, owned order summaries, anonymous account rejection, media scope, stream/pixel/format limits, metadata removal, immutable/traversal-safe storage, production adapter denial, successful upload/audit and publication-dependent reads. Browser captures and reports are committed under `qa/m5`; approved designs are unchanged. QR and buyer details in captures are synthetic fixtures with local-only keys.
+
+Intermediate failures corrected: Tailwind scanned generated artifacts (explicit source scanning now prevents it); QA needed a synthetic data key for the existing M3 rate limiter and a consistent localhost origin; initial scoped lint exposed four nearby demo type issues and two organizer image warnings. No security check was relaxed for browser automation. Whole-repository lint was not rerun or claimed clean; the historical M1 baseline remains 287 errors and 35 warnings.
+
+All database/preview work used newly named synthetic loopback databases without loading application credentials. Font license notices were fetched from the official Google Fonts source only. No deployment, production credentials/data, live provider/Wallet/mail calls, merge or push occurred. Local processes/cluster are stopped at handoff; fixture files/databases remain for inspection.
+
+Remaining limits: production object storage/legacy media migration and remote-image allowlist policy; approved legal/contact operations; real featured-event curation/category editing; profile editing; safe transfer and M7 AI; detailed legacy checkout/confirmation and organizer/admin layouts; existing schema adoption and all M4 operational/provider/key/worker limits. No physical-device, Safari/Firefox, assistive-technology, load, merchant or formal WCAG certification is claimed. See DESIGN-SYSTEM for explicit visual deviations.
+
 ## Exact next milestone
 
-**M5: 1D primitives/shells, media boundary, public discovery and account.** Completion evidence: responsive visual QA and real data. Continue from M4; do not restart M1-M4. Stop after the coherent M4 commit. Do not deploy or begin M5 in this task.
+**M6: Organizer event lifecycle, multi-tier editor and Event Center.** Completion evidence: create/edit/preview/publish and tenant tests. Continue from the coherent M5 commit; do not restart M1-M5. Stop here. Do not deploy or automatically begin M6.

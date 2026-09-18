@@ -31,6 +31,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "resend": "^6.7.0",
+    "sharp": "0.34.5",
     "stripe": "^20.1.0",
     "transbank-sdk": "^6.1.1"
   },

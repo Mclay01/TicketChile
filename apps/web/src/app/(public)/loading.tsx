@@ -1,0 +1,1 @@
+export default function Loading() { return <div className="page stack" role="status" aria-label="Cargando"><div className="skeleton" style={{ width: "60%", height: 44 }} /><div className="skeleton" style={{ height: 320 }} /><p className="muted">Cargando tu próxima experiencia…</p></div>; }

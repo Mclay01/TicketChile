@@ -104,3 +104,24 @@ Historical M1/M2 counts above remain their original evidence. Final M3 combined 
 - [ ] Guest capability policy, QR/Wallet credential transfer/revocation/key rotation, nonzero fee/refund/settlement policies and operations.
 
 Historical M2 SQL-contract payment/mail tests were replaced where their implementation no longer exists with stronger actual-PostgreSQL behavior coverage. Existing identity/QR/wallet/scanner/owner boundaries remain tested; historical counts are not added to the current total. Whole-repository lint remains outside the clean claim.
+
+
+## M5 verification and remaining product gates
+
+- [x] Approved 1D template audit; reusable tokens, local licensed fonts, precise public/account shells and event/ticket primitives.
+- [x] Real published Home/catalog/search/category/detail; bounded parameterized filters, escaped search wildcards, 12-result pagination, real facets and no public fixture fallback.
+- [x] All public event compatibility routes reject unpublished IDs/slugs.
+- [x] Canonical tier display and availability read; quantity-only selection into unchanged M4 checkout; inventory error disables continuation.
+- [x] M3 buyer login/signup/recovery/reset forms; real browser registration/recovery queue and safe invalid-token feedback.
+- [x] Current-owner upcoming/past/cancelled tickets and detail; foreign/transferred-ticket denial; independently owned purchase history; no provider references or purchaser PII.
+- [x] Real authorized QR browser load, configured-only Wallet visibility, M4 queued resend and explicitly unavailable transfer.
+- [x] Binary upload bounds/normalization/metadata stripping; tenant/event scope; immutable local objects; media-reference ownership; audit; publication-dependent public image reads.
+- [x] Legacy base64 compatibility without new public HTML blobs or automatic data migration/deletion; arbitrary remote image URLs rejected.
+- [x] 259 M1-M5 tests; TypeScript; scoped lint on 64 changed/new files; isolated production build; root diff check.
+- [x] 90 Chrome page/viewport combinations at 390/430/768/1024/1440; zero horizontal overflow, missing labels or broken images. Dialog focus/Escape, reduced-motion and real login/selection interactions checked. Evidence: [qa/m5](qa/m5/README.md).
+- [x] FAQ, validated/configured contact address or honest unavailable state, provisional legal pages and disabled AI generation foundation.
+- [ ] Production media object adapter, hosting/remote-image policy, storage quotas/cleanup and separately authorized legacy media transition.
+- [ ] Approved legal/refund/contact operations; account editing and safe transfer; M7 structured AI generation.
+- [ ] Full detailed checkout/confirmation and organizer/admin design completion in the remaining product work; physical mobile, other browsers, screen readers and formal accessibility/performance review.
+
+M5 does not waive M3/M4 production migration, payment/provider/Wallet/email, key management, scheduler, operator review, load or infrastructure gates. No whole-repository lint clean claim; historical legacy debt remains.

@@ -1,53 +1,15 @@
-﻿import EventosFilters from "@/components/EventosFilters";
-import EventCard from "@/components/EventCard";
-import HomeHeroRotator from "@/components/HomeHeroRotator";
-import { EVENTS } from "@/lib/events";
-import { Suspense } from "react";
-
-export default function HomePage() {
-  const cities = Array.from(new Set(EVENTS.map((e) => e.city))).sort((a, b) =>
-    a.localeCompare(b, "es")
-  );
-
-  const sortedEvents = [...EVENTS].sort(
-    (a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime()
-  );
-
-  const gridEvents = sortedEvents.slice(0, 9);
-
-  const heroItems = sortedEvents.slice(0, 5).map((event) => ({
-    href: `/eventos/${event.slug}`,
-    desktopSrc: event?.hero?.desktop ?? "/banners/1400x450/fiesta-verano.jpg",
-    mobileSrc: event?.hero?.mobile ?? "/banners/800x400/fiesta-verano.jpg",
-    alt: `Banner: ${event.title}`,
-  }));
-
-  return (
-    <div className="space-y-8">
-      <HomeHeroRotator items={heroItems} intervalMs={4000} />
-
-      <div className="space-y-8 pt-6">
-        <section className="glass-card rounded-3xl p-4 md:p-5">
-          <Suspense fallback={<div className="text-sm text-white/60">Cargando filtros…</div>}>
-            <EventosFilters cities={cities} />
-          </Suspense>
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-xs text-white/50">Eventos</p>
-              <h2 className="text-lg font-semibold text-white">Explora lo que viene</h2>
-            </div>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {gridEvents.map((e) => (
-              <EventCard key={e.id} event={e} />
-            ))}
-          </div>
-        </section>
-      </div>
-    </div>
-  );
+import Link from "next/link";
+import { catalogDb, discoveryFacets } from "@/lib/events.server";
+import { EventCard, EventHero } from "@/components/tc/events";
+import { EmptyState, Notice } from "@/components/tc/ui";
+export const dynamic = "force-dynamic";
+export default async function HomePage() {
+  const data = await Promise.all([catalogDb(), discoveryFacets()]).catch(() => null);
+  const events = data?.[0].events || [], facets = data?.[1];
+  return <div style={{ paddingBottom: 64 }}>{events[0] ? <EventHero event={events[0]} /> : <section className="page stack"><p className="eyebrow">TicketChile · Vive el próximo encuentro</p><h1>Hay algo que se vive<br />solo estando ahí.</h1><p className="muted">Descubre la cartelera y encuentra tu próxima experiencia.</p>{!data ? <Notice error>No pudimos cargar los eventos. Intenta nuevamente en unos momentos.</Notice> : <EmptyState title="La próxima cartelera está en camino">Vuelve pronto para descubrir nuevos eventos.</EmptyState>}</section>}
+    {!!facets?.categories.length && <nav className="categories" aria-label="Categorías">{facets.categories.map(c => <Link className="category-chip" key={c.slug} href={`/categorias/${c.slug}`}>{c.name}<span>{c.count}</span></Link>)}</nav>}
+    {!!events.length && <section className="section"><div className="between section-head"><h2>Próximos encuentros</h2><Link className="eyebrow" href="/eventos">Ver cartelera →</Link></div><div className="event-grid">{events.slice(0, 8).map(event => <EventCard key={event.id} event={event} />)}</div></section>}
+    {!!facets?.cities.length && <section className="section"><h2>Por ciudad</h2><nav className="categories" aria-label="Ciudades">{facets.cities.slice(0, 8).map(c => <Link className="category-chip" key={c.city} href={`/eventos?city=${encodeURIComponent(c.city)}`}>{c.city}<span>{c.count}</span></Link>)}</nav></section>}
+    <section className="ai-entry"><div className="stack"><p className="eyebrow">Para organizadores · TicketChile AI</p><h2>Todo gran evento empieza con una idea.</h2><p className="muted">Un espacio para dar forma a tu próximo encuentro. Estamos preparando el asistente de creación.</p></div><div className="stack" style={{ alignContent: "center" }}><p className="muted">Conoce el espacio de planificación o entra al panel para gestionar tus eventos.</p><div className="row"><Link className="btn secondary" href="/simulador">Explorar el simulador →</Link><Link href="/organizador">Panel organizador</Link></div></div></section>
+  </div>;
 }

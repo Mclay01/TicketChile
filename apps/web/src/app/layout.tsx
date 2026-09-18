@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "Ticketchile",
-  description: "Ticketera demo",
+  title: "TicketChile",
+  description: "Descubre eventos y encuentra tus entradas en TicketChile.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

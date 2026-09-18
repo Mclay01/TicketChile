@@ -1,102 +1,17 @@
 "use client";
-
+import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-
-function isEmail(s: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || "").trim().toLowerCase());
-}
-
+import AuthShell from "@/components/tc/AuthShell";
+import { Button, Field, Notice } from "@/components/tc/ui";
 export default function SignupClient() {
-  const router = useRouter();
-
-  const [email, setEmail] = useState("");
-  const [pass, setPass] = useState("");
-  const [pass2, setPass2] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  return (
-    <div className="mx-auto max-w-md rounded-2xl border border-white/10 bg-white/5 p-6">
-      <h1 className="text-2xl font-semibold">Registrarse</h1>
-      <p className="mt-1 text-sm text-white/70">Crea tu cuenta con email y contraseña.</p>
-
-      <div className="mt-6 space-y-3">
-        <input
-          className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
-          inputMode="email"
-        />
-
-        <input
-          className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none"
-          placeholder="Contraseña (mín. 8)"
-          type="password"
-          value={pass}
-          onChange={(e) => setPass(e.target.value)}
-          autoComplete="new-password"
-        />
-
-        <input
-          className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none"
-          placeholder="Repite contraseña"
-          type="password"
-          value={pass2}
-          onChange={(e) => setPass2(e.target.value)}
-          autoComplete="new-password"
-        />
-
-        {err && (
-          <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-white/80">
-            {err}
-          </div>
-        )}
-
-        <button
-          disabled={loading}
-          onClick={async () => {
-            setErr(null);
-
-            const e = email.trim().toLowerCase();
-
-            if (!isEmail(e)) return setErr("Email inválido.");
-            if (pass.length < 12) return setErr("Contraseña muy corta (mínimo 8).");
-            if (pass !== pass2) return setErr("Las contraseñas no coinciden.");
-
-            setLoading(true);
-            try {
-              const r = await fetch("/api/auth/signup", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: e, password: pass }),
-              });
-
-              const data = await r.json().catch(() => null);
-
-              if (!r.ok) {
-                const msg =
-                  data?.error ||
-                  data?.detail ||
-                  data?.message ||
-                  `Error ${r.status}`;
-                throw new Error(msg);
-              }
-
-              router.push("/security?kind=BUYER&operation=verify-email");
-            } catch (ex: unknown) {
-              setErr(ex instanceof Error?ex.message:"No se pudo completar.");
-            } finally {
-              setLoading(false);
-            }
-          }}
-          className="w-full rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-60"
-        >
-          {loading ? "Creando..." : "Crear cuenta"}
-        </button>
-      </div>
-    </div>
-  );
+  const [busy, setBusy] = useState(false), [error, setError] = useState(""), [sent, setSent] = useState(false);
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const data = new FormData(e.currentTarget); setError("");
+    if (data.get("password") !== data.get("confirm")) { setError("Las contraseñas no coinciden."); return; }
+    setBusy(true);
+    try { const response = await fetch("/api/auth/signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: String(data.get("email")).trim().toLowerCase(), password: data.get("password") }) });
+      if (!response.ok) setError("No pudimos completar la solicitud. Revisa los datos o intenta más tarde."); else setSent(true);
+    } catch { setError("No pudimos conectar. Intenta nuevamente."); } finally { setBusy(false); }
+  }
+  return <AuthShell><div className="stack-sm"><p className="eyebrow">Tu próxima experiencia</p><h1>Crea tu cuenta</h1><p className="muted">Un lugar para tus entradas y tus encuentros.</p></div>{sent ? <div className="stack"><Notice>Solicitud recibida. Si corresponde, recibirás las instrucciones para verificar tu correo.</Notice><Link className="btn" href="/security?kind=BUYER&operation=verify-email">Verificar mi correo</Link><Link href="/signin">Volver a ingresar</Link></div> : <form onSubmit={submit} className="stack"><Field label="Correo electrónico"><input name="email" type="email" autoComplete="email" required maxLength={254} placeholder="tu@correo.cl" /></Field><Field label="Contraseña" hint="Usa al menos 12 caracteres."><input name="password" type="password" autoComplete="new-password" minLength={12} maxLength={256} required /></Field><Field label="Repite tu contraseña"><input name="confirm" type="password" autoComplete="new-password" minLength={12} maxLength={256} required /></Field><p className="hint">Consulta la información de <Link href="/legal/privacidad">privacidad</Link> y los <Link href="/legal/terminos">términos del servicio</Link>.</p>{error && <Notice error>{error}</Notice>}<Button disabled={busy}>{busy ? "Enviando…" : "Crear cuenta →"}</Button><p className="muted">¿Ya tienes cuenta? <Link href="/signin">Ingresar</Link></p></form>}</AuthShell>;
 }

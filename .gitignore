@@ -32,3 +32,5 @@ Thumbs.db
 
 # Disposable local PostgreSQL and security test artifacts
 .local/
+
+.next-m5-qa/

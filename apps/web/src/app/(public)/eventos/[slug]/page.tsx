@@ -1,137 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { formatDateLong } from "@/lib/events";
 import { getEventBySlugDb } from "@/lib/events.server";
+import Media from "@/components/tc/Media";
+import { EventMetadata } from "@/components/tc/events";
 import EventTicketSelector from "@/components/EventTicketSelector";
-
-type Props = { params: Promise<{ slug: string }> };
-
-function formatDateOnly(dateISO: string) {
-  const d = new Date(dateISO);
-  return d.toLocaleDateString("es-CL", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatTimeOnly(dateISO: string) {
-  const d = new Date(dateISO);
-  return d.toLocaleTimeString("es-CL", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-export default async function EventoDetallePage({ params }: Props) {
-  const { slug } = await params;
-
-  const event = await getEventBySlugDb(slug);
-  if (!event) return notFound();
-
-  const eventImage = event.image?.trim() || "";
-
-  return (
-    <div className="bg-transparent text-white">
-      <div className="space-y-6 py-10">
-        <div>
-          <Link
-            href="/eventos"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80 hover:bg-black/30 hover:text-white"
-          >
-            ← Volver a eventos
-          </Link>
-        </div>
-
-        <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(0,0,0,0.55),rgba(255,255,255,0.06))] shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-sm">
-          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_360px]">
-            {/* Imagen primero en móvil */}
-            {eventImage ? (
-              <div className="order-1 lg:order-2">
-                <img
-                  src={eventImage}
-                  alt={event.title}
-                  className="block w-full object-contain object-center h-[260px] sm:h-[320px] lg:h-[420px]"
-                />
-              </div>
-            ) : null}
-
-            {/* Información */}
-            <div className="order-2 p-6 md:p-7 lg:order-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-black/25 px-3 py-1 text-xs text-white/90 ring-1 ring-white/10">
-                  {event.city}
-                </span>
-                <span className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs text-white ring-1 ring-[color:var(--accent-soft-2)]">
-                  {formatDateOnly(event.dateISO)}
-                </span>
-                <span className="rounded-full bg-black/25 px-3 py-1 text-xs text-white/90 ring-1 ring-white/10">
-                  {formatTimeOnly(event.dateISO)}
-                </span>
-              </div>
-
-              <h1 className="mt-4 text-3xl font-extrabold tracking-tight md:text-5xl">
-                {event.title}
-              </h1>
-
-              <div className="mt-4 space-y-2 text-sm text-white/85 md:text-base">
-                <p>
-                  <span className="text-white/70">Lugar:</span>{" "}
-                  <span className="font-semibold">{event.venue}</span>
-                </p>
-                <p className="text-white/75">{event.city}</p>
-                <p className="text-sm text-white/70">
-                  {formatDateLong(event.dateISO)} • {event.venue} • {event.city}
-                </p>
-              </div>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <a
-                  href="#tickets"
-                  className="inline-flex items-center justify-center rounded-2xl bg-[color:var(--accent)] px-5 py-3 text-sm font-semibold text-white hover:brightness-95"
-                >
-                  Comprar tickets
-                </a>
-                <a
-                  href="#info"
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white/90 hover:bg-white/10"
-                >
-                  Ver info
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-          <section
-            id="info"
-            className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(0,0,0,0.35))] p-6 md:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-sm"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-bold tracking-widest text-white/85">
-                INFORMACIÓN COMPLETA DEL EVENTO
-              </p>
-              <span className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-[11px] text-white ring-1 ring-[color:var(--accent-soft-2)]">
-                Importante
-              </span>
-            </div>
-
-            <div className="mt-4 space-y-4 text-sm leading-6 text-white/80">
-              <p className="whitespace-pre-wrap">{event.description}</p>
-
-              <p className="text-xs text-white/55">
-                {formatDateLong(event.dateISO)} • {event.venue} • {event.city}
-              </p>
-            </div>
-          </section>
-
-          <aside id="tickets" className="h-fit scroll-mt-24 lg:sticky lg:top-20">
-            <EventTicketSelector event={event} />
-          </aside>
-        </div>
-      </div>
-    </div>
-  );
+import { Notice } from "@/components/tc/ui";
+export const dynamic = "force-dynamic";
+export default async function EventPage({ params }: { params: Promise<{ slug: string }> }) {
+  const event = await getEventBySlugDb((await params).slug);
+  if (!event) notFound();
+  const past = event.ended;
+  return <div className="page"><Link className="hint" href="/eventos">← Volver a la cartelera</Link><section className="detail-hero"><Media src={event.hero?.desktop || event.image} mobileSrc={event.hero?.mobile} alt={event.title} priority sizes="(max-width: 800px) 100vw, 55vw" /><div className="stack"><p className="eyebrow">{event.categoryName || "Evento"} · {event.city}</p><h1>{event.title}</h1><EventMetadata event={event} /><a className="btn" href="#tickets">Ver entradas →</a></div></section>
+    <div className="detail-columns"><section className="stack"><h2>El encuentro</h2><p className="description">{event.description}</p><hr className="divider" /><div><p className="eyebrow">Organiza</p><h3>{event.organizerName || "Información del organizador pendiente"}</h3></div><Link href="/ayuda">¿Necesitas ayuda con tu entrada? →</Link></section>
+      <aside id="tickets" className="selection">{past ? <Notice>Este evento ya finalizó. No hay entradas a la venta.</Notice> : <EventTicketSelector key={event.id} event={event} />}</aside></div>
+  </div>;
 }
