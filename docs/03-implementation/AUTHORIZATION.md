@@ -1,4 +1,4 @@
-# Authorization boundaries — current through M6
+# Authorization boundaries — current through M7
 
 M1 (`39a0931`) and M2 (`319cb5f`) remain implemented. M3 extends their server guards with the shared persisted identity and staff model; client roles, cookie presence, event codes and knowledge of identifiers never authorize access. Full identity/session/recovery/MFA/delivery/rate/audit details are in [IDENTITY-SECURITY.md](IDENTITY-SECURITY.md).
 
@@ -114,3 +114,14 @@ New image references must belong to the tenant and be readable/editable in the s
 Production AI remains unavailable. The explicitly configured development-only local rules adapter is visibly identified and cannot activate in production. Current/proposed fields require review, sensitive values require confirmation, and apply uses the same versioned draft save. No external provider/PII transmission or automatic publication, refund, communication or promotion occurs. M7 will add the real provider integration.
 
 Remaining limits include in-memory CSV volume, bounded 200-event dashboard/list, M7 provider AI, M8 ticket operations, M9 admin moderation/refunds, legacy critical corrections, production storage/workers/grants/key management, safe transfer and provider/browser certification. M6 does not certify the whole platform for production.
+
+
+## M7 AI boundaries
+
+The M6 development-only AI section is superseded by [AI-ARCHITECTURE.md](AI-ARCHITECTURE.md). `/api/organizer/events/:id/ai` authenticates with M3 and builds context only after live event capability checks: event.edit for content/readiness/tiers/promotions, finance.read for aggregate analytics, attendees.read for communication drafts. It repeats authority after provider completion. The legacy event POST proposal action delegates to the same service. Provider configuration and a ticket/event/proposal ID never grant authority.
+
+Proposals bind actor, event, base revision and expiry. Applying a field requires event.edit, current revision, a selected field allowed by the original proposal, and explicit server-side sensitive confirmation for dates/timezone/location/age/capacity/tiers. The normal M6 save transaction and inventory constraints remain authoritative. Apply/reject and audit are atomic and single-use; metadata records field names, provider/model and confirmation without full prompts. No AI action can publish, pause, cancel, pay, refund, settle, alter banking, send communications or activate promotions.
+
+`/api/ai/simulator` is the intentional public generation surface. Mutation requires same-origin, bounded input and persisted network/session/global budgets. A random 256-bit HttpOnly host-only cookie identifies a hashed, expiring anonymous capability; draft/proposal content is encrypted. IDs alone cannot read/claim. Authenticated saves bind exact actor kind/ID. Claim requires that browser capability, matching bound actor if present, live tenant-wide event.edit, explicit confirmation and an approved organization. Creation/save/claim consumption/audit commit together; expiry/replay/foreign user/organization fail. Temporary draft ciphertext is cleared after claim. Account approval/MFA are never bypassed.
+
+Provider inputs use explicit field allowlists and aggregates, with best-effort free-text contact/key redaction. No attendee names/emails, payment/session/MFA/bank/provider secrets are assembled into contexts. Model instructions are separate from untrusted data; no tools or database access exist. Schema validation does not establish semantic truth or comprehensive DLP. Live model quality/injection/privacy verification, trusted ingress, encrypted-data retention scheduling, production keys/grants/migrations and prior release gates remain required. No real provider or production system was called.

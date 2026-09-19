@@ -1,6 +1,13 @@
 @import "tailwindcss" source(none);
 @source "../";
 @import "./fonts.css";
+/* M7 task-oriented AI: the same fields and surfaces as the event editor. */
+.ai-diff,.ai-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.ai-diff>*{min-width:0}.ai-diff pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;font-size:13px;color:var(--muted);padding:12px;border:1px solid var(--border)}
+.ai-review,.ai-simulator{min-width:0}.ai-review textarea{min-height:110px}
+.tc .ai-simulator .org-preview{width:100%;max-width:100%;container-type:inline-size}
+.tc .ai-simulator .org-preview.mobile{max-width:390px;margin-inline:auto}
+@media(max-width:800px){.ai-diff,.ai-fields{grid-template-columns:1fr;gap:16px}}
 :root {
  --background:#0a0b0c; --foreground:#e9eae7; --surface:#101215; --surface-2:#15181c;
  --border:rgba(255,255,255,.12); --accent:#d8342c; --accent-2:#e9615a; --accent-soft:rgba(216,52,44,.12);

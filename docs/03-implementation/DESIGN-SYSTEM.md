@@ -14,7 +14,7 @@ The audit found fixture-backed Home data, N+1/unbounded catalog queries, three p
 | --- | --- |
 | Background / surfaces | `#0A0B0C`, `#101215`, `#15181C`; fields `#0E1013` |
 | Text / muted | `#E9EAE7`, `#A8ADB1` |
-| Accent | `#D8342C`; focus/light accent `#E9615A` |
+| Accent | `#D8342C`; focus/light accent `#E9625A` |
 | Status | Muted green `#9DB8A5`, warning `#D5AC70`; always accompanied by text |
 | Borders / radius | Fine white at 12% opacity; 4px default; restrained perforation only on tickets |
 | Spacing | 4 / 8 / 12 / 16 / 24 / 32 / 48px |
@@ -72,3 +72,14 @@ Event Center implements overview, editor, inventory, sales, attendees, staff, ac
 The proposal surface has no floating chatbot. Production reports unavailable; the opt-in local development parser is explicitly labeled, with editable current/proposed diff, accept/reject controls, missing fields and sensitive-value confirmation. Real model generation and contextual analytical reasoning remain M7. No prototype response is passed off as AI.
 
 Evidence: [qa/m6/README.md](qa/m6/README.md), 100 screen/viewport combinations plus real browser draft, conflict, proposal, binary-upload, publication, invitation and staff-session actions. Existing local art and all identities/orders/metrics in captures are synthetic QA fixtures. Organizer authentication pages and the separate legacy owner payments layout remain existing guarded screens; wider admin/checkout redesign, physical devices, other browsers and formal accessibility certification remain later work.
+
+
+## M7 task-oriented AI patterns
+
+The public simulator follows approved Fase 1B describe/review/adjust/save states using the existing 1D tokens. It now has real asynchronous server generation, explicit provider/development/unavailable labels, editable event/tier fields, missing information, recoverable errors, shared public event preview, save/account handoff and preserved-draft notices. The account gate uses M3 verification/approval/MFA without invented completion promises. No generic chat bubble or second design system was added.
+
+Organizer review uses current/proposed columns that stack on mobile, per-field acceptance, editable values and a selected-field summary. Sensitive values reveal a distinct confirmation block; editing or changing selection clears client confirmation, and the server independently enforces it. Facts, hypotheses and recommendations are separate labeled sections with metric references. Communication/promotion copy remains editable and cannot send/activate. Editor/inventory/readiness links and sales/analytics/attendee contexts lead to focused tasks; manual editing remains available.
+
+Status regions announce generation/results/errors, review headings receive focus, native labeled controls support keyboard interaction and reduced-motion rules are retained. The simulator uses the same EventDetail/Preview as M6, with no purchase or inventory fetch. Summary/SEO suggestions persist in the normal editor; published metadata consumes reviewed fields. No fabricated facts are used as placeholders.
+
+Evidence: [qa/m7](qa/m7/README.md), 62 states across 390/430/768/1024/1440 including real browser draft claim. Development screenshots are labeled local rules; provider output quality and non-Chrome/physical-device/formal accessibility certification remain pending.

@@ -19,7 +19,7 @@ Updated: 2026-09-18. Branch: `astra/ticketchile-v2`. Starting commit: `6104fd9`.
 
 ## Current work
 
-M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df1875d392abc7b7ad60a67`; M3 in `fd48fc02df1408a299157d7308b644b102a532cd`; M4 in `9e4466e34a69192761a36a918c56e430c849c9be`; M5 in `9ac87167614db44fbfe05c2c685fd006bcee818a`. M6 is complete in the coherent commit containing the M6 entry below. Prior milestones were extended, not reimplemented. No deployment, production credentials/data, live provider calls, merge or push.
+M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df1875d392abc7b7ad60a67`; M3 in `fd48fc02df1408a299157d7308b644b102a532cd`; M4 in `9e4466e34a69192761a36a918c56e430c849c9be`; M5 in `9ac87167614db44fbfe05c2c685fd006bcee818a`. M6 is complete in `3e9b00ec43505f0df3dc7ee34ac9134d4fdcb45e`. M7 is complete in the coherent commit containing the M7 entry below. Prior milestones were extended, not reimplemented. No deployment, production credentials/data, live provider calls, merge or push.
 
 ## M2 completed
 
@@ -34,7 +34,7 @@ M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df187
 
 ## Pending
 
-M6-M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). M1-M5 are complete locally. Production schema adoption, external worker installation, provider end-to-end certification and the remaining product milestones are pending. The full platform remains incomplete and is not production-ready.
+M8-M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). M1-M7 are complete locally. Production schema adoption, external worker installation, provider end-to-end certification and the remaining product milestones are pending. The full platform remains incomplete and is not production-ready.
 
 ## Decisions
 
@@ -244,3 +244,38 @@ All database and browser work used synthetic loopback fixtures without applicati
 ## Exact next milestone after M6
 
 **M7: Public AI simulator and organizer contextual AI.** Completion evidence: validated proposals, preserved drafts and confirmed sensitive changes. Continue from this coherent M6 commit. Stop here; do not begin M7 or deploy without a new instruction.
+
+
+## M7 completed - supersedes historical next-milestone entries
+
+- Confirmed clean `astra/ticketchile-v2` at `3e9b00e`, M1-M6 completion and preserved prior boundaries. Read the M7 plan, PRD-AI, authorization/design/lifecycle documents and approved public simulator reference. Audited static simulator, local parser, organizer review, aggregate data, M3 rate/audit and identity gates.
+- Added a vendor-independent task contract, closed runtime/JSON schemas, explicit disabled/development states and a real OpenAI Responses adapter with strict output, no tools, no response storage request, fixed endpoint, server-only key/model allowlist, bounds, abort timeout and no automatic retries. Official API contract was checked; all execution used deterministic/fake transports, not live credentials.
+- Implemented the public simulator: real asynchronous generation, editable event/tier proposals, missing fields/warnings, manual fallback, shared desktop/mobile preview and account/save flow. Seven-day encrypted browser-capability drafts survive auth navigation; actor binding and tenant-wide authorized, confirmed, atomic single-use claim create a private organizer draft. Expiry/replay/foreign actors and invalid claim rollback are tested.
+- Replaced the organizer parser endpoint with the shared architecture, including its compatibility action. Added contextual copy/shortening/summary/FAQ/SEO/tiers/readiness, editable per-field diff, selected-field application/rejection, server-sensitive confirmation and revision-aware normal saves. New tiers are added inactive. No AI lifecycle, financial, bank, message-send or promotion activation authority exists.
+- Added explicit event/capability context assemblers and real cumulative analytics aggregates. UI distinguishes server facts, model hypotheses and recommendations with metric references. Communication/promotion output remains editable draft text. No attendee PII or whole tenant/payment rows are sent; free-text redaction supplements allowlists. Prompts are not persisted/logged, validated output is encrypted, and accepted field/confirmation metadata is audited atomically.
+- Added durable request correlation/idempotency, user/session/network/global cost limits, token/latency/outcome metadata, input/output budgets and sanitized failure states. Failure/timeout/schema rejection preserve drafts. Pending/failed request IDs never silently repeat a paid provider call.
+- Appended migration `0007_ai_proposals.sql` for summary/SEO, encrypted proposal metadata and temporary claims; migrations 0001-0006 unchanged. Updated authorization, lifecycle, design, migration and QA documentation; created [AI-ARCHITECTURE.md](AI-ARCHITECTURE.md) and [browser evidence](qa/m7/README.md).
+
+## M7 verification
+
+| Check | Result |
+| --- | --- |
+| `node --test --experimental-test-isolation=none --test-reporter=spec tests/*.test.mjs` | PASS: 294 tests, zero failures/skips; 18 new AI cases and retained M1-M6 coverage |
+| Final AI/organizer regression rerun after review polish | PASS: 35 tests |
+| `node node_modules/typescript/bin/tsc --noEmit --incremental false` | PASS |
+| `node scripts/lint-changed.mjs` | PASS: 34 changed/new source/test/script files; zero errors/warnings |
+| `node scripts/verify-build.mjs` | PASS: optimized production compilation, type validation, page generation and route collection with scrubbed/inert credentials and unreachable loopback DB |
+| `node scripts/m7-browser-qa.mjs` | PASS: 62 screen/viewport combinations at 390/430/768/1024/1440, including field acceptance, secure claim, keyboard focus and reduced-motion emulation |
+| Root `git -c core.safecrlf=false diff --check` | PASS |
+
+Real PostgreSQL tests cover tenant/event/capability denial, revocation, schema/revision validation, explicit sensitive confirmation, no lifecycle mutation, atomic apply/audit/rejection, concurrency/idempotency, claim actor/expiry/reuse/rollback, public rates and unchanged drafts after failure. Provider contract tests use explicit fake transports; no test calls a merchant, mail or real model service. Browser errors/delay are explicitly injected in the QA harness; production loading follows the real request. Screenshots were visually inspected and raw tier JSON was replaced with labeled controls during final review.
+
+Intermediate issues corrected: an older M6 unavailable-provider test relied on ambient configuration; it now sets and restores disabled mode explicitly. A registration handoff import needed its visible notice wired. Windows sandbox restrictions required authorized execution of local preview/build/lint and PostgreSQL helpers. No automatic approval rejection remained. Whole-repository lint was not rerun or claimed clean; historical debt remains 287 errors/35 warnings.
+
+Remaining AI limits: live model/account/schema/usage and content-quality/injection evaluation, approved provider privacy/data-processing terms, production trusted ingress and budgets, encrypted-data physical retention scheduling and key rotation, cross-device draft recovery/identity linking, richer time-series/checkout analytics and formal accessibility/device/load certification. Suggestions can still be semantically wrong despite valid shape and require review. Prior production media, migrations/grants, workers, provider certification, transfer/key and legal-policy limits remain. No production-readiness claim.
+
+All database/browser work used synthetic loopback fixtures. No deployment, production credentials/data, real AI/provider/mail/Wallet call, merge or push. Local preview/isolated Chrome/PostgreSQL are stopped at handoff; local synthetic databases remain for inspection.
+
+## Exact next milestone after M7
+
+**M8: Staff, attendees, promotions, complimentary tickets and operational scanner.** Completion evidence: least privilege, inventory/audit and concurrent check-in tests. Stop here; do not begin M8 or deploy without a new instruction.

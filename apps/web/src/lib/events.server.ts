@@ -4,7 +4,7 @@ import type { Event, TicketType } from "@/lib/events";
 import { catalogFilters, type SearchValues } from "@/lib/discovery";
 import { eventMedia } from "@/lib/media";
 
-type Row = { id: string; slug: string; title: string; city: string; venue: string; date_iso: string | Date; description: string;
+type Row = {short_description:string;seo_title:string;seo_description:string; id: string; slug: string; title: string; city: string; venue: string; date_iso: string | Date; description: string;
   timezone: string; end_at: string | Date | null; address: string; age_policy: string; access_info: string; faq: string;
   image: string; hero_desktop: string; hero_mobile: string; category_slug: string; category_name: string; organizer_name: string;
   tiers: { id: string; name: string; price_clp: number; capacity: number; sold: number; held: number; max_per_order: number | null }[] };
@@ -22,7 +22,7 @@ export function rowToEvent(row: Row): Event {
   const image = eventMedia(row.image, row.id);
   return { id: row.id, slug: row.slug, title: row.title, city: row.city, venue: row.venue, dateISO: new Date(row.date_iso).toISOString(),
     timezone:row.timezone,endISO:row.end_at?new Date(row.end_at).toISOString():undefined,address:row.address,agePolicy:row.age_policy,accessInfo:row.access_info,faq:row.faq,
-    description: row.description, image, hero: { desktop: row.hero_desktop ? eventMedia(row.hero_desktop, row.id, "desktop") : image, mobile: row.hero_mobile ? eventMedia(row.hero_mobile, row.id, "mobile") : image },
+    description: row.description, shortDescription:row.short_description,seoTitle:row.seo_title,seoDescription:row.seo_description,image, hero: { desktop: row.hero_desktop ? eventMedia(row.hero_desktop, row.id, "desktop") : image, mobile: row.hero_mobile ? eventMedia(row.hero_mobile, row.id, "mobile") : image },
     category: row.category_slug || undefined, categoryName: row.category_name || undefined, organizerName: row.organizer_name || undefined, ended: new Date(row.date_iso).getTime() < Date.now(), ticketTypes };
 }
 export async function getEventBySlugDb(slug: string) {

@@ -60,14 +60,16 @@ export async function readEvent(id:string,capability?:string,client?:PoolClient,
 export async function createEvent(organizerId:string){
   const actor=await requireOrganizerCapability(organizerId,'event.edit');
   await limit('event-create',`${actor.kind}:${actor.id}`,{hits:20,seconds:3600});
-  return withTx(async client=>{
+  return withTx(client=>createEventTx(client,organizerId,actor));
+}
+export async function createEventTx(client:PoolClient,organizerId:string,actor:Principal){
+    await requireOrganizerCapability(organizerId,'event.edit',actor);
     const id=`evt_${randomUUID()}`;
     await client.query(`INSERT INTO events(id,slug,title,city,venue,date_iso,description,image,lifecycle,is_published)
       VALUES($1,$1,'','','',NULL,'','','DRAFT',false)`,[id]);
     await client.query('INSERT INTO organizer_events(event_id,organizer_id) VALUES($1,$2)',[id,organizerId]);
     await audit(client,{actor,organizerId,eventId:id,action:'event.created',targetType:'event',targetId:id});
     return {id,revision:1};
-  });
 }
 function text(v:unknown,max:number){if(typeof v!=='string'||v.length>max)fail('Texto inválido o demasiado extenso.');return v.trim();}
 function integer(v:unknown,min:number,max:number){if(typeof v!=='number'||!Number.isSafeInteger(v)||v<min||v>max)fail('Número fuera de rango.');return v;}
@@ -75,8 +77,8 @@ function date(v:unknown){if(v===null||v==='')return null;if(typeof v!=='string'|
 export function validateDraft(input:unknown):Draft{
   if(!input||typeof input!=='object'||Array.isArray(input))fail('Borrador inválido.');
   const v=input as Record<string,unknown>,d={...emptyDraft};
-  for(const key of ['title','description','category_slug','timezone','venue','address','city','region','age_policy','access_info','image','hero_desktop','hero_mobile','faq'] as const)
-    d[key]=text(v[key],['description','faq'].includes(key)?5000:['image','hero_desktop','hero_mobile'].includes(key)?300:500);
+  for(const key of ['title','description','category_slug','timezone','venue','address','city','region','age_policy','access_info','image','hero_desktop','hero_mobile','faq','short_description','seo_title','seo_description'] as const)
+    d[key]=text(v[key],key==='seo_title'?70:key==='seo_description'?170:key==='short_description'?300:['description','faq'].includes(key)?5000:['image','hero_desktop','hero_mobile'].includes(key)?300:500);
   try{new Intl.DateTimeFormat('es-CL',{timeZone:d.timezone});}catch{fail('Zona horaria inválida.');}
   d.date_iso=date(v.date_iso);d.end_at=date(v.end_at);d.capacity=integer(v.capacity,0,1000000);
   if(d.date_iso&&d.end_at&&d.end_at<=d.date_iso)fail('El cierre debe ser posterior al inicio.');
@@ -98,7 +100,9 @@ export function validateDraft(input:unknown):Draft{
 export async function saveEvent(id:string,revision:unknown,input:unknown,confirmPrices=false){
   const actor=await organizerActor();
   await limit('event-save',`${actor.kind}:${actor.id}`,{hits:120,seconds:60});
-  return withTx(async client=>{
+  return withTx(client=>saveEventTx(client,actor,id,revision,input,confirmPrices));
+}
+export async function saveEventTx(client:PoolClient,actor:Principal,id:string,revision:unknown,input:unknown,confirmPrices=false){
     await lockInventory(client);await expireHoldsTx(client);
     const old=await readEvent(id,'event.edit',client,actor);
     if(old.revision!==revision)fail('Hay una versión más reciente. Recarga antes de volver a guardar.','REVISION_CONFLICT',409);
@@ -131,7 +135,6 @@ export async function saveEvent(id:string,revision:unknown,input:unknown,confirm
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT(event_id,id) DO UPDATE SET name=$3,description=$4,price_clp=$5,capacity=$6,max_per_order=$7,sales_start=$8,sales_end=$9,visible=$10,active=$11`,[id,t.id,t.name,t.description,t.price_clp,t.capacity,t.max_per_order,t.sales_start,t.sales_end,t.visible,t.active]);
     for(const action of ['event.updated',...(priceChange?['event.prices_changed']:[]),...(d.capacity!==old.capacity?['event.capacity_changed']:[]),...((d.tiers.length!==old.tiers.length||d.tiers.some(t=>{const before=old.tiers.find(o=>o.id===t.id);return !before||Object.keys(t).some(k=>!['sold','held'].includes(k)&&t[k as keyof Tier]!==before[k as keyof Tier]);}))?['event.tiers_changed']:[])])await audit(client,{actor,organizerId:old.organizer_id,eventId:id,action,targetType:'event',targetId:id});
     return {revision:old.revision+1};
-  });
 }
 export async function transitionEvent(id:string,revision:unknown,target:unknown,confirmation:unknown){
   const actor=await organizerActor();

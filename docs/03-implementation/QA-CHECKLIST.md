@@ -148,3 +148,25 @@ M5 does not waive M3/M4 production migration, payment/provider/Wallet/email, key
 - [ ] Production object adapter, schema adoption, restricted DB grants, keys, provider certification, delivery/reconciliation scheduling, legal/contact operations and broad device/accessibility/load work remain release gates.
 
 Whole-repository lint was not rerun or claimed clean; historical baseline remains 287 errors and 35 warnings. No deployment, production credentials/data, live provider calls, merge or push occurred.
+
+
+## M7 AI verification - supersedes M6 AI pending item
+
+- [x] M1-M6 confirmed complete; no reimplementation or authorization shortcuts.
+- [x] Replaceable provider contract, explicit disabled/development states; real adapter contract tested with fake transport only.
+- [x] Closed schema validates unknown fields, categories, dates/timezones/windows, integer CLP/stock, lengths and analytics references; malformed/refused/incomplete output rejected.
+- [x] Server-side organizer authentication, tenant/event/feature capability scope before and after generation; revoked/foreign grants denied.
+- [x] Explicit minimal contexts; no attendee/payment secrets; obvious free-text PII/key patterns redacted; prompts absent from persistence/logging.
+- [x] Request idempotency/concurrency, sanitized failure/timeout/schema outcomes, persisted public/user/global rates and budgets; no automatic provider retries.
+- [x] Sensitive field confirmation enforced server-side; selected reviewed fields only, normal revision/inventory services, single-use apply/reject with transactional audit; no AI publication/cancellation/financial authority.
+- [x] Encrypted seven-day browser capability draft, authenticated actor binding, approved tenant-wide claim, expiry/replay/cross-user denial, atomic rollback and private draft creation.
+- [x] Real scoped facts separated from hypotheses and recommendations; metric references validated; no fabricated conversion/forecasts.
+- [x] 294 full regression tests (18 new AI cases), plus final 35-test affected rerun; PostgreSQL migration/idempotency/checksum/rollback coverage through 0007.
+- [x] TypeScript, scoped lint (34 changed/new files, zero errors/warnings), credential-isolated production build and Git whitespace checks.
+- [x] 62 local Chrome screen/viewport combinations at 390/430/768/1024/1440: public empty/generating/proposal/preview/error/account; organizer creation/diff/sensitive confirmation/rewrite/analytics; actual edited-field application and anonymous-to-organizer claim. Keyboard focus and reduced motion emulated. [Evidence](qa/m7/README.md).
+- [ ] Live provider model/schema/usage, output quality and adversarial-content evaluation; approved privacy/provider processing terms.
+- [ ] Production ingress/keys/grants/migration rehearsal, expired ciphertext retention job and load/operational budget validation.
+- [ ] Cross-device draft recovery/identity linking, broader analytics and physical-device/other-browser/screen-reader/formal accessibility certification.
+- [ ] M8 operational promotions, courtesies, attendee/scanner workflows; M9 financial/admin actions and prior release gates.
+
+Whole-repository lint remains unclaimed; historical legacy debt persists. No deployment, production mutation or live model calls occurred.

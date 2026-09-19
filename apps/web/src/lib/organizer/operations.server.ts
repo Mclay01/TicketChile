@@ -2,9 +2,6 @@ import 'server-only';
 import { pool } from '@/lib/db';
 import { organizerActor } from '@/lib/security/capabilities.server';
 import { readEvent } from './events.server';
-import { AccessError } from '@/lib/access.server';
-import { localProposal } from './proposals';
-import { limit } from '@/lib/security/rate-limit.server';
 export async function attendees(id:string,query='',status='',page=1){
   const actor=await organizerActor();await readEvent(id,'attendees.read',undefined,actor);
   const q=`%${query.slice(0,120).replace(/[\\%_]/g,'\\$&')}%`;
@@ -49,12 +46,4 @@ export async function activity(id:string){
   const p=await organizerActor();await readEvent(id,'audit.read',undefined,p);
   return (await pool.query(`SELECT action,created_at FROM security_audit WHERE event_id=$1 AND security_can_event($2,$3,$4,event_id,'audit.read') ORDER BY created_at DESC LIMIT 20`,[id,p.kind,p.id,p.version])).rows as {action:string;created_at:Date}[];
 }
-export async function organizerProposal(id:string,prompt:unknown){
-  const actor=await organizerActor();
-  await limit('organizer-proposal',`${actor.kind}:${actor.id}`,{hits:30,seconds:3600});
-  const e=await readEvent(id,'event.edit');
-  if(typeof prompt!=='string'||prompt.length<10||prompt.length>4000)throw new AccessError(400,'INVALID_INPUT','Describe el evento en 10 a 4000 caracteres.');
-  if(process.env.NODE_ENV!=='production'&&process.env.ORGANIZER_AI_ADAPTER==='local')return localProposal(prompt,e.revision);
-  // M7 owns the model adapter. No fake generation, prompt persistence or external transmission.
-  throw new AccessError(503,'AI_UNAVAILABLE','TicketChile AI aún no tiene un proveedor habilitado. Tu borrador está disponible en el editor manual.');
-}
+export {proposeEvent as organizerProposal} from '@/lib/ai/service.server';

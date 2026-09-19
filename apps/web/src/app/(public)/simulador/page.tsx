@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { Field, Notice, PageHeading } from "@/components/tc/ui";
-export default function SimulatorPage() {
-  return <div className="page"><PageHeading eyebrow="TicketChile AI · Para organizadores" title="Dale forma a tu próxima idea">Un punto de partida para planificar tu evento.</PageHeading><div className="detail-columns"><section className="panel stack"><h2>¿Qué te gustaría crear?</h2><Field label="Describe tu evento" hint="Puedes explorar este espacio. Tu texto no se envía ni se guarda."><textarea maxLength={2000} placeholder="Tipo de evento, ciudad, fecha, capacidad y las entradas que imaginas…" /></Field><Notice>Estamos preparando el asistente. La generación de propuestas aún no está disponible.</Notice><button className="btn" disabled>Generación próximamente</button></section><aside className="stack"><p className="eyebrow">De la idea al encuentro</p><h2>Tu criterio,<br />en cada decisión.</h2><p className="muted">El asistente propondrá una estructura para que puedas revisarla. Tú decidirás los detalles antes de publicar.</p><hr className="perforation" /><p className="muted">¿Ya tienes un evento?</p><Link className="btn secondary" href="/organizador">Ir al panel organizador →</Link></aside></div></div>;
-}
+import {PageHeading} from '@/components/tc/ui';
+import Simulator from '@/components/ai/Simulator';
+import {providerStatus} from '@/lib/ai/provider.server';
+export const dynamic='force-dynamic';
+export default function SimulatorPage(){return <div className="page"><PageHeading eyebrow="TicketChile AI / Para organizadores" title="Dale forma a tu próxima idea">De una descripción a una propuesta que puedes revisar.</PageHeading><Simulator status={providerStatus()}/></div>;}

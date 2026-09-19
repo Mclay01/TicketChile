@@ -35,6 +35,9 @@ export type Event = {
     mobile: string;
   };
 
+  shortDescription?: string;
+  seoTitle?: string;
+  seoDescription?: string;
   description: string;
   ticketTypes: TicketType[];
   ended?: boolean;

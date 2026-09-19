@@ -1,6 +1,7 @@
 // apps/web/src/app/(organizer)/organizador/(auth)/login/OrganizerLoginClient.tsx
 "use client";
 
+import HandoffNotice from '@/components/ai/HandoffNotice';
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -69,7 +70,7 @@ export default function OrganizerLoginClient() {
 
   return (
     <main className="min-h-[72vh] flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md"><HandoffNotice/>
         <div className="mb-6">
           <h1 className="text-2xl font-semibold tracking-tight">Panel Organizador</h1>
           <p className="text-sm text-white/60">Acceso privado a tus eventos, pagos y scanner.</p>

@@ -1,6 +1,7 @@
 // apps/web/src/app/(organizer)/organizador/(auth)/registro/page.tsx
 "use client";
 
+import HandoffNotice from '@/components/ai/HandoffNotice';
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -116,7 +117,7 @@ export default function OrganizerRegisterPage() {
     ].join(" ");
 
   return (
-    <main className="min-h-[80vh] flex items-center justify-center px-4">
+    <main className="min-h-[80vh] flex items-center justify-center px-4"><HandoffNotice/>
       <div className="w-full max-w-lg">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold tracking-tight text-white">Registro de Organizador</h1>
