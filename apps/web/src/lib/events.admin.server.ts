@@ -1,7 +1,6 @@
-import { audit,type Actor } from "@/lib/security/audit.server";
 // apps/web/src/lib/events.admin.server.ts
 import "server-only";
-import { pool,withTx } from "@/lib/db";
+import { pool } from "@/lib/db";
 
 export type AdminEventRow = {
   id: string;
@@ -57,11 +56,4 @@ export async function adminGetEventDb(id: string) {
   } finally {
     client.release();
   }
-}
-
-export async function adminSetPublishedDb(id: string, published: boolean, actor:Actor) {
-  await withTx(async client=>{
-    const result=await client.query("UPDATE events SET is_published=$2 WHERE id=$1 RETURNING id",[id,published]);
-    if(result.rowCount)await audit(client,{actor,eventId:id,action:published?"event.published":"event.unpublished",targetType:"event",targetId:id});
-  });
 }

@@ -1,15 +1,5 @@
-// apps/web/src/app/api/admin/events/[id]/publish/route.ts
-import { NextResponse, type NextRequest } from "next/server";
-import { adminSetPublishedDb } from "@/lib/events.admin.server";
+import { type NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard.server";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const gate = await requireAdmin(req);
-  if (!gate.ok) return gate.response;
-  const { id } = await ctx.params;
-  await adminSetPublishedDb(String(id), true, {kind:"ADMIN",id:gate.admin.id});
-  return NextResponse.json({ ok: true });
-}
+import { privateJson } from "@/lib/access.server";
+export async function POST(req:NextRequest){const gate=await requireAdmin(req);if(!gate.ok)return gate.response;
+return privateJson(410,{ok:false,error:"Legacy publication retired. Use the authorized Event Center lifecycle."});}

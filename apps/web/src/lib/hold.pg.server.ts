@@ -55,7 +55,7 @@ export async function createHoldPgServer(args: {
     await expireHoldsTx(client);
 
     // validar evento existe
-    const ev = await client.query(`SELECT id FROM events WHERE id = $1 AND is_published=true`, [eventId]);
+    const ev = await client.query(`SELECT id FROM events WHERE id = $1 AND is_published=true AND lifecycle='PUBLISHED' AND date_iso>now()`, [eventId]);
     if (ev.rowCount === 0) {
       if (!transaction) await client.query("ROLLBACK");
       throw new Error("Evento no existe.");
@@ -68,7 +68,7 @@ export async function createHoldPgServer(args: {
       `
       SELECT id, name, price_clp, capacity, sold, held, max_per_order
       FROM ticket_types
-      WHERE event_id = $1 AND id = ANY($2)
+      WHERE event_id = $1 AND id = ANY($2) AND active AND visible AND (sales_start IS NULL OR sales_start<=now()) AND (sales_end IS NULL OR sales_end>now())
       ORDER BY id FOR UPDATE
       `,
       [eventId, ids]

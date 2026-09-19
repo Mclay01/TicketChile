@@ -1,4 +1,4 @@
-# Authorization boundaries ? current through M5
+# Authorization boundaries — current through M6
 
 M1 (`39a0931`) and M2 (`319cb5f`) remain implemented. M3 extends their server guards with the shared persisted identity and staff model; client roles, cookie presence, event codes and knowledge of identifiers never authorize access. Full identity/session/recovery/MFA/delivery/rate/audit details are in [IDENTITY-SECURITY.md](IDENTITY-SECURITY.md).
 
@@ -6,7 +6,7 @@ M1 (`39a0931`) and M2 (`319cb5f`) remain implemented. M3 extends their server gu
 
 Admin and organizer cookies resolve hashed `identity_sessions` with expiry, revocation, current account version, live principal state and completed required MFA. Buyer NextAuth sessions resolve a persisted session reference on each use. Login rotates tokens; logout/reset/MFA/privilege changes invalidate sessions. Legacy sessions and signed organizer-ID cookies are not accepted. ADMIN and SUPERADMIN pass operational admin guards; only SUPERADMIN may change identity roles/disabled state through `/api/admin/identity`.
 
-Organizer dashboard/payments pages retain their M1 owner guards and tenant-filtered services. Staff capabilities do not implicitly expose the whole organizer panel or those owner-only pages. The proxy provides preliminary navigation checks, never server authority. Only the existing audited scanner compatibility paths bypass its organizer-cookie-only check, because staff use buyer sessions; their handlers enforce the live capability policy. Admin/other organizer proxy checks remain.
+M6 replaces the organizer panel with live capability-scoped owner/buyer-staff pages. The separate legacy payments page retains its M1 owner guard. Exact organizer panel page paths now bypass the organizer-cookie-only preliminary proxy check so persisted buyer-staff sessions can reach the authoritative server guards. Scanner compatibility exceptions remain; legacy organizer APIs, legacy payments and admin proxy checks remain. Neither a page URL nor a present cookie grants access.
 
 ## Persisted capability model
 
@@ -96,3 +96,21 @@ New account page services independently resolve the live buyer identity. Ticket 
 `GET /api/media/:id` reads a draft only with live event/tenant capability. Public access requires an actual reference from a published event; unpublishing removes that grant on subsequent reads. Responses are private/no-store. Legacy `/api/event-media/:id/:slot` exposes only a fixed raster field on a published event and normalizes it to bounded binary output. The local media adapter is unavailable in production; an explicit production adapter remains a deployment prerequisite.
 
 M5 adds no public QR fetching, client pricing authority, scanner role shortcut, export bypass or payment confirmation path. Earlier identity/payment/production-operation limits remain in force. Profile editing, safe ticket transfer, production media lifecycle and related revocation/key policy remain pending.
+
+## M6 organizer surfaces
+
+`/organizador`, `/organizador/eventos`, creation and Event Center pages use the live M3 principal and persisted event scope. Navigation reflects capabilities, and every section's server service independently enforces them. Door/support never receive finance sections or payment totals; an event-scoped manager cannot create new tenant events. The owner-only legacy `/organizador/pagos` remains separately protected. No new role or capability grant was added to migration 0003.
+
+`POST /api/organizer/events` requires tenant-wide `event.edit`. `GET/PATCH /api/organizer/events/:id` require `event.read`/`event.edit`. Lifecycle POST additionally requires the active approved owner, current revision, allowed transition, applicable checklist and explicit confirmation. Proposal POST requires event editing and a persisted rate limit; it cannot transition lifecycle. All writes are same-origin and body bounded. Actor IDs/tenant IDs/client roles in input are not authority.
+
+Sales and analytics repeat `finance.read` in their scoped SQL; attendees repeat `attendees.read` with bounded search/pagination; access metrics repeat `scanner.read`; audit history requires `audit.read`. Staff screens require `staff.manage` and call the existing owner-only M3 invite/update/revoke endpoints. CSV reuses M2 export authority and formula protection. Reads return neither provider credentials nor buyer QR credentials.
+
+Lifecycle and inventory changes share M4's transaction lock. Check-in now also takes that lock and excludes cancelled/ended events, including `/api/demo/checkin`. Cancellation invalidates unused tickets and releases holds; paid evidence after release enters M4 review without issuance. Price changes do not rewrite purchases. Detailed transitions, pause semantics, review policy and critical-edit restrictions: [EVENT-LIFECYCLE.md](EVENT-LIFECYCLE.md).
+
+All three legacy admin approval/publication mutation routes authenticate then return 410, and the old organizer submission route is retired after authentication. The unused boolean publication writer and organizer demo UI/fallback have been removed. SQL enforces consistency between lifecycle and the public compatibility boolean. Legacy pending submissions remain stored for a separately reviewed M9 migration; no legacy alias can bypass the new publication checklist.
+
+New image references must belong to the tenant and be readable/editable in the source event scope. `/api/event-preview-media/:id/:slot` requires live event-read capability before reading a fixed legacy raster field, repeats scope in SQL, normalizes output and uses private/no-store. Unchanged legacy bytes stay intact; no base64 enters client event props. Production media storage still fails closed.
+
+Production AI remains unavailable. The explicitly configured development-only local rules adapter is visibly identified and cannot activate in production. Current/proposed fields require review, sensitive values require confirmation, and apply uses the same versioned draft save. No external provider/PII transmission or automatic publication, refund, communication or promotion occurs. M7 will add the real provider integration.
+
+Remaining limits include in-memory CSV volume, bounded 200-event dashboard/list, M7 provider AI, M8 ticket operations, M9 admin moderation/refunds, legacy critical corrections, production storage/workers/grants/key management, safe transfer and provider/browser certification. M6 does not certify the whole platform for production.

@@ -29,7 +29,7 @@ async function admin(role="ADMIN"){
 }
 async function event(org){
   const id=`event_${randomUUID()}`;
-  await db.pool.query("INSERT INTO events(id,slug,title,city,venue,date_iso,description,is_published) VALUES($1,$1,'Fixture','City','Venue',NOW(),'Fixture',true)",[id]);
+  await db.pool.query("INSERT INTO events(id,slug,title,city,venue,date_iso,description,is_published) VALUES($1,$1,'Fixture','City','Venue',NOW()+interval '30 days','Fixture',true)",[id]);
   await db.pool.query("INSERT INTO organizer_events(organizer_id,event_id) VALUES($1,$2)",[org.id,id]);
   await db.pool.query("INSERT INTO ticket_types(id,event_id,name,price_clp,capacity) VALUES('general',$1,'General',1000,1000)",[id]);
   return id;
@@ -50,7 +50,7 @@ before(async()=>{
 after(async()=>{await db?.pool.end();if(previousKey===undefined)delete process.env.SECURITY_DATA_KEY;else process.env.SECURITY_DATA_KEY=previousKey;});
 
 test("migrations execute and are idempotent; checksum drift is rejected",async()=>{
-  await migrate(db.pool);assert.equal((await db.pool.query("SELECT count(*)::int AS n FROM schema_migrations")).rows[0].n,5);
+  await migrate(db.pool);assert.equal((await db.pool.query("SELECT count(*)::int AS n FROM schema_migrations")).rows[0].n,6);
   await db.pool.query("UPDATE schema_migrations SET checksum='changed' WHERE version='0003_capability_policy.sql'");
   await assert.rejects(migrate(db.pool),/checksum mismatch/);
   // Restore only the disposable ledger using the immutable source digest.
@@ -243,12 +243,12 @@ test("migration runner refuses unbaselined existing data and rolls back a failed
   const fs=await import("node:fs/promises"),os=await import("node:os"),path=await import("node:path"),url=await import("node:url");
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),"ticketchile-migration-test-"));
   const source=new URL("../sql/migrations/",import.meta.url);
-  for(const file of ["0001_runtime_baseline.sql","0002_identity_security.sql","0003_capability_policy.sql","0004_payment_lifecycle.sql","0005_discovery_media.sql"])
+  for(const file of ["0001_runtime_baseline.sql","0002_identity_security.sql","0003_capability_policy.sql","0004_payment_lifecycle.sql","0005_discovery_media.sql","0006_event_lifecycle.sql"])
     await fs.copyFile(new URL(file,source),path.join(directory,file));
-  await fs.writeFile(path.join(directory,"0006_failure.sql"),"CREATE TABLE should_rollback(id int); SELECT intentionally_missing_function();");
+  await fs.writeFile(path.join(directory,"0007_failure.sql"),"CREATE TABLE should_rollback(id int); SELECT intentionally_missing_function();");
   await assert.rejects(migrate(db.pool,url.pathToFileURL(directory+path.sep)),/intentionally_missing_function/);
   assert.equal((await db.pool.query("SELECT to_regclass('public.should_rollback') AS relation")).rows[0].relation,null);
-  assert.equal((await db.pool.query("SELECT count(*)::int AS n FROM schema_migrations")).rows[0].n,5);
+  assert.equal((await db.pool.query("SELECT count(*)::int AS n FROM schema_migrations")).rows[0].n,6);
 });
 test("privileged HTTP login grants only setup access until MFA confirmation and sets host-only cookies",async()=>{
   const p=await admin();const login=load("lib/security/login.server.ts");

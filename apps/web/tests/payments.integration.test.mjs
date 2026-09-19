@@ -25,7 +25,7 @@ const overrides=()=>({
 function load(entry,extra={}) {return loadSource(entry,{...overrides(),...extra});}
 async function fixture({provider='stripe',qty=2,capacity=10}={}) {
  const event='event_'+randomUUID(),owner=randomUUID()+'@test.invalid';
- await db.pool.query("INSERT INTO events(id,slug,title,city,venue,date_iso,description,is_published) VALUES($1,$1,'Fixture','City','Venue',NOW(),'Local fixture',true)",[event]);
+ await db.pool.query("INSERT INTO events(id,slug,title,city,venue,date_iso,description,is_published) VALUES($1,$1,'Fixture','City','Venue',NOW()+interval '30 days','Local fixture',true)",[event]);
  await db.pool.query("INSERT INTO ticket_types(event_id,id,name,price_clp,capacity) VALUES($1,'general','General',1000,$2)",[event,capacity]);
  const body={eventId:event,items:[{ticketTypeId:'general',qty}],buyerName:'Fixture',buyerEmail:'contact@test.invalid'};
  const payment=await create.preparePayment(owner,provider,body,randomUUID());
@@ -63,9 +63,9 @@ for(const qty of [0,-1,1.5,11,'2',null]) test(`checkout rejects invalid quantity
  const {body}=await fixture();await assert.rejects(create.preparePayment(randomUUID()+'@test.invalid','stripe',{...body,items:[{ticketTypeId:'general',qty}]},randomUUID()));
 });
 test('unpublished event and unknown type cannot reserve inventory',async()=>{
- const {body,event}=await fixture();await db.pool.query('UPDATE events SET is_published=false WHERE id=$1',[event]);
+ const {body,event}=await fixture();await db.pool.query("UPDATE events SET lifecycle='PAUSED',is_published=false WHERE id=$1",[event]);
  await assert.rejects(create.preparePayment(randomUUID()+'@test.invalid','stripe',body,randomUUID()));
- await db.pool.query('UPDATE events SET is_published=true WHERE id=$1',[event]);
+ await db.pool.query("UPDATE events SET lifecycle='PUBLISHED',is_published=true WHERE id=$1",[event]);
  await assert.rejects(create.preparePayment(randomUUID()+'@test.invalid','stripe',{...body,items:[{ticketTypeId:'foreign',qty:1}]},randomUUID()));
 });
 test('concurrent create retries yield one durable payment and hold',async()=>{
@@ -245,7 +245,7 @@ for(const endpoint of ['demo/availability','demo/remaining','remaining']) test(`
  const route=load(`app/api/${endpoint}/route.ts`);const response=await route.GET(new Request(`https://ticketchile.test/api/${endpoint}?eventId=${event}`));
  assert.equal(response.status,200);const payload=await response.json();assert.equal(payload.remainingByTicketTypeId.general,2);
  assert.doesNotMatch(JSON.stringify(payload),/buyerEmail|recentUsed|owner_email|usedAt|soldBy/);
- await db.pool.query('UPDATE events SET is_published=false WHERE id=$1',[event]);assert.equal((await route.GET(new Request(`https://ticketchile.test/api/${endpoint}?eventId=${event}`))).status,404);
+ await db.pool.query("UPDATE events SET lifecycle='PAUSED',is_published=false WHERE id=$1",[event]);assert.equal((await route.GET(new Request(`https://ticketchile.test/api/${endpoint}?eventId=${event}`))).status,404);
 });
 test('finalizer refuses hold/payment owner mismatch before order creation',async()=>{
  const {p}=await fixture();await finalize.recordVerifiedPayment(evidence(p));await db.pool.query("UPDATE holds SET owner_email='foreign@test.invalid' WHERE id=$1",[p.hold_id]);

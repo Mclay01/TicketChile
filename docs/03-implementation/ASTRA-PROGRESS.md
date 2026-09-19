@@ -19,7 +19,7 @@ Updated: 2026-09-18. Branch: `astra/ticketchile-v2`. Starting commit: `6104fd9`.
 
 ## Current work
 
-M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df1875d392abc7b7ad60a67`. Both were verified before M3 and were extended rather than reimplemented. M3 is complete in `fd48fc02df1408a299157d7308b644b102a532cd`. M4 is complete in `9e4466e34a69192761a36a918c56e430c849c9be`. M5 is complete in the commit containing the M5 entry below. No deployment, production credentials/data, provider calls, merge or push.
+M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df1875d392abc7b7ad60a67`; M3 in `fd48fc02df1408a299157d7308b644b102a532cd`; M4 in `9e4466e34a69192761a36a918c56e430c849c9be`; M5 in `9ac87167614db44fbfe05c2c685fd006bcee818a`. M6 is complete in the coherent commit containing the M6 entry below. Prior milestones were extended, not reimplemented. No deployment, production credentials/data, live provider calls, merge or push.
 
 ## M2 completed
 
@@ -203,3 +203,44 @@ Remaining limits: production object storage/legacy media migration and remote-im
 ## Exact next milestone
 
 **M6: Organizer event lifecycle, multi-tier editor and Event Center.** Completion evidence: create/edit/preview/publish and tenant tests. Continue from the coherent M5 commit; do not restart M1-M5. Stop here. Do not deploy or automatically begin M6.
+
+## M6 completed — supersedes the historical next-milestone entry above
+
+Starting state: clean `astra/ticketchile-v2` at M5 `9ac8716`. Read implementation/security/payment/design documentation, approved 1D/Fase 2A references and organizer/AI/product PRDs. Confirmed M1–M5 complete before changing organizer functionality.
+
+- Added a capability-aware 1D organizer shell, desktop/sidebar and mobile/bottom navigation, real scoped dashboard/upcoming events and event list. Revenue appears only with finance authority. Removed unused organizer demo UI/reset/fallback and the replaced one-page submission form.
+- Implemented manual and contextual proposal entry, private draft creation, five-section editor with autosave/status/retry/version conflicts, binary media, operational fields and arbitrary multi-tier inventory. The server validates sums, windows, prices and per-order limits under M4's inventory lock. Existing tiers/history remain; sold-price edits require confirmation and critical date/location/age changes with sales/reservations are rejected for review.
+- Added DRAFT/IN_REVIEW/PUBLISHED/PAUSED/ENDED/CANCELLED lifecycle, real checklist, owner-only explicit transitions and stronger cancellation phrase. Pause stops new purchases while existing attempts may fulfill; cancellation/end release holds; cancellation invalidates unused tickets and records required operational follow-up without refunds or automatic communications. Scanner's canonical and compatibility mutation now reject ended/cancelled events under the same lock.
+- Completed Event Center overview/editor/inventory/sales/attendees/staff/access/facts-only analytics/settings/checklist/preview. Staff UI uses real M3 invitations, role subsets, grants and revocation. Promotions remain an explicit M8 unavailable entry. No fictional conversion, net balance, settlement or causal AI analysis is displayed.
+- Extracted the actual public event detail for shared private preview, with mobile width control, missing-field labels and purchase/stock-request disablement. Added saved timezone/address/access/age/FAQ display to that shared component. Legacy raster preview is independently event-authorized; unchanged stored bytes are preserved and never serialized into client props.
+- Implemented an event-scoped proposal/review boundary, editable diff and explicit accept/reject/sensitive confirmation through the normal revision-aware save. Production reports provider unavailable. An opt-in nonproduction local rules adapter extracts only supplied facts and is visibly labeled; full provider generation/analytics remain M7. No provider call or prompt persistence occurred.
+- Closed legacy boolean publication shortcuts: SQL consistency constraint, authenticated 410 admin approve/publish/unpublish and organizer submission aliases, removed unused publication writer. Legacy pending submissions remain stored for deliberate M9 migration/moderation. No identity or scanner role shortcut was added.
+- Appended `0006_event_lifecycle.sql`; previous migrations unchanged. Updated authorization/design/payment/migration docs and added [EVENT-LIFECYCLE.md](EVENT-LIFECYCLE.md) plus browser evidence.
+
+## M6 verification
+
+Run from `apps/web` unless noted:
+
+| Check | Result |
+| --- | --- |
+| `node --test --experimental-test-isolation=none --test-reporter=spec tests/*.test.mjs` | PASS: 276 tests, zero failures/skips; 17 M6 cases plus retained M1–M5 coverage |
+| `node node_modules/typescript/bin/tsc --noEmit --incremental false` | PASS |
+| `node scripts/lint-changed.mjs` | PASS: 49 changed/new source/test/QA script files, zero errors/warnings |
+| `node scripts/verify-build.mjs` | PASS: optimized compilation, type validation, static generation and route collection; inert credentials/unreachable loopback DB |
+| `node scripts/m6-visual-qa.mjs` | PASS: 100 screen/viewport combinations at 390/430/768/1024/1440, labels/images/overflow; screenshots visually inspected |
+| `node scripts/m6-state-qa.mjs` | PASS: manual draft/autosave, stale-tab conflict, selected proposal acceptance, binary upload and confirmed publication, queued invitation, actual buyer staff login and scope denial |
+| Root `git -c core.safecrlf=false diff --check` | PASS |
+
+Regression cases execute real PostgreSQL scope/revision/lifecycle/inventory/media/history/aggregate/audit behavior. The final suite retains M4 provider doubles and M3 identity/MFA/concurrency checks; no merchant or production service was called. Browser owner authentication uses a synthetic persisted MFA-ready fixture; buyer staff uses the real sign-in UI. Local evidence is in [qa/m6](qa/m6/README.md).
+
+Final review tightened missing-date availability, kept catalog price sorting within visible active tiers and rejected activation of unsupported zero-price tiers. The affected organizer/payment/discovery integration suites passed again (85 tests), followed by TypeScript, scoped lint and a fresh production build. The preview-only inventory label was also verified and recaptured at 390/1440.
+
+Intermediate failures corrected: legacy test fixtures sold at `NOW()` and independently flipped publication; scanner unit doubles did not expect the new lock; two browser assertions initially raced React/server refresh; a few generated labels had encoding artifacts; preview initially implied a stock fetch it intentionally disables. Tests now assert future on-sale fixtures and retired-route behavior without relaxing the new guards. Whole-repository lint was not rerun or claimed clean; historical legacy debt remains 287 errors/35 warnings.
+
+Remaining organizer limits: production AI provider; production media adapter; 200-event panel bound and in-memory CSV volume; advanced promotions/courtesies/attendee actions/communications; operator workflow for critical sold-event corrections; M9 admin moderation, pending-submission import, refunds/settlements. Dates in editor explicitly use device-local selectors and persist absolute timestamps plus event timezone. No automatic end-state scheduler, approved refund/fee/legal policy or physical-device/other-browser/formal accessibility/load certification was invented. Prior production migration/provider/worker/key/transfer limits remain.
+
+All database and browser work used synthetic loopback fixtures without application credentials. No deployment, production data mutation, real provider/mail/Wallet call, merge or push. Local preview/Chrome/PostgreSQL are stopped at handoff; synthetic files/databases remain for inspection.
+
+## Exact next milestone after M6
+
+**M7: Public AI simulator and organizer contextual AI.** Completion evidence: validated proposals, preserved drafts and confirmed sensitive changes. Continue from this coherent M6 commit. Stop here; do not begin M7 or deploy without a new instruction.

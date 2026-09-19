@@ -38,6 +38,7 @@ for (const endpoint of ["scanner/checkin", "demo/checkin"]) {
           ticketId: "tkt_1", eventId: scenario === "wrong-event" ? "event_2" : event.id,
         } },
         "@/lib/db": { pool: { query: async (sql, args) => {
+          if (sql.includes("pg_advisory_xact_lock")) return {rows:[]};
           if (sql.includes("JOIN organizer_events")) { eventReads++; return eventQuery(sql, args, scenario); }
           assert.match(sql, /t.event_id=\$2/);
           assert.match(sql, /security_can_event\(\$3,\$4,\$5,t.event_id,'scanner.checkin'\)/);
@@ -71,7 +72,8 @@ for (const prefix of ["scanner", "demo"]) {
         let reads = 0;
         const route = loadSource(`app/api/${prefix}/${endpoint}/route.ts`, {
           ...auth(scenario), "@/lib/db": { pool: { query: async (sql, args) => {
-            if (sql.includes("JOIN organizer_events")) return eventQuery(sql, args, scenario);
+            if (sql.includes("pg_advisory_xact_lock")) return {rows:[]};
+          if (sql.includes("JOIN organizer_events")) return eventQuery(sql, args, scenario);
             reads++;
             assert.match(sql, /event_id=\$1/);
             assert.match(sql, /security_can_event\(\$2,\$3,\$4/);

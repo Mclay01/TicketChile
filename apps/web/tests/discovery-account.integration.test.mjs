@@ -108,6 +108,6 @@ test("authorized media upload stores normalized immutable bytes plus atomic audi
   assert.equal((await read.GET(new Request("http://local"), context)).status, 404);
   await db.pool.query("UPDATE events SET image=$1 WHERE id='ev0'", [data.url]);
   assert.equal((await read.GET(new Request("http://local"), context)).status, 200);
-  await db.pool.query("UPDATE events SET is_published=false WHERE id='ev0'");
+  await db.pool.query("UPDATE events SET lifecycle='PAUSED',is_published=false WHERE id='ev0'");
   assert.equal((await read.GET(new Request("http://local"), context)).status, 404);
 });

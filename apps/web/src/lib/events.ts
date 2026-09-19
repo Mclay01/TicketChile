@@ -19,6 +19,12 @@ export type Event = {
   city: string;
   venue: string;
   dateISO: string;
+  timezone?: string;
+  endISO?: string;
+  address?: string;
+  agePolicy?: string;
+  accessInfo?: string;
+  faq?: string;
 
   // Poster vertical (cards + detalle)
   image: string;

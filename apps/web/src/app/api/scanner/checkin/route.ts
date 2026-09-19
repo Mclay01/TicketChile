@@ -1,3 +1,4 @@
+import { lockInventory } from "@/lib/payments/inventory.server";
 import { pool, withTx } from "@/lib/db";
 import { verifyTicketToken } from "@/lib/qr-token.server";
 import { requireEventAccess } from "@/lib/event-access.server";
@@ -34,10 +35,12 @@ export async function POST(request: Request) {
     // Atomic compare-and-set. Repeat ownership in the write predicate so an
     // event reassignment between authorization and mutation cannot grant access.
     const result = await withTx(async client => {
+      await lockInventory(client);
       const changed = await client.query<CheckinRow>(
       `UPDATE tickets t SET status='USED', used_at=NOW()
        WHERE t.id=$1 AND t.event_id=$2 AND t.status='VALID'
          AND security_can_event($3,$4,$5,t.event_id,'scanner.checkin')
+         AND EXISTS(SELECT 1 FROM events e WHERE e.id=t.event_id AND e.lifecycle NOT IN ('CANCELLED','ENDED'))
        RETURNING t.id, t.ticket_type_name, t.status, t.used_at`,
       [ticketId, eventId, access.actor.kind, access.actor.id, access.actor.version],
     );

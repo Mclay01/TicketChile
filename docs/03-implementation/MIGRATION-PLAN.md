@@ -75,3 +75,13 @@ Future uploads now use the authorized binary endpoint and immutable storage abst
 Legacy base64 raster strings remain compatible via a read-only publication-checked binary reader. Unsupported remote/SVG media uses a placeholder; no unrestricted optimizer domain list was added. Historical pending submissions may still contain old image strings; new submissions accept only tenant-owned media references.
 
 A future legacy transition must be separately authorized: inventory references and ownership, validate/re-encode approved rasters, create immutable objects and metadata, verify sizes/checksums/rendering, then update each reference transactionally with an audit trail. Retain original references and backups until an approved retention decision; never bulk-delete or rewrite production images from this milestone's scripts. Interrupted uploads can leave unreachable local objects if metadata persistence fails; automatic cleanup is intentionally absent.
+
+## M6 event lifecycle migration
+
+Append `0006_event_lifecycle.sql`; migrations 0001–0005 remain unchanged. The disposable runner/checksum/rollback tests now include six versions (the deliberately failing test migration is numbered 0007 only inside its temporary fixture directory).
+
+Add lifecycle, revision/update time, nullable draft start, end/timezone, address/region, age/access text, visibility, event capacity, FAQ and cancellation follow-up to events; add description, sales windows and visible/active flags to tiers. Existing publication maps to PUBLISHED/DRAFT and existing tier capacities sum into event capacity. No missing dates/addresses/legal rules/categories are inferred. Existing tier default visibility/activity preserves prior behavior. No order, sold/held count, ticket price snapshot, media bytes or pending submission is rewritten or deleted.
+
+A check binds the compatibility publication boolean to lifecycle. Legacy inserts initialize state from their existing boolean; legacy publication updates are rejected. Apply the reconciled migration before this app version, and update fixtures/seeding accordingly. The new application creates only DRAFT events and retires legacy publication/submission mutation endpoints. Pending submissions need a deliberate M9 import/review; no automatic conversion occurs.
+
+Before any production adoption: inventory the real catalog and summed capacities, reconcile incompatible prior constraints/columns, rehearse event-table locks and indexes, verify grandfathered event dates/media/tier windows, and plan deployment order so old boolean writers cannot race the new constraint. Rollback is a reviewed forward repair, not dropping columns, deleting history or re-enabling an unsafe publication route. No production schema or data was accessed in M6.

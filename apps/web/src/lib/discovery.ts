@@ -12,6 +12,6 @@ export function catalogUrl(filters: Partial<CatalogFilters>, path = "/eventos") 
   for (const [key, value] of Object.entries(filters)) if (value && !(key === "page" && value === 1)) params.set(key, String(value));
   return path + (params.size ? `?${params}` : "");
 }
-export function dateLabel(value: string | Date, time = false) {
-  return new Intl.DateTimeFormat("es-CL", { timeZone: "America/Santiago", day: "2-digit", month: "short", year: "numeric", ...(time ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" } as const : {}) }).format(new Date(value));
+export function dateLabel(value: string | Date, time = false, timeZone = "America/Santiago") {
+  return new Intl.DateTimeFormat("es-CL", { timeZone, day: "2-digit", month: "short", year: "numeric", ...(time ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" } as const : {}) }).format(new Date(value));
 }

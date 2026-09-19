@@ -4,11 +4,11 @@ import { NextResponse } from "next/server";
 import { AccessError } from "@/lib/access.server";
 import { readSession, type IdentityKind } from "./identity.server";
 export const stringValue=(value:unknown)=>typeof value==="string"?value:"";
-export async function readBody(req:Request):Promise<Record<string,unknown>> {
-  if (Number(req.headers.get("content-length"))>16384) throw new AccessError(413,"TOO_LARGE","Solicitud demasiado grande.");
+export async function readBody(req:Request,maxBytes=16384):Promise<Record<string,unknown>> {
+  if (Number(req.headers.get("content-length"))>maxBytes) throw new AccessError(413,"TOO_LARGE","Solicitud demasiado grande.");
   const reader=req.body?.getReader();let size=0;const chunks:Uint8Array[]=[];
   if(reader)try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;
-    if(size>16384){await reader.cancel();throw new AccessError(413,"TOO_LARGE","Solicitud demasiado grande.");}chunks.push(value);
+    if(size>maxBytes){await reader.cancel();throw new AccessError(413,"TOO_LARGE","Solicitud demasiado grande.");}chunks.push(value);
   }}finally{reader.releaseLock();}
   const text=Buffer.concat(chunks).toString("utf8");
   if (req.headers.get("content-type")?.includes("application/json")) {

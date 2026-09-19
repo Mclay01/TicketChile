@@ -1,0 +1,9 @@
+'use client';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button,Field,Notice } from '@/components/tc/ui';
+export default function Create({organizations}:{organizations:{id:string;name:string}[]}){
+  const [org,setOrg]=useState(organizations[0]?.id||''),[busy,setBusy]=useState(false),[error,setError]=useState('');const router=useRouter();
+  async function create(ai=false){setBusy(true);setError('');try{const r=await fetch('/api/organizer/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({organizerId:org})});const d=await r.json();if(!r.ok)throw new Error(d.error);router.push(`/organizador/eventos/${d.id}?section=${ai?'ai':'editor'}`);}catch(e){setError(e instanceof Error?e.message:'No se pudo crear el borrador.');setBusy(false);}}
+  return <div className="stack"><Field label="Organización"><select value={org} onChange={e=>setOrg(e.target.value)}>{organizations.map(o=><option value={o.id} key={o.id}>{o.name}</option>)}</select></Field><div className="org-two"><section className="panel stack"><p className="eyebrow">01 / A tu ritmo</p><h2>Crear manualmente</h2><p className="muted">Construye el evento por secciones. Guarda primero, revisa y publica cuando esté listo.</p><Button disabled={busy||!org} onClick={()=>create()}>Crear borrador →</Button></section><section className="panel stack"><p className="eyebrow">02 / TicketChile AI</p><h2>Comenzar con una idea</h2><p className="muted">Describe tu evento y revisa cada propuesta antes de aplicarla. La conexión al modelo estará disponible en M7.</p><Button variant="secondary" disabled={busy||!org} onClick={()=>create(true)}>Abrir espacio de propuesta →</Button></section></div>{busy&&<Notice>Creando borrador…</Notice>}{error&&<Notice error>{error}</Notice>}<p className="hint">Ambos caminos crean un borrador privado. Ninguno publica automáticamente.</p></div>;
+}

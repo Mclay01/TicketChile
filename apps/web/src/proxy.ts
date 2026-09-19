@@ -76,6 +76,9 @@ function isProtectedDemoApi(pathname: string) {
 
 export function proxy(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
+  // M6 panel pages use live owner/buyer staff guards in their layout and each service.
+  // Exact page allowlist; legacy organizer APIs/payments retain their preliminary gate.
+  if (pathname === "/organizador" || pathname === "/organizador/eventos" || pathname === "/organizador/eventos/nuevo" || /^\/organizador\/eventos\/[A-Za-z0-9_-]+(?:\/scanner)?$/.test(pathname)) return NextResponse.next();
   // These M2 compatibility routes delegate to persisted event-capability guards.
   // Staff use buyer sessions, so an organizer-cookie-only preliminary gate is inappropriate.
   if(["/api/demo/event-stats","/api/demo/event-checkins","/api/demo/export","/api/demo/export-checkins"].includes(pathname))return NextResponse.next();

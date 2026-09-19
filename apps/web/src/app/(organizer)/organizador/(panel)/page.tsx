@@ -1,8 +1,11 @@
-﻿export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-import OrganizadorUI from "../ui";
-
-export default function OrganizadorPage() {
-  return <OrganizadorUI />;
+import Link from 'next/link';
+import { organizerEvents } from '@/lib/organizer/events.server';
+import EventList from '@/components/organizer/EventList';
+import { formatCLP } from '@/lib/events';
+import { PageHeading,EmptyState,Notice } from '@/components/tc/ui';
+export default async function Dashboard(){
+ const {events,organizations}=await organizerEvents();
+ const active=events.filter(e=>e.lifecycle==='PUBLISHED'),drafts=events.filter(e=>e.capabilities.includes('event.edit')&&['DRAFT','IN_REVIEW'].includes(e.lifecycle));
+ const financial=events.filter(e=>e.gross!==null),upcoming=events.filter(e=>e.date_iso&&new Date(e.date_iso)>new Date()&&!['CANCELLED','ENDED'].includes(e.lifecycle)).sort((a,b)=>String(a.date_iso).localeCompare(String(b.date_iso)));
+ return <div className="stack"><div className="row between"><PageHeading eyebrow="Tu espacio de trabajo" title="Cada evento, bajo control.">Operaciones y pendientes de tus eventos autorizados.</PageHeading>{organizations.some(o=>o.can_create)&&<Link className="btn" href="/organizador/eventos/nuevo">Crear evento +</Link>}</div><div className="org-summary"><div><span className="mono">{active.length}</span><span>Publicados</span></div><div><span className="mono">{events.reduce((n,e)=>n+e.sold,0)}</span><span>Entradas vendidas</span></div><div><span className="mono">{drafts.length}</span><span>En preparación</span></div>{financial.length>0&&<div><span className="mono">${formatCLP(financial.reduce((n,e)=>n+Number(e.gross),0))}</span><span>Bruto verificado · alcance financiero</span></div>}</div>{drafts.length>0&&<Notice>{drafts.length} eventos necesitan completar o revisar su publicación. <Link href={`/organizador/eventos/${drafts[0].id}?section=checklist`}>Revisar pendientes →</Link></Notice>}<div className="row between"><h2>{upcoming.length?'Próximos encuentros':'Tus eventos recientes'}</h2><Link href="/organizador/eventos">Ver todos →</Link></div>{events.length?<EventList events={(upcoming.length?upcoming:events).slice(0,6)}/>:<EmptyState title="Tu próximo evento empieza aquí">No hay eventos en tu alcance actual.</EmptyState>}<p className="hint">Datos reales de hasta 200 eventos autorizados. Los montos aparecen solo con permiso financiero.</p></div>;
 }

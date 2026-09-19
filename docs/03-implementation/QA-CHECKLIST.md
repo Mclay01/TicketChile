@@ -125,3 +125,26 @@ Historical M2 SQL-contract payment/mail tests were replaced where their implemen
 - [ ] Full detailed checkout/confirmation and organizer/admin design completion in the remaining product work; physical mobile, other browsers, screen readers and formal accessibility/performance review.
 
 M5 does not waive M3/M4 production migration, payment/provider/Wallet/email, key management, scheduler, operator review, load or infrastructure gates. No whole-repository lint clean claim; historical legacy debt remains.
+
+## M6 organizer verification
+
+- [x] Confirmed M1–M5 complete and clean branch at `9ac8716`; reused their security/domain/design foundation.
+- [x] Appended migration 0006; retained 0001–0005 checksums; local fresh migration/idempotency/failed-migration rollback checks.
+- [x] Private DRAFT creation, bounded sectioned editor, binary media, arbitrary multi-tier fields, same-tenant source-event media scope and unchanged legacy-media preservation.
+- [x] Revision-aware autosave, concurrent save conflict, visible browser retry/conflict state and dirty-navigation warning.
+- [x] Owner/manager/door/finance/support matrix, revoked grants, disabled tenant, cross-tenant/event reads and writes; navigation plus independent server boundaries.
+- [x] Checklist/allowed transitions/current revision/explicit owner confirmation; no DRAFT publication shortcut; legacy submission/admin publication mutations retired.
+- [x] Inventory sums, negative/invalid input, per-order limits, sales windows, inactive/private tiers, sold+held floors, critical edits and confirmed future prices; historical held/purchased prices unchanged.
+- [x] Pause blocks new reservations while previously persisted reservations can fulfill; cancellation/end release holds; cancelled late-paid evidence enters review without issuance/refund; ended event blocks actual scanner mutation and preserves ticket history.
+- [x] Scoped finance/attendees/access/staff/audit views; historical sales aggregates; no finance leakage to support/door; existing export permission and formula protection preserved.
+- [x] Production AI unavailable; development local rules clearly labeled; output has missing fields/warnings, no invented address/date/legal policy and no automatic publication. Browser current/proposed review applies selected fields only.
+- [x] Shared public production detail/selector used for authorized preview; no preview stock fetch or purchase.
+- [x] Full suite **276 tests**, zero failures/skips, including 17 M6 PostgreSQL cases and retained M1–M5 coverage.
+- [x] TypeScript without incremental cache; scoped ESLint on **49** changed/new code/test/script files, zero errors/warnings; isolated optimized production build; root diff whitespace check.
+- [x] **100 Chrome screen/viewport combinations** at 390/430/768/1024/1440; six real browser workflow assertions. Evidence and limits: [qa/m6/README.md](qa/m6/README.md).
+- [ ] Real provider AI and expanded contextual analytics: M7.
+- [ ] Promotions, complimentary tickets, operational attendee actions, communication/transfer policies and export-volume controls: M8/later approved policy.
+- [ ] Admin lifecycle moderation, pending legacy submission migration, refunds and settlements: M9.
+- [ ] Production object adapter, schema adoption, restricted DB grants, keys, provider certification, delivery/reconciliation scheduling, legal/contact operations and broad device/accessibility/load work remain release gates.
+
+Whole-repository lint was not rerun or claimed clean; historical baseline remains 287 errors and 35 warnings. No deployment, production credentials/data, live provider calls, merge or push occurred.

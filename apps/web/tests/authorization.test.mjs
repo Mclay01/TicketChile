@@ -43,7 +43,7 @@ for (const [route, method] of protectedRoutes) {
   }
 }
 
-test("valid persisted admin can read and publish; browser cross-origin mutation is rejected", async () => {
+test("valid persisted admin can read; legacy publication is retired; browser cross-origin mutation is rejected", async () => {
   const writes = [];
   const overrides = {
     "next/headers": cookieJar(validSession),
@@ -62,8 +62,8 @@ test("valid persisted admin can read and publish; browser cross-origin mutation 
   const request = origin => new Request("https://ticketchile.test/api/admin/events/event-a/publish", { method: "POST", headers: { origin } });
   assert.equal((await publish.POST(request("https://attacker.test"), ctx)).status, 403);
   assert.deepEqual(writes, []);
-  assert.equal((await publish.POST(request("https://ticketchile.test"), ctx)).status, 200);
-  assert.deepEqual(writes, [["event-a", true,{kind:"ADMIN",id:"admin-a"}]]);
+  assert.equal((await publish.POST(request("https://ticketchile.test"), ctx)).status, 410);
+  assert.deepEqual(writes, []);
 });
 
 test("session store failure returns a generic unavailable response without allowing work", async () => {
@@ -77,32 +77,10 @@ test("session store failure returns a generic unavailable response without allow
   assert.doesNotMatch(await gate.response.text(), /password|secret/);
 });
 
-test("approved submission retry is locked and cannot issue another event", async () => {
-  const statements = [];
-  let released = false;
-  const route = loadSource("app/api/admin/events/[id]/approve/route.ts", {
-    "next/headers": cookieJar(validSession),
-    "@/lib/db": { pool: {
-      query: async () => ({ rows: [activeAdmin] }),
-      connect: async () => ({
-        release: () => { released = true; },
-        query: async sql => {
-          statements.push(sql);
-          if (/SELECT id, organizer_id/.test(sql)) {
-            assert.match(sql, /FOR UPDATE/);
-            return { rows: [{ id: "submission-a", status: "APPROVED" }] };
-          }
-          assert.match(sql, /^(BEGIN|ROLLBACK)$/);
-          return { rows: [] };
-        },
-      }),
-    } },
-  });
-  const response = await route.POST(new Request("https://ticketchile.test/api/admin/events/submission-a/approve", { method: "POST" }), { params: Promise.resolve({ id: "submission-a" }) });
-  assert.equal(response.status, 200);
-  assert.equal((await response.json()).alreadyApproved, true);
-  assert.equal(released, true);
-  assert.equal(statements.length, 3);
+test("legacy submission approval is retired and never issues an event", async () => {
+ const route=loadSource("app/api/admin/events/[id]/approve/route.ts",{"next/headers":cookieJar(validSession),"@/lib/db":{pool:{query:async()=>({rows:[activeAdmin]}),connect:async()=>{throw new Error("No domain writes allowed");}}}});
+ const response=await route.POST(new Request("https://ticketchile.test/api/admin/events/old/approve",{method:"POST"}));
+ assert.equal(response.status,410);
 });
 
 test("admin panel layout rejects a forged cookie and keeps valid session access", async () => {

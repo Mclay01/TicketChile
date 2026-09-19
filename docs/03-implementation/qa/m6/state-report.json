@@ -1,0 +1,8 @@
+[
+  "Manual creation and autosave persist a private draft",
+  "Stale browser autosave shows conflict and cannot overwrite",
+  "Local proposal review changes only explicitly accepted fields; no publication",
+  "Checklist/review/publish requires explicit owner confirmation in the UI",
+  "Event-scoped staff invitation is persisted and queued, with no external mail",
+  "Real buyer staff session sees only assigned event and access; editing and foreign IDs denied"
+]
