@@ -71,3 +71,12 @@ Known limits: organizer list/dashboard are explicitly bounded to 200 authorized 
 ## M7 extension
 
 M7 supersedes the local-only proposal boundary with [AI-ARCHITECTURE.md](AI-ARCHITECTURE.md). Shared transaction helpers preserve all M6 authorization, revision, inventory, publication-checklist and history rules while allowing proposal resolution or public draft claim plus audit in the same transaction. Summary/SEO fields are ordinary reviewed event fields. AI generation never changes lifecycle; proposal apply cannot select lifecycle fields. Public claims create only private drafts, with proposed tiers inactive. There are no new financial, publication, cancellation or communication authorities.
+
+
+## M8 ticket and access operations
+
+See [EVENT-OPERATIONS.md](EVENT-OPERATIONS.md). Published/paused future events can issue explicitly confirmed courtesy tickets within selected tier capacity. They increment issued/sold stock, have a consumed zero-price snapshot and dedicated issuance record, and do not inflate payment revenue. Revocation affects only unused courtesy tickets, retains append-only history and does not automatically release capacity. Event cancellation preserves this history and existing M6 ticket invalidation.
+
+Promotions reserve one usage with an ACTIVE unexpired checkout hold and consume it with successful M4 issuance. Original/final unit prices are immutable snapshots; existing reservations survive promotion deactivation or window expiry. Expiry/release restores available usage without deleting history; cancellation/refund does not automatically restore consumed usage. Terms are immutable and replaced with a new code when necessary.
+
+Check-in remains atomic VALID to USED. Access can be disabled, start-time restricted or limited to configured gate labels by an authorized editor; ENDED/CANCELLED lifecycle still blocks new entry. Recent records capture actor/method/gate/device. No reversal, refunded/transfer ticket state or offline check-in is simulated. Actual ticket statuses remain VALID/USED/CANCELLED, and prior transfer/QR revocation limitations remain explicit.

@@ -31,9 +31,9 @@ export async function staffForEvent(id:string){
   const e=await readEvent(id,'staff.manage');
   const [staff,invites]=await Promise.all([
     pool.query(`SELECT s.id,u.email,s.role,s.capabilities,s.event_ids FROM organizer_staff s JOIN usuarios u ON u.id=s.buyer_id
-      WHERE s.organizer_id=$1 AND s.revoked_at IS NULL AND (s.event_ids IS NULL OR $2=ANY(s.event_ids)) ORDER BY u.email`,[e.organizer_id,id]),
-    pool.query(`SELECT id,email,role,capabilities,event_ids,expires_at FROM organizer_invites WHERE organizer_id=$1 AND revoked_at IS NULL AND accepted_at IS NULL AND expires_at>now()
-      AND (event_ids IS NULL OR $2=ANY(event_ids)) ORDER BY email`,[e.organizer_id,id])]);
+      WHERE s.organizer_id=$1 AND s.revoked_at IS NULL ORDER BY u.email`,[e.organizer_id]),
+    pool.query(`SELECT id,email,role,capabilities,event_ids,expires_at FROM organizer_invites WHERE organizer_id=$1 AND revoked_at IS NULL AND accepted_at IS NULL
+       ORDER BY email`,[e.organizer_id])]);
   return JSON.parse(JSON.stringify({staff:staff.rows,invites:invites.rows})) as {staff:StaffEntry[];invites:StaffEntry[]};
 }
 export type StaffEntry={id:string;email:string;role:string;capabilities:string[];event_ids:string[]|null;expires_at?:string};

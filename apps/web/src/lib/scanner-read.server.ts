@@ -4,14 +4,14 @@ import { requireEventAccess } from "@/lib/event-access.server";
 
 export async function eventCheckins(eventId: string) {
   const access = await requireEventAccess(eventId);
-  const result = await pool.query<{ id: string; ticket_type_name: string; used_at: Date }>(
-    `SELECT t.id, t.ticket_type_name, t.used_at FROM tickets t
+  const result = await pool.query<{ id: string; ticket_type_name: string; used_at: Date;gate:string;device:string }>(
+    `SELECT t.id, t.ticket_type_name, t.used_at,cr.gate,cr.device FROM tickets t LEFT JOIN checkin_records cr ON cr.ticket_id=t.id
      WHERE t.event_id=$1 AND t.status='USED'
        AND security_can_event($2,$3,$4,t.event_id,'scanner.read')
      ORDER BY t.used_at DESC LIMIT 20`, [eventId, access.actor.kind, access.actor.id, access.actor.version],
   );
   return result.rows.map(row => ({ id: row.id, ticketId: row.id, ticketTypeName: row.ticket_type_name,
-    status: "USED", usedAtISO: row.used_at ? new Date(row.used_at).toISOString() : null }));
+    status: "USED",gate:row.gate||'',device:row.device||'', usedAtISO: row.used_at ? new Date(row.used_at).toISOString() : null }));
 }
 
 export async function eventStats(eventId: string) {

@@ -205,6 +205,7 @@ function parseCartParam(s: string) {
 ----------------------------- */
 
 export default function CheckoutBuyerForm({ event, methods }: { event: Event; methods: PayMethod[] }) {
+  const [promotionCode,setPromotionCode]=useState(''),[quote,setQuote]=useState<{signature:string;discount:number;fee:number;total:number}|null>(null),[quoting,setQuoting]=useState(false),[quoteError,setQuoteError]=useState('');
   const attempt = useRef<{payload:string;key:string} | null>(null);
   const sp = useSearchParams();
   const canceled = sp.get("canceled") === "1";
@@ -300,7 +301,10 @@ export default function CheckoutBuyerForm({ event, methods }: { event: Event; me
 
   const addressOk = buyerRegion.trim().length > 0 && buyerComuna.trim().length > 0 && buyerAddress1.trim().length >= 5;
 
-  const canPay = methods.includes(payMethod) &&
+  const quoteSignature=JSON.stringify({code:promotionCode.trim().toUpperCase(),items,eventId:event.id});
+  const currentQuote=quote?.signature===quoteSignature?quote:null;
+  async function checkPromotion(){setQuoting(true);setQuote(null);setQuoteError('');try{const r=await fetch('/api/promotions/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:quoteSignature}),d=await r.json();if(!r.ok)throw new Error(d.error||'No se pudo validar.');setQuote({...d,signature:quoteSignature});}catch(e){setQuoteError(e instanceof Error?e.message:'No se pudo conectar.');}finally{setQuoting(false);}}
+  const canPay = (!promotionCode.trim()||!!currentQuote) && !quoting && methods.includes(payMethod) &&
     !paying &&
     totalQty > 0 &&
     subtotal > 0 &&
@@ -330,6 +334,7 @@ export default function CheckoutBuyerForm({ event, methods }: { event: Event; me
 
     return {
       eventId: event.id,
+      ...(promotionCode.trim()?{promotionCode:promotionCode.trim().toUpperCase(),amount:currentQuote?.total}:{}),
       items,
       buyerName: buyerName.trim(),
       buyerEmail: normalizedBuyerEmail,
@@ -524,6 +529,11 @@ export default function CheckoutBuyerForm({ event, methods }: { event: Event; me
       <aside className="lg:sticky lg:top-20 h-fit space-y-4">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
           <h3 className="text-sm font-semibold text-white">Resumen</h3>
+          <label className="mt-4 block">Código de promoción<input aria-label="Código de promoción" className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" maxLength={32} value={promotionCode} disabled={paying||quoting} onChange={e=>setPromotionCode(e.target.value)}/></label>
+          <button type="button" className="btn secondary" disabled={paying||quoting||!totalQty} onClick={()=>void checkPromotion()}>{quoting?'Validando...':'Validar total'}</button>
+          {quoteError&&<p role="alert">{quoteError}</p>}
+          {currentQuote&&<div role="status"><p>Descuento: ${formatCLP(currentQuote.discount)}</p><p>Cargo: ${formatCLP(currentQuote.fee)}</p><p>Total confirmado: ${formatCLP(currentQuote.total)}</p><p className="text-sm">Un código por compra. La disponibilidad se confirma al iniciar el pago.</p></div>}
+          {promotionCode.trim()&&!currentQuote&&<p>Valida el código antes de pagar.</p>}
 
           <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
             <span className="text-sm text-white/70">

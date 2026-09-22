@@ -84,3 +84,16 @@ export async function updateStaff(actor:Principal,input:{organizerId:string;id:s
     await audit(client,{actor,organizerId:input.organizerId,action:"staff.permissions_changed",targetType:"staff",targetId:input.id,metadata:{role:grant.role}});
   });
 }
+
+export async function resendInvite(actor:Principal,organizerId:string,id:string,delivery:SecurityDelivery=queueSecurityMessage){
+ await requireOrganizerCapability(organizerId,'staff.manage',actor);
+ return withTx(async client=>{
+  await client.query('SELECT id FROM organizer_users WHERE id=$1 FOR UPDATE',[organizerId]);
+  const row=(await client.query('SELECT * FROM organizer_invites WHERE id::text=$1 AND organizer_id=$2 AND accepted_at IS NULL AND revoked_at IS NULL FOR UPDATE',[id,organizerId])).rows[0];
+  if(!row)throw new AccessError(404,'NOT_FOUND','Invitación no disponible.');
+  const token=randomToken(),expiresAt=new Date(Date.now()+48*3600000).toISOString();
+  await client.query('UPDATE organizer_invites SET token_hash=$2,expires_at=$3 WHERE id=$1',[row.id,digest(token),expiresAt]);
+  await delivery(client,{purpose:'INVITE',to:row.email,token,expiresAt});
+  await audit(client,{actor,organizerId,action:'staff.invite_resent',targetType:'invite',targetId:id});return {id,expiresAt};
+ });
+}

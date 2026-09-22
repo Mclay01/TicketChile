@@ -170,3 +170,24 @@ Whole-repository lint was not rerun or claimed clean; historical baseline remain
 - [ ] M8 operational promotions, courtesies, attendee/scanner workflows; M9 financial/admin actions and prior release gates.
 
 Whole-repository lint remains unclaimed; historical legacy debt persists. No deployment, production mutation or live model calls occurred.
+
+
+## M8 operations verification - supersedes historical M8 pending items
+
+- [x] M1-M7 preserved; current branch/head audited before work; no unrelated redesign.
+- [x] Owner staff list/invite/revoke/resend/update, explicit event assignments and opt-in capability ceilings; persisted identity/tenant/event scope and no role escalation.
+- [x] Attendee scoped search, tier/status/date filters, 50-row pages/detail/check-in metadata, finance-gated payment data and current-owner resend.
+- [x] Canonical/compatibility exports share authorized streaming pages, minimum holder data and CSV formula escaping; bounded legacy internal export.
+- [x] Courtesy confirmed issuance, real tier capacity, concurrent/idempotent inventory behavior, recipient/issuer/reason history, no fake payment, durable delivery, unused-only revocation and immutable history.
+- [x] Promotion server validation, scope/tier/window/limits, no stacking, authoritative pricing/expected-total rejection, concurrent last-use protection, retry/expiry/consumed usage and discounted verified fulfillment.
+- [x] AI schema rejects promotion activation/action fields; normal confirmed domain operations remain mandatory.
+- [x] Real assigned-event scanner, server-side check-in authority, signed QR verification, current ticket state, access schedule/gates, single-use concurrent admission, actor/device history and exact non-PII manual lookup.
+- [x] Camera permission/absence/readiness, valid/used/invalid/wrong-event, manual unknown/success, network/server/offline states; recent real counts/history. No offline admission or reversal implemented.
+- [x] 313 tests, including 19 M8 cases and retained M1-M7 boundary tests; disposable PostgreSQL migration/idempotency/checksum/rollback through 0008.
+- [x] Final TypeScript, scoped lint on 37 changed/new files (zero errors/warnings), isolated production build and root Git whitespace check.
+- [x] 80 local Chrome screen/viewport states across 390/430/768/1024/1440 plus 18 final mobile/manual/error/date/detail follow-ups; real synthetic-camera decoding, persisted invitation acceptance, role visibility, courtesy and promotion quote. [Evidence and limits](qa/m8/README.md).
+- [ ] Approved refund/transfer/reversal policies, offline guarantees, courtesy reallocation and consumed coupon restoration are intentionally unresolved.
+- [ ] Production catalog/grants/index/worker/storage/provider/key/retention rehearsal, physical devices, other browsers and formal accessibility/load certification remain release gates.
+- [ ] M9: Admin operations, finance/refunds/settlements and support; authorized audited operations, no invented business policies.
+
+Whole-repository lint remains unclaimed (historical 287 errors/35 warnings). No deployment, production access, real emails or live provider calls occurred.

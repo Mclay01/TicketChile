@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { exportTicketsCsvPgServer } from "@/lib/event-export.server";
+import { streamEventCsv } from "@/lib/event-export.server";
 import { accessResponse } from "@/lib/access.server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,8 +8,8 @@ export async function GET(request: Request) {
     const sp = new URL(request.url).searchParams;
     const eventId = sp.get("eventId") || "";
     const status = sp.get("status");
-    const csv = await exportTicketsCsvPgServer({
-      eventId, status: status === "VALID" || status === "USED" ? status : "ALL",
+    const csv = await streamEventCsv({
+      eventId, status: status === "VALID" || status === "USED" || status === "CANCELLED" ? status : "ALL",
       ticketTypeId: sp.get("ticketTypeId") || undefined,
       fromISO: sp.get("from") || undefined, toISO: sp.get("to") || undefined,
       dateField: sp.get("dateField") === "usedAt" ? "usedAt" : "createdAt",

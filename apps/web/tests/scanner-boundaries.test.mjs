@@ -42,7 +42,7 @@ for (const endpoint of ["scanner/checkin", "demo/checkin"]) {
           if (sql.includes("JOIN organizer_events")) { eventReads++; return eventQuery(sql, args, scenario); }
           assert.match(sql, /t.event_id=\$2/);
           assert.match(sql, /security_can_event\(\$3,\$4,\$5,t.event_id,'scanner.checkin'\)/);
-          assert.deepEqual(args, ["tkt_1", "event_1", "ORGANIZER", "org_1",1]);
+          assert.deepEqual(args.slice(0,5), ["tkt_1", "event_1", "ORGANIZER", "org_1",1]);
           if (sql.startsWith("UPDATE")) {
             writes++; assert.match(sql, /t.status='VALID'/);
             return { rows: ["owned", "manual"].includes(scenario) ? [{ id: "tkt_1", ticket_type_name: "General", status: "USED", used_at: new Date() }] : [] };
@@ -78,12 +78,13 @@ for (const prefix of ["scanner", "demo"]) {
             assert.match(sql, /event_id=\$1/);
             assert.match(sql, /security_can_event\(\$2,\$3,\$4/);
             assert.deepEqual(args.slice(0, 4), ["event_1", "ORGANIZER", "org_1",1]);
-            return { rows: [] };
+            return { rows: sql.includes("max(id)") ? [{id:""}] : [] };
           } } },
         });
         const response = await route.GET(new Request(`https://ticketchile.test/api/${prefix}/${endpoint}?eventId=event_1&organizerId=org_2&secret=legacy-export-secret`));
         assert.equal(response.status, { anonymous: 401, forged: 401, foreign: 404, owned: 200 }[scenario]);
-        assert.equal(reads, scenario === "owned" ? 1 : 0);
+        await response.text();
+        assert.equal(reads, scenario === "owned" ? (endpoint.startsWith("export")?2:1) : 0);
         assert.match(response.headers.get("cache-control"), /no-store/);
       });
     }

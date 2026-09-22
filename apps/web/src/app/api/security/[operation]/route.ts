@@ -5,7 +5,7 @@ import { currentIdentity } from "@/lib/security/current.server";
 import { requestRecovery, resetPassword } from "@/lib/security/recovery.server";
 import { beginEnrollment, confirmEnrollment, disableMfa, verifyMfa } from "@/lib/security/mfa.server";
 import { publicLimit } from "@/lib/security/rate-limit.server";
-import { acceptInvite, inviteStaff, revokeStaff,updateStaff } from "@/lib/security/staff.server";
+import { acceptInvite, inviteStaff, revokeStaff,updateStaff,resendInvite } from "@/lib/security/staff.server";
 import { organizerActor } from "@/lib/security/capabilities.server";
 import { requestVerification } from "@/lib/security/registration.server";
 export const runtime="nodejs";
@@ -40,10 +40,11 @@ export async function POST(req:Request,context:{params:Promise<{operation:string
       await publicLimit(req,"invite-accept",p.id,{hits:20,seconds:900});
       return privateJson(200,{ok:true,...await acceptInvite(p,token)});
     }
-    if(operation==="invite"||operation==="staff-revoke"||operation==="invite-revoke"||operation==="staff-update") {
+    if(operation==="invite"||operation==="staff-revoke"||operation==="invite-revoke"||operation==="staff-update"||operation==="invite-resend") {
       const actor=await organizerActor();
       await publicLimit(req,"staff-change",`${actor.kind}:${actor.id}`,{hits:40,seconds:900});
       const organizerId=stringValue(body.organizerId);
+      if(operation==="invite-resend")return privateJson(200,{ok:true,...await resendInvite(actor,organizerId,stringValue(body.id))});
       if(operation==="staff-update"){
         await updateStaff(actor,{organizerId,id:stringValue(body.id),role:body.role,capabilities:body.capabilities,eventIds:body.eventIds});
         return privateJson(200,{ok:true});

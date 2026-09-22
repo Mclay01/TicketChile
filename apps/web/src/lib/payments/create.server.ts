@@ -4,11 +4,13 @@ import { pool, withTx } from '@/lib/db';
 import { AccessError, accessResponse, privateJson } from '@/lib/access.server';
 import { paymentCreator } from '@/lib/payment-create-access.server';
 import { createHoldPgServer } from '@/lib/hold.pg.server';
+import {limit} from '@/lib/security/rate-limit.server';
 import { audit } from '@/lib/security/audit.server';
 import { readBody } from '@/lib/security/http.server';
 import { lockInventory } from './inventory.server';
 import { feePolicy, requireAvailable, type Provider } from './config.server';
 import { adapter } from './adapters.server';
+import {applyPromotionTx,codeValue} from '@/lib/operations/promotion-pricing.server';
 import type { Payment } from './types';
 
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
@@ -16,7 +18,8 @@ function invalid(): never { throw new AccessError(400,'INVALID_INPUT','Datos de 
 export async function preparePayment(owner: string, provider: Provider, body: Record<string,unknown>, requestKey: string) {
   if (!owner) throw new AccessError(401,'UNAUTHENTICATED','Inicia sesion.');
   const fee = feePolicy();
-  const holdId = text(body.holdId), eventId = text(body.eventId);
+  const holdId = text(body.holdId), eventId = text(body.eventId),promotionCode=codeValue(body.promotionCode);
+  if(promotionCode)await limit('promotion-checkout',owner,{hits:30,seconds:60});
   const name = text(body.buyerName), email = text(body.buyerEmail).toLowerCase();
   if (name.length < 2 || name.length > 150 || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) invalid();
   if ((!requestKey && !holdId) || (requestKey && !/^[a-zA-Z0-9_-]{16,100}$/.test(requestKey)) || holdId.length>200 || eventId.length>200) invalid();
@@ -31,7 +34,7 @@ export async function preparePayment(owner: string, provider: Provider, body: Re
     }
   }
   const requested = [...quantities].sort(([a],[b])=>a.localeCompare(b)).map(([ticketTypeId,qty])=>({ticketTypeId,qty}));
-  const hash = createHash('sha256').update(JSON.stringify({provider,holdId,eventId,name,email,requested})).digest('hex');
+  const hash = createHash('sha256').update(JSON.stringify({provider,holdId,eventId,name,email,requested,...(promotionCode?{promotionCode}:{})})).digest('hex');
   return withTx(async client => {
     await lockInventory(client);
     if (requestKey) {
@@ -47,6 +50,7 @@ export async function preparePayment(owner: string, provider: Provider, body: Re
     if (!hold) throw new AccessError(404,'NOT_FOUND','Reserva no encontrada.');
     const old = (await client.query<Payment>('SELECT * FROM payments WHERE hold_id=$1 FOR UPDATE',[id])).rows[0];
     if (old) {
+      if(promotionCode){const applied=(await client.query('SELECT p.code FROM promotion_reservations r JOIN promotions p ON p.id=r.promotion_id WHERE r.hold_id=$1',[id])).rows[0];if(applied?.code!==promotionCode)invalid();}
       if (old.owner_email.toLowerCase() !== owner || old.provider !== provider) throw new AccessError(409,'RETRY_CONFLICT','Reserva no disponible.');
       if (body.amount !== undefined && Number(body.amount) !== old.amount_clp) throw new AccessError(409,'AMOUNT_CHANGED','El total de la compra cambio.');
       return old;
@@ -54,6 +58,7 @@ export async function preparePayment(owner: string, provider: Provider, body: Re
     if (hold.status !== 'ACTIVE' || !hold.unexpired) throw new AccessError(409,'HOLD_EXPIRED','Reserva vencida.');
     const event = (await client.query('SELECT title FROM events WHERE id=$1 AND is_published=true',[hold.event_id])).rows[0];
     if (!event) throw new AccessError(409,'EVENT_UNAVAILABLE','Evento no disponible.');
+    await applyPromotionTx(client,id,hold.event_id,promotionCode);
     const sum = (await client.query('SELECT SUM(unit_price_clp::bigint*qty)::text AS total FROM hold_items WHERE hold_id=$1',[id])).rows[0];
     const amount = Number(sum.total)+fee.feeClp;
     if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 2147483647) invalid();

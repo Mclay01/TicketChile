@@ -279,3 +279,39 @@ All database/browser work used synthetic loopback fixtures. No deployment, produ
 ## Exact next milestone after M7
 
 **M8: Staff, attendees, promotions, complimentary tickets and operational scanner.** Completion evidence: least privilege, inventory/audit and concurrent check-in tests. Stop here; do not begin M8 or deploy without a new instruction.
+
+
+## M8 completed - supersedes historical next-milestone entries
+
+- Confirmed M1-M7 complete on `astra/ticketchile-v2` at `fb12b7e624c6740488b30bb073e609bd9af61529`; read the M8 plan, authorization, lifecycle, AI, design and operational PRD context. Preserved completed foundations and the TicketChile 1D system.
+- Completed owner staff management with explicit event assignment, role/capability editing, pending/expired invitation listing, safe token-rotating resend and revocation. New manager operations and optional support resend require explicit grants; existing grants and omitted defaults do not silently expand. Door retains event-scoped scanner/check-in only.
+- Added scoped attendee search, tier/status/purchase-period filters, 50-row pages, detail, check-in metadata, finance-gated payment visibility/filtering and current-owner delivery resend. Date-only periods explicitly include the whole UTC end day. CSV aliases use bounded 500-row streaming pages, repeated authorization, backpressure, minimum holder fields and formula protection; legacy internal string helpers are bounded.
+- Implemented inventory-backed courtesy issuance with explicit tier/recipient confirmation, actor/request fingerprint idempotency, zero-price consumed snapshot, actual order/tickets, durable email queue and atomic audit. No fake payment is created. Authorized unused-courtesy revocation retains consumed capacity and append-only issuance/revocation history. The UI distinguishes a retry from an explicitly prepared new emission.
+- Added event/tier/window/usage-scoped percentage and fixed-CLP codes, inactive creation and confirmed activation/deactivation. Immutable terms require a replacement code; one code per purchase, no stacking, and a minimum 1 CLP per paid ticket are documented technical defaults. Buyer quote is nonreserving; M4 checkout calculates final snapshots and reserves usage transactionally, preserves retries/holds/fees and verifies provider fulfillment against the discounted amount. Expired/released holds free available usage; consumed usage is retained. AI remains suggestion-only.
+- Completed real authorized scanner selection, mobile QR-only camera flow, permission/no-device/ready/paused/error states, duplicate detection throttling, next-entry flow, exact scoped manual fallback and recent non-PII check-in history. Atomic writes enforce current grants, event state, access enabled/start/gate configuration and VALID state. Unique append-only actor/method/gate/device records accompany the retained audit. No offline/reversal/refund/transfer behavior is fabricated.
+- Appended `0008_event_operations.sql` for operation tables, price snapshots, new capability ceilings, immutable histories and indexes. Prior migrations unchanged. Updated security, migration, lifecycle, AI and design documentation and created [EVENT-OPERATIONS.md](EVENT-OPERATIONS.md) and [QA evidence](qa/m8/README.md).
+
+## M8 verification
+
+| Check | Result |
+| --- | --- |
+| `node --test --experimental-test-isolation=none --test-reporter=spec tests/*.test.mjs` | PASS: **313 tests**, zero failures/skips; **19 new M8 PostgreSQL/domain cases**, retained M1-M7 regressions |
+| PostgreSQL 18.1, disposable loopback databases | PASS: usage/inventory/check-in races, idempotency, ownership/scope, append-only history, quote/finalization, migration/checksum/rollback through 0008 |
+| `node node_modules/typescript/bin/tsc --noEmit --incremental false` | PASS |
+| `node scripts/lint-changed.mjs` | PASS: **37** changed/new source/test/script files; zero errors/warnings |
+| `node scripts/verify-build.mjs` | PASS: optimized production compilation, TypeScript, page generation and routes with scrubbed/inert credentials and unreachable loopback DB |
+| `node scripts/m8-browser-qa.mjs` | PASS: **80** screen/viewport states at 390/430/768/1024/1440, plus real local invitation/acceptance, scope denial, courtesy issuance, promotion quote and manager/support visibility |
+| `node scripts/m8-review-qa.mjs` | PASS: **18** follow-up states at 390/430/1440: explicit next courtesy issuance, unknown/manual success, network/server/offline recovery, inclusive date period and detail |
+| Root `git -c core.safecrlf=false diff --check` | PASS |
+
+Browser QR scans use actual ZXing decoding of synthetic canvas camera frames and actual signed-token/check-in requests. Permission/no-camera/network/server failures are explicitly injected in the QA harness, not production code. Buyer/owner browser sessions are synthetic persisted identities; no real email is sent. Selected mobile/desktop captures were visually inspected. Physical-device/other-browser/screen-reader/formal accessibility/load certification is not claimed.
+
+Intermediate issues corrected: checkout pricing originally imported unnecessary organizer dependencies; legacy SQL doubles and migration counts required updates; one test reused a buyer until the existing hold quota correctly rejected it; a static synthetic frame stalled the broader decoder, prompting QR-specific decoding, native-resolution QA frames and stopped-session callback guards. Final review corrected end-date inclusivity and malformed promotion-kind handling. All relevant checks then passed. Whole-repository lint was not rerun or claimed clean; historical debt remains 287 errors/35 warnings.
+
+Remaining limits: immutable promotion terms (replace code), no stacking, no automatic courtesy-capacity release or consumed-usage restoration, no reversal/offline/refund/transfer workflow, bounded 200-event selection/50-row attendee pages and an existing global inventory lock requiring load rehearsal. Export is operational streaming, not an immutable financial snapshot. Production schema/grants/index rehearsal, workers/delivery/provider/storage certification, QR/key rotation and transfer, retention and final commercial/legal policies remain prior/future release prerequisites. No whole-platform production-readiness claim.
+
+No deployment, production credentials/data, live merchant/model/mail/Wallet calls, main switch, merge or push. Local preview, isolated Chrome and PostgreSQL are stopped at handoff; synthetic fixture databases remain for inspection.
+
+## Exact next milestone after M8
+
+**M9: Admin operations, finance/refunds/settlements and support.** Completion evidence: **authorized audited operations; no invented business policies**. Stop after the coherent M8 commit. M9 has not begun.

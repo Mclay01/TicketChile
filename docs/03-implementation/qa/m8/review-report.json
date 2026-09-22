@@ -1,0 +1,128 @@
+[
+  {
+    "page": "courtesy-issued",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "missingLabels": 0
+  },
+  {
+    "page": "unknown-manual",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "missingLabels": 0
+  },
+  {
+    "page": "scanner-server-error",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "missingLabels": 0
+  },
+  {
+    "page": "scanner-network-error",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "missingLabels": 0
+  },
+  {
+    "page": "scanner-offline",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "missingLabels": 0
+  },
+  {
+    "page": "manual-checkin-success",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "missingLabels": 0
+  },
+  {
+    "page": "purchase-period",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "missingLabels": 0
+  },
+  {
+    "page": "attendee-detail",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "missingLabels": 0
+  },
+  {
+    "page": "courtesy-issued",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "missingLabels": 0
+  },
+  {
+    "page": "unknown-manual",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "missingLabels": 0
+  },
+  {
+    "page": "scanner-server-error",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "missingLabels": 0
+  },
+  {
+    "page": "scanner-network-error",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "missingLabels": 0
+  },
+  {
+    "page": "scanner-offline",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "missingLabels": 0
+  },
+  {
+    "page": "manual-checkin-success",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "missingLabels": 0
+  },
+  {
+    "page": "purchase-period",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "missingLabels": 0
+  },
+  {
+    "page": "attendee-detail",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "missingLabels": 0
+  },
+  {
+    "page": "attendees",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "missingLabels": 0
+  },
+  {
+    "page": "attendee-detail",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "missingLabels": 0
+  }
+]

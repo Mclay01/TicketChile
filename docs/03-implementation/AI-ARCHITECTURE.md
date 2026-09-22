@@ -84,3 +84,8 @@ Configuration outside numeric bounds falls back to conservative defaults. No API
 Append-only `0007_ai_proposals.sql` adds editable summary/SEO fields, encrypted proposal/request metadata and temporary simulator sessions. Migrations 0001–0006 remain unchanged. Local PostgreSQL covers scope/revocation, atomic confirmation/claim/replay/expiry, revisions, audit, rate and rollback. Contract tests use fake transports/providers and validate malformed/refused/incomplete responses, privacy minimization and timeout. Browser evidence: [qa/m7](qa/m7/README.md). Build verification scrubs inherited/file AI credentials as well as prior providers.
 
 Remaining: actual model/account/schema/usage validation, content-quality/injection evaluations, approved provider privacy terms, trusted production ingress, deployed migrations/keys/restricted grants, physical retention scheduling and load testing; production media/storage and other prior release gates. The local provider is intentionally modest. No mass communications, operational promotions, new financial actions or generic chatbot are implemented. Next milestone is M8; M7 does not deploy or start it.
+
+
+## M8 promotion handoff
+
+Event Center promotion suggestions remain copy/concept proposals under the M7 closed schema with no action or active/coupon fields. Organizers separately review and create an inactive code through M8, then explicitly activate it under promotions.manage. No AI callback dispatches a promotion mutation. Domain pricing, tier/window/usage validation, no-stacking and immutable terms are documented in [EVENT-OPERATIONS.md](EVENT-OPERATIONS.md).

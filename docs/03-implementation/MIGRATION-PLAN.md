@@ -90,3 +90,10 @@ Before any production adoption: inventory the real catalog and summed capacities
 ## M7 migration 0007
 
 Append `0007_ai_proposals.sql` after 0006; applied migrations 0001-0006 are unchanged. Adds event short_description/seo_title/seo_description with empty defaults, ai_requests (correlation, scope, state, encrypted validated output, usage and expiry), and ai_simulator_sessions (hashed browser capability, encrypted temporary draft, exact actor binding and consumed event). Indexes support expiry operations. No existing event/inventory/payment state is transformed. Fresh/idempotent application, checksum protection and rollback are verified on disposable local PostgreSQL. Production rehearsal, runtime grants, key management and physical expired-data retention scheduling remain operator prerequisites; this milestone applies nothing to production.
+
+
+## M8 migration 0008
+
+Append `0008_event_operations.sql`; migrations 0001-0007 remain byte-for-byte unchanged. Adds promotions, immutable per-hold promotion reservations, original hold-item price snapshots, complimentary issuance/revocation metadata, unique append-only check-in records, access configuration and event/tier/order/export indexes. Replaces role-ceiling/policy functions to recognize explicitly granted new operations without changing existing staff grants. No historical ticket/payment status, identity, price or inventory counter is rewritten.
+
+Fresh, idempotent, checksum and rollback tests now cover eight versions, with the deliberate failed test migration numbered 0009 in a temporary fixture directory only. PostgreSQL integration proves discount/usage/inventory/check-in concurrency and immutable history. Production adoption still requires an authorized catalog/grants/index-lock rehearsal and migration-before-application sequencing; no production schema or credentials were accessed. Rollback is a reviewed forward repair, not deletion of operations history or restoration of legacy unsafe routes.

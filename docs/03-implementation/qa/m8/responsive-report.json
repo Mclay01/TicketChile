@@ -1,0 +1,722 @@
+[
+  {
+    "page": "staff",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "attendees",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "attendee-detail",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "promotions",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "courtesy",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "access",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "scanner-events",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 390,
+    "title": "Tus eventos asignados",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "scanner-camera",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "camera-denied",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "camera-absent",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "valid-scan",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "used-scan",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "invalid-scan",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "wrong-event",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "manual-lookup",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 375,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "recent-scans",
+    "viewport": 390,
+    "width": 390,
+    "scroll": 390,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "staff",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "attendees",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "attendee-detail",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "promotions",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "courtesy",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "access",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "scanner-events",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 430,
+    "title": "Tus eventos asignados",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "scanner-camera",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "camera-denied",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "camera-absent",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "valid-scan",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "used-scan",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "invalid-scan",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "wrong-event",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "manual-lookup",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "recent-scans",
+    "viewport": 430,
+    "width": 430,
+    "scroll": 415,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "staff",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "attendees",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "attendee-detail",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "promotions",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "courtesy",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "access",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "scanner-events",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 768,
+    "title": "Tus eventos asignados",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "scanner-camera",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "camera-denied",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "camera-absent",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "valid-scan",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "used-scan",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "invalid-scan",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "wrong-event",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "manual-lookup",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "recent-scans",
+    "viewport": 768,
+    "width": 768,
+    "scroll": 753,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "staff",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "attendees",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "attendee-detail",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "promotions",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "courtesy",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "access",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "scanner-events",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1024,
+    "title": "Tus eventos asignados",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "scanner-camera",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "camera-denied",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "camera-absent",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "valid-scan",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "used-scan",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "invalid-scan",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "wrong-event",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "manual-lookup",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "recent-scans",
+    "viewport": 1024,
+    "width": 1024,
+    "scroll": 1009,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "staff",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "attendees",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "attendee-detail",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "promotions",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "courtesy",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "access",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "scanner-events",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1440,
+    "title": "Tus eventos asignados",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "scanner-camera",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "camera-denied",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "camera-absent",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "valid-scan",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "used-scan",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "invalid-scan",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "wrong-event",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "manual-lookup",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1425,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  },
+  {
+    "page": "recent-scans",
+    "viewport": 1440,
+    "width": 1440,
+    "scroll": 1440,
+    "title": "Ritual Nocturno",
+    "missingLabels": 0,
+    "overflow": []
+  }
+]

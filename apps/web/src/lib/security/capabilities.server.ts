@@ -6,17 +6,17 @@ import { buyerPrincipal } from "./current.server";
 import { principal,eligible,type Principal } from "./identity.server";
 
 export const roleCapabilities={
-  ORGANIZER_MANAGER:["event.read","event.edit","scanner.read","scanner.checkin","attendees.read","attendees.export"],
+  ORGANIZER_MANAGER:["event.read","event.edit","scanner.read","scanner.checkin","attendees.read","attendees.export","courtesy.issue","courtesy.revoke","promotions.manage","attendees.resend"],
   ORGANIZER_DOOR:["scanner.read","scanner.checkin"],
   ORGANIZER_FINANCE:["finance.read"],
-  ORGANIZER_SUPPORT:["attendees.read"],
+  ORGANIZER_SUPPORT:["attendees.read","attendees.resend"],
 } as const;
 export type StaffRole=keyof typeof roleCapabilities;
-export type Capability="event.read"|"event.edit"|"scanner.read"|"scanner.checkin"|"attendees.read"|"attendees.export"|"finance.read"|"staff.manage"|"audit.read";
+export type Capability="event.read"|"event.edit"|"scanner.read"|"scanner.checkin"|"attendees.read"|"attendees.export"|"finance.read"|"staff.manage"|"audit.read"|"courtesy.issue"|"courtesy.revoke"|"promotions.manage"|"attendees.resend";
 export function requestedCapabilities(role:unknown,capabilities:unknown){
   if(typeof role!=="string"||!Object.hasOwn(roleCapabilities,role))throw new AccessError(400,"INVALID_ROLE","Rol invalido.");
   const allowed:readonly string[]=roleCapabilities[role as StaffRole];
-  const requested=capabilities===undefined?[...allowed]:capabilities;
+  const requested=capabilities===undefined?allowed.filter(c=>!["courtesy.issue","courtesy.revoke","promotions.manage","attendees.resend"].includes(c)):capabilities;
   if(!Array.isArray(requested)||!requested.length||!requested.every(value=>typeof value==="string"&&allowed.includes(value)))
     throw new AccessError(400,"INVALID_CAPABILITIES","Permisos invalidos.");
   return {role:role as StaffRole,capabilities:[...new Set(requested as string[])]};

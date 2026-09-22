@@ -13,9 +13,9 @@ async function ticketRow(ticketId:string,recipient:string) {
   return (await pool.query(`SELECT t.*,${TICKET_OWNER_SQL} AS recipient,o.buyer_name,o.buyer_email,o.event_title,e.city,e.venue,e.date_iso
     FROM tickets t JOIN orders o ON o.id=t.order_id JOIN events e ON e.id=t.event_id
     WHERE t.id=$1 AND ${TICKET_OWNER_SQL}=$2 AND t.status='VALID'
-    AND EXISTS(SELECT 1 FROM payments p WHERE p.hold_id=o.hold_id AND p.status='PAID' AND p.order_id=o.id)`,[ticketId,recipient])).rows[0];
+    AND (EXISTS(SELECT 1 FROM payments p WHERE p.hold_id=o.hold_id AND p.status='PAID' AND p.order_id=o.id) OR EXISTS(SELECT 1 FROM complimentary_issues c WHERE c.order_id=o.id AND c.event_id=t.event_id))`,[ticketId,recipient])).rows[0];
 }
-/** Current owner, valid ticket and persisted paid order are all required. A
+/** Current owner, valid ticket and a paid order or courtesy record are required. A
  * rolling 15-minute bucket suppresses double-click/reload resend bursts. */
 export async function queueTicketResend(ticketId:string,email:string) {
   const ticket=await ticketRow(ticketId,email);

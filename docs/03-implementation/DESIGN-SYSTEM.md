@@ -14,7 +14,7 @@ The audit found fixture-backed Home data, N+1/unbounded catalog queries, three p
 | --- | --- |
 | Background / surfaces | `#0A0B0C`, `#101215`, `#15181C`; fields `#0E1013` |
 | Text / muted | `#E9EAE7`, `#A8ADB1` |
-| Accent | `#D8342C`; focus/light accent `#E9625A` |
+| Accent | `#D8342C`; focus/light accent `#E9615A` |
 | Status | Muted green `#9DB8A5`, warning `#D5AC70`; always accompanied by text |
 | Borders / radius | Fine white at 12% opacity; 4px default; restrained perforation only on tickets |
 | Spacing | 4 / 8 / 12 / 16 / 24 / 32 / 48px |
@@ -83,3 +83,12 @@ Organizer review uses current/proposed columns that stack on mobile, per-field a
 Status regions announce generation/results/errors, review headings receive focus, native labeled controls support keyboard interaction and reduced-motion rules are retained. The simulator uses the same EventDetail/Preview as M6, with no purchase or inventory fetch. Summary/SEO suggestions persist in the normal editor; published metadata consumes reviewed fields. No fabricated facts are used as placeholders.
 
 Evidence: [qa/m7](qa/m7/README.md), 62 states across 390/430/768/1024/1440 including real browser draft claim. Development screenshots are labeled local rules; provider output quality and non-Chrome/physical-device/formal accessibility certification remain pending.
+
+
+## M8 operational patterns
+
+Staff assignments, attendee filters/details, courtesy confirmation/history, promotions and access configuration use the existing TicketChile 1D fields, dense rows, notices, buttons and event navigation. New permissions remain visibly explicit; finance-only values are omitted by the server for other roles. No second visual language was introduced. Courtesy issuance includes an explicit new-emission action after success to distinguish a deliberate repeat from an idempotent retry.
+
+The scanner keeps event context and connectivity visible, uses large result/next-entry controls with success/error surfaces, and separates exact manual fallback from camera capture. Permission, no-camera, ready/paused and connectivity states are explicit. Result headings receive focus, camera tracks stop on exit, stopped-session callbacks are ignored, and duplicate detections are throttled. Door history contains tier/time/gate/device without buyer PII.
+
+Responsive evidence is recorded in [qa/m8](qa/m8/README.md). Browser QA uses real ZXing QR decoding of synthetic camera frames and real local check-in requests; denied/missing-camera states are injected in the harness. This is not physical-camera, Safari/Firefox or formal accessibility/load certification.

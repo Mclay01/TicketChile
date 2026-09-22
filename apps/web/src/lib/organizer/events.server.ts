@@ -12,7 +12,7 @@ import { ownedMediaReference } from '@/lib/media-access.server';
 import { eventMedia } from '@/lib/media';
 import { checklist, emptyDraft, transitions, type Draft, type Tier, type EventRecord, type Lifecycle } from './model';
 
-const caps=['event.read','event.edit','finance.read','attendees.read','attendees.export','scanner.read','scanner.checkin','staff.manage','audit.read'];
+const caps=['event.read','event.edit','finance.read','attendees.read','attendees.export','scanner.read','scanner.checkin','staff.manage','audit.read','courtesy.issue','courtesy.revoke','promotions.manage','attendees.resend'];
 const permissions=`ARRAY(SELECT c FROM unnest($4::text[]) c WHERE security_can_event($1,$2,$3,e.id,c))`;
 const args=(p:Principal)=>[p.kind,p.id,p.version,caps];
 function fail(message:string,code='INVALID_EVENT',status=400):never{throw new AccessError(status,code,message);}
