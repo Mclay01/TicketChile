@@ -62,3 +62,12 @@ Production credential status is **not inspected** for every row. No provider is 
 - Review current dependency advisories with approved network tooling before release. No dependency version upgrade or vulnerability-free claim was made during M10.
 
 M10 is not permission to launch. Use [DEPLOYMENT-RUNBOOK](DEPLOYMENT-RUNBOOK.md) and [INCIDENT-ROLLBACK](INCIDENT-ROLLBACK.md) only after separately authorized release gates are satisfied.
+
+
+## M11 product extension (2026-09-28)
+
+The user extended the completed M1-M10 plan with M11 buyer profile editing and secure ticket transfer. Technical implementation adds durable recipient-bound claims, ownership history, atomic acceptance and QR/Wallet credential revocation; see [TICKET-TRANSFER.md](TICKET-TRANSFER.md) and [qa/m11](qa/m11/README.md). This supersedes the earlier transfer/rotation feature gap, not the release BLOCKED decision.
+
+Additional release gates: reviewed adoption of migration 0010; every scanner/alias/mail worker upgraded before enabling transfers; approved event/tier transfer policies (none enabled by migration); email link fragment preservation and delivery proof; actual Wallet issuer/device acceptance; ownership/ciphertext retention and privacy review; production-like concurrency/load and security testing. Email change, transfer charging, nominative/age verification, remote Wallet removal and a dedicated policy editor remain unavailable.
+
+Recommended next milestone, not started: **M12 - production media storage and asset lifecycle**. Implement the currently missing production MediaStore adapter, tenant-scoped upload/read validation, safe legacy-media adoption and orphan/retention operations, with disposable/provider-sandbox tests and operational documentation. Production deployment and unresolved commercial/legal approvals remain separately gated.

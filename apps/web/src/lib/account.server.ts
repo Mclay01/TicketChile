@@ -12,23 +12,29 @@ async function accountEmail() {
 }
 export async function buyerProfile() {
   const email = await accountEmail();
-  const result = await pool.query<{ nombre: string; email: string; email_verified_at: Date | null }>(`SELECT nombre,email,email_verified_at FROM usuarios WHERE lower(email)=$1 LIMIT 1`, [email]);
+  const result = await pool.query<{ nombre: string; phone: string; email: string; email_verified_at: Date | null }>(`SELECT nombre,phone,email,email_verified_at FROM usuarios WHERE lower(email)=$1 LIMIT 1`, [email]);
   return result.rows[0] || null;
 }
-export type AccountTicket = { id: string; status: string; ticket_type_name: string; title: string; date_iso: Date; city: string; venue: string; image: string; owner_email: string; slug: string; event_id: string; is_published: boolean };
-const ticketSelect = `SELECT t.id,t.status,t.ticket_type_name,e.id AS event_id,e.is_published,e.title,e.date_iso,e.city,e.venue,e.image,e.slug,${TICKET_OWNER_SQL} AS owner_email
+export type AccountTicket = { id: string; status: string; ticket_type_name: string; title: string; date_iso: Date; city: string; venue: string; image: string; owner_email: string; slug: string; event_id: string; is_published: boolean; current_owner: boolean; transfer_state: string; credential_version: number };
+const ticketSelect = `SELECT t.id,t.status,t.credential_version,(${TICKET_OWNER_SQL}=$1) AS current_owner,
+ CASE WHEN ${TICKET_OWNER_SQL}<>$1 THEN 'TRANSFERRED_AWAY'
+ WHEN EXISTS(SELECT 1 FROM refunds r WHERE r.order_id=t.order_id AND r.status='COMPLETED') THEN 'REFUNDED'
+ WHEN t.status<>'VALID' THEN ''
+ WHEN EXISTS(SELECT 1 FROM ticket_transfers tr WHERE tr.ticket_id=t.id AND tr.state='PENDING' AND tr.expires_at>now()) THEN 'PENDING_TRANSFER'
+ WHEN t.credential_version>0 THEN 'RECEIVED' ELSE '' END AS transfer_state,t.ticket_type_name,e.id AS event_id,e.is_published,e.title,e.date_iso,e.city,e.venue,e.image,e.slug,CASE WHEN ${TICKET_OWNER_SQL}=$1 THEN ${TICKET_OWNER_SQL} ELSE 'Titular actual' END AS owner_email
  FROM tickets t JOIN orders o ON o.id=t.order_id JOIN events e ON e.id=t.event_id`;
 const ticketImage = (t: AccountTicket) => t.image.startsWith("data:") ? t.is_published ? eventMedia(t.image, t.event_id) : MEDIA_FALLBACK : mediaSource(t.image);
 export async function buyerTickets(view = "upcoming", page = 1) {
   const email = await accountEmail();
+  const participant = `EXISTS(SELECT 1 FROM ticket_transfers tr JOIN usuarios u ON u.id=tr.sender_id OR u.id=tr.recipient_id WHERE tr.ticket_id=t.id AND lower(u.email)=$1 AND tr.state='ACCEPTED')`;
   const condition = view === "cancelled" ? "t.status='CANCELLED'" : view === "past" ? "t.status<>'CANCELLED' AND e.date_iso<now()" : "t.status<>'CANCELLED' AND e.date_iso>=now()";
-  const result = await pool.query<AccountTicket>(`${ticketSelect} WHERE ${TICKET_OWNER_SQL}=$1 AND ${condition} ORDER BY e.date_iso,t.id LIMIT 13 OFFSET $2`, [email, (Math.min(1000, Math.max(1, page)) - 1) * 12]);
+  const result = await pool.query<AccountTicket>(`${ticketSelect} WHERE ${view==='transferred'?`${TICKET_OWNER_SQL}<>$1 AND ${participant}`:`${TICKET_OWNER_SQL}=$1 AND ${condition}`} ORDER BY e.date_iso,t.id LIMIT 13 OFFSET $2`, [email, (Math.min(1000, Math.max(1, page)) - 1) * 12]);
   return { tickets: result.rows.slice(0, 12).map(t => ({ ...t, image: ticketImage(t) })), hasMore: result.rows.length > 12 };
 }
 export async function buyerTicket(id: string) {
   const email = await accountEmail();
   if (!identifier(id)) return null;
-  const result = await pool.query<AccountTicket>(`${ticketSelect} WHERE t.id=$1 AND ${TICKET_OWNER_SQL}=$2 LIMIT 1`, [id, email]);
+  const result = await pool.query<AccountTicket>(`${ticketSelect} WHERE t.id=$2 AND (${TICKET_OWNER_SQL}=$1 OR EXISTS(SELECT 1 FROM ticket_transfers tr JOIN usuarios u ON u.id=tr.sender_id OR u.id=tr.recipient_id WHERE tr.ticket_id=t.id AND lower(u.email)=$1 AND tr.state='ACCEPTED')) LIMIT 1`, [email, id]);
   const row = result.rows[0];
   return row ? { ...row, image: ticketImage(row) } : null;
 }

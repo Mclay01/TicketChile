@@ -1,0 +1,1157 @@
+{
+  "completed": true,
+  "states": [
+    {
+      "name": "profile-edit",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-validation",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-success",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "buyer-security",
+      "h1": "Seguridad y acceso",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "my-tickets-normal",
+      "h1": "Mis tickets",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transfer-start",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "transfer-pending",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "sender-cancelled",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "invitation-signin-required",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-login",
+      "h1": "Ingresa a tu cuenta",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-registration",
+      "h1": "Crea tu cuenta",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-verified",
+      "h1": "Verifica tu correo",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "accept-transfer",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transfer-success",
+      "h1": "La entrada ya es tuya",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "new-owner-wallet",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "transferred-away",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transferred-history",
+      "h1": "Mis tickets",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "used-ticket",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "refunded-ticket",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "expired-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "cancelled-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "invalid-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "wrong-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 390,
+      "scroll": 375,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-edit",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-validation",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-success",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "buyer-security",
+      "h1": "Seguridad y acceso",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "my-tickets-normal",
+      "h1": "Mis tickets",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transfer-start",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "transfer-pending",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "sender-cancelled",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "invitation-signin-required",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-login",
+      "h1": "Ingresa a tu cuenta",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-registration",
+      "h1": "Crea tu cuenta",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-verified",
+      "h1": "Verifica tu correo",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "accept-transfer",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transfer-success",
+      "h1": "La entrada ya es tuya",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "new-owner-wallet",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "transferred-away",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transferred-history",
+      "h1": "Mis tickets",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "used-ticket",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "refunded-ticket",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "expired-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "cancelled-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "invalid-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "wrong-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 430,
+      "scroll": 415,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-edit",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-validation",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-success",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "buyer-security",
+      "h1": "Seguridad y acceso",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "my-tickets-normal",
+      "h1": "Mis tickets",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transfer-start",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "transfer-pending",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "sender-cancelled",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "invitation-signin-required",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-login",
+      "h1": "Ingresa a tu cuenta",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-registration",
+      "h1": "Crea tu cuenta",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-verified",
+      "h1": "Verifica tu correo",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "accept-transfer",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transfer-success",
+      "h1": "La entrada ya es tuya",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "new-owner-wallet",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "transferred-away",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transferred-history",
+      "h1": "Mis tickets",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "used-ticket",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "refunded-ticket",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "expired-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "cancelled-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "invalid-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "wrong-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 768,
+      "scroll": 753,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-edit",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-validation",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-success",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "buyer-security",
+      "h1": "Seguridad y acceso",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "my-tickets-normal",
+      "h1": "Mis tickets",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transfer-start",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "transfer-pending",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "sender-cancelled",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "invitation-signin-required",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-login",
+      "h1": "Ingresa a tu cuenta",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-registration",
+      "h1": "Crea tu cuenta",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-verified",
+      "h1": "Verifica tu correo",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "accept-transfer",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transfer-success",
+      "h1": "La entrada ya es tuya",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "new-owner-wallet",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "transferred-away",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transferred-history",
+      "h1": "Mis tickets",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "used-ticket",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "refunded-ticket",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "expired-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "cancelled-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "invalid-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "wrong-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 1024,
+      "scroll": 1009,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-edit",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-validation",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "profile-success",
+      "h1": "Tu perfil",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "buyer-security",
+      "h1": "Seguridad y acceso",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "my-tickets-normal",
+      "h1": "Mis tickets",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transfer-start",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "transfer-pending",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "sender-cancelled",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "invitation-signin-required",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-login",
+      "h1": "Ingresa a tu cuenta",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-registration",
+      "h1": "Crea tu cuenta",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "recipient-verified",
+      "h1": "Verifica tu correo",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "accept-transfer",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transfer-success",
+      "h1": "La entrada ya es tuya",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "new-owner-wallet",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 1
+    },
+    {
+      "name": "transferred-away",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "transferred-history",
+      "h1": "Mis tickets",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "used-ticket",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "refunded-ticket",
+      "h1": "Tu entrada",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "expired-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "cancelled-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "invalid-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    },
+    {
+      "name": "wrong-invitation",
+      "h1": "Recibe tu próxima experiencia",
+      "main": 1,
+      "width": 1440,
+      "scroll": 1425,
+      "unlabeled": 0,
+      "smallTargets": [],
+      "qr": 0
+    }
+  ],
+  "providers": "Disabled; Wallet JWT generated locally only",
+  "limitations": "Local Chrome only; no actual email, Wallet issuer, mobile hardware or formal accessibility certification"
+}

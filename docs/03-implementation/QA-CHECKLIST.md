@@ -229,4 +229,22 @@ No production access or deployment occurred. Whole-repository lint remains uncla
 - [x] Provider/feature/business matrices, ENVIRONMENT, RELEASE-READINESS, DEPLOYMENT-RUNBOOK, INCIDENT-ROLLBACK and M10-AUDIT published in the repository. Approved designs unchanged; no deployment.
 - [ ] External release gates: production catalog/restore, media adapter, scheduler/alerts/retention, approved policies, provider certification, real-device/accessibility/security/dependency/load acceptance. These remain explicitly blocked, not inferred from local test success.
 
-No implementation milestone follows M10 in the approved plan.
+M10 completed the original plan. The subsequent user request explicitly extended it with M11 below.
+
+## M11 buyer account and transfer verification - 2026-09-28
+
+- [x] Clean starting point `b72128f3d0cd44722e4b0dae8125e4f477029e4d`, branch `astra/ticketchile-v2`; completed M1-M10 preserved.
+- [x] Inspected identity/profile/orders/ownership, all active QR sign/render/verify paths, Wallet, scanner/manual aliases, ticket delivery, refunds, courtesy, audit and transfer placeholders.
+- [x] Profile accepts only current-buyer name/phone with validation/audit. Email/RUT/identity injection rejected; buyer security UI excludes privileged controls.
+- [x] No default event transfer enablement. Explicit event/tier policy, deadline/count/fee/nominative/courtesy gates; unavailable unsupported rules fail closed.
+- [x] Durable random hashed expiring recipient-bound claims, encrypted mail, nonenumerating initiation, preserved HttpOnly authentication handoff, cancelled/expired/wrong-recipient/replay denial.
+- [x] Atomic acceptance/owner change/credential increment/history/audit/notification queue, with rollback on audit failure; idempotent initiation/cancellation and rotated rate-limited resend.
+- [x] Legacy tc1 works at generation zero; transferred tc1/old tc2 and round-trip credentials fail. Current-generation scanner and current-owner QR/Wallet work. Former-owner API/alias reads cannot reveal purchaser PII or QR.
+- [x] PostgreSQL double accept, duplicate initiation, cancel/accept, scan/accept, refund request/accept and refund completion races; no reactivation of used/refunded tickets. Payment owner remains separate.
+- [x] Complimentary policy and original issuance retention; current-owner history, generation-bound mail retries, encrypted exact-payload dedupe and transport failure without ownership corruption.
+- [x] **115 browser states at 390/430/768/1024/1440**, with 46 screenshots: profile validation/save, buyer security, tickets, initiation/pending/cancel/resend, login/registration/verification, cookie-preserved acceptance, keyboard/focus, success, historical/new-owner/Wallet/used/refunded and expired/cancelled/invalid/wrong-recipient states. Report in `qa/m11/`.
+- [x] **360 tests**, zero failures/skips: all 336 existing cases plus 24 new PostgreSQL transfer/profile/mail/policy/race cases. TypeScript, whole repository lint, scoped lint, production build and diff checks pass.
+- [x] Whole lint: **354 maintained files, 0 errors / 0 warnings**. Scoped lint: **37 changed/new files**, 0 errors/warnings. Build logging uses runtime-native crypto to remove the inherited Edge instrumentation warning.
+- [x] Additive `0010_ticket_transfers.sql`, legacy-zero/history backfill and no policy enablement tested. Applied migrations 0001-0009 unchanged. No production migration/provider/data/credential use, deployment, push or merge.
+- [x] Transfer/security/migration/operations/payment/design/release/progress documents updated. Recommended M12 is production media storage and asset lifecycle; not started.
+- [ ] Production catalog/restore/runtime grants, real mail/Wallet/device certification, approved transfer/legal/business policies, retention/key management, production security/load and other M10 release gates remain open.

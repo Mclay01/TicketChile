@@ -76,3 +76,10 @@ Use coherent forward commits on the existing branch. Revert an application miles
 | M10 | Complete states, accessibility, performance, cleanup and release documentation | Full gates and responsive end-to-end acceptance matrix |
 
 M1/M2 are security containment milestones, not a claim that the platform is production-ready. Continue unfinished milestones using the progress document rather than redoing M0.
+
+
+## Authorized extension after M10
+
+M1-M10 were completed and preserved. The user's subsequent request authorizes **M11 - buyer account completion, ticket transfer, QR re-keying and Wallet lifecycle**. Scope: name/phone editing with M3 identity; fail-closed configurable eligibility; durable recipient-bound claims; atomic ownership/history/credential rotation; current-owner QR/Wallet/mail; scanner/refund concurrency; responsive acceptance/account states and full local gates. No deployment, merge or production operation. The original milestone entries above remain historical.
+
+Recommended follow-up after M11: **M12 - production media storage and asset lifecycle**, addressing the explicit M5/M10 production storage blocker. This recommendation does not authorize starting M12; stop after the coherent M11 commit.

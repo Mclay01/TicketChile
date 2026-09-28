@@ -101,3 +101,8 @@ New payment creation snapshots effective commission policy immutably; missing po
 ## M10 verification and operations
 
 Initial issued/failed/cancelled confirmation responses no longer start a redundant poll; abandoned initial status reads are aborted. Checkout controls have persistent labels. Stripe refund availability now requires both the explicit flag and a recognized secret-key format; flag-only configuration stays unavailable. Production secrets were not inspected. Full local provider/worker/financial regressions pass; browser fake evidence is injected only into isolated Node services, never through a production backdoor. Scheduling, merchant certification, email delivery proof and business/accounting policy remain release gates in DEPLOYMENT-RUNBOOK.md and RELEASE-READINESS.md.
+
+
+## M11 current-owner transfer interaction
+
+Transfers never modify payment/order owner, provider binding, paid evidence, amounts, inventory or refund destination. Any active refund request blocks new transfer acceptance; M9 execution/confirmation still uses the original verified payment and immutable refund-ticket mapping. Completion cancels the current owner's VALID mapped tickets and scanner admission remains blocked. PostgreSQL tests cover refund-request/acceptance races and refund completion after transfer. No reimbursement to a transferee, transfer fee or new refund policy is invented. See [TICKET-TRANSFER.md](TICKET-TRANSFER.md).

@@ -105,3 +105,8 @@ Lists have filters, bounded pagination and empty states. Native labeled forms re
 ## M10 accessibility acceptance
 
 The 1D colors/type/layout direction is preserved. Field descriptions/errors use unique associations, checkout/login labels remain visible, mobile controls target 44px, dialog focus wraps and returns on Escape/close, registration steps receive focus, and duplicate organizer-auth main landmarks are removed. Measured token contrast: primary white 4.72:1, muted/surface 8.29:1, accent/background 5.93:1, warning/surface 8.90:1. Reduced motion was verified in Chrome. Four reference HTML hashes and separate final screenshots are in `qa/m10/`; no approved artifact was overwritten. Real screen-reader, content-overlay contrast, zoom/device and visual stakeholder acceptance remain external validation, not silently certified by a DOM audit.
+
+
+## M11 buyer lifecycle extension
+
+Existing 1D AccountShell/AuthShell, fields, buttons, notices, status, ticket details and responsive layouts now support editable name/phone, buyer-only security navigation, recipient invitation/registration/verification/acceptance, pending cancel/resend, received and historical transferred-away tickets, and masked ownership history. Native forms and explicit irreversible-acceptance copy replace the disabled transfer placeholder. Email and RUT editing remain explicitly unavailable. No unrelated organizer/admin/public redesign or approved-reference edit occurred. New states retain labels, status announcements, keyboard acceptance and focus; five-width local evidence is in qa/m11.

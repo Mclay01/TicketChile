@@ -23,24 +23,29 @@ function hmac(payload: string) {
  * Formato token:
  * tc1.<ticketId>.<eventId>.<iatMs>.<sig>
  */
-export function signTicketToken(input: { ticketId: string; eventId: string; iatMs?: number }) {
+export function signTicketToken(input: { ticketId: string; eventId: string; iatMs?: number; credentialVersion?: number }) {
   const iatMs = input.iatMs ?? Date.now();
-  const payload = `tc1.${input.ticketId}.${input.eventId}.${iatMs}`;
+  const version=input.credentialVersion;
+  if(version!==undefined&&(!Number.isSafeInteger(version)||version<0)) throw new Error('Invalid credential generation');
+  const payload = version===undefined ? `tc1.${input.ticketId}.${input.eventId}.${iatMs}` : `tc2.${input.ticketId}.${input.eventId}.${iatMs}.${version}`;
   const sig = hmac(payload);
   return `${payload}.${sig}`;
 }
 
-export function verifyTicketToken(token: string): null | { ticketId: string; eventId: string; iatMs: number } {
+export function verifyTicketToken(token: string): null | { ticketId: string; eventId: string; iatMs: number; credentialVersion?: number } {
   const parts = token.split(".");
-  if (parts.length !== 5) return null;
+  if (parts.length !== 5 && parts.length !== 6) return null;
 
-  const [v, ticketId, eventId, iatStr, sig] = parts;
-  if (v !== "tc1") return null;
+  const [v, ticketId, eventId, iatStr] = parts;
+  if (!((v==='tc1'&&parts.length===5)||(v==='tc2'&&parts.length===6))) return null;
+  const sig=parts.at(-1)!;
+  const version=v==='tc2'?Number(parts[4]):0;
+  if(!Number.isSafeInteger(version)||version<0||(v==='tc2'&&String(version)!==parts[4]))return null;
 
   const iatMs = Number(iatStr);
   if (!Number.isFinite(iatMs) || iatMs <= 0) return null;
 
-  const payload = `tc1.${ticketId}.${eventId}.${iatMs}`;
+  const payload = parts.slice(0,-1).join('.');
   const expected = hmac(payload);
 
   // Comparación segura (evita timing attacks)
@@ -49,5 +54,5 @@ export function verifyTicketToken(token: string): null | { ticketId: string; eve
   if (a.length !== b.length) return null;
   if (!crypto.timingSafeEqual(a, b)) return null;
 
-  return { ticketId, eventId, iatMs };
+  return v==='tc1'?{ ticketId, eventId, iatMs }:{ ticketId, eventId, iatMs,credentialVersion:version };
 }

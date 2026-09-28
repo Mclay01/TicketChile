@@ -26,13 +26,12 @@ export async function GET() {
       `
       SELECT
         t.id,
-        t.order_id        AS "orderId",
         t.event_id        AS "eventId",
         o.event_title     AS "eventTitle",
         t.ticket_type_name AS "ticketTypeName",
         t.ticket_type_id AS "ticketTypeId",
         t.created_at AS "createdAtISO",
-        t.buyer_email     AS "buyerEmail",
+        ${TICKET_OWNER_SQL} AS "ownerEmail",
         t.status
       FROM tickets t
       JOIN orders o ON o.id = t.order_id

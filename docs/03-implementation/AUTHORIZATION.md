@@ -153,3 +153,16 @@ An event reassignment does not expose its previous organizer's settlement: organ
 ## M10 operational hardening
 
 Ticket/order/payment IDs still confer no authority; existing persisted identity, owner and event/capability predicates are unchanged. Unknown admin detail now maps to not-found, and inherited object-property names cannot select an admin section. Public health/readiness expose only booleans and no identities, schema names or provider secrets. Unexpected API failures return a correlation ID and generic text; operational logs never serialize raw Error, URL, headers or body. Security headers preserve camera=(self); CSP retains inline hydration/styles and requires external provider/HTTPS acceptance before release. See the M10 audit and release gates for limitations.
+
+
+## M11 transfer and profile boundaries
+
+M11 supersedes earlier statements that transfer/QR rotation and profile editing are unavailable. [TICKET-TRANSFER.md](TICKET-TRANSFER.md) is the complete policy, claim, transaction, credential, Wallet and race contract. No other M1-M10 boundary is relaxed.
+
+- Profile PATCH targets only the verified M3 buyer and accepts only name/phone. Email/RUT/identity/security field changes are rejected. Buyer security navigation uses `/cuenta/seguridad`, without privileged controls.
+- Transfer initiate/manage/detail/inspect/accept all require live verified buyer identity; IDs and claim tokens alone grant no ticket access. The public stage operation only stores an encrypted expiring HttpOnly claim cookie. Recipient account existence is not disclosed. Same-origin, bounded bodies, persisted rates, expiry/state/recipient checks and atomic audit apply.
+- Policy configuration requires live event.edit and repeats database event/tenant scope in its transaction. No policies are enabled by migration; fee/nominative workflows fail closed when unsupported.
+- tc1 is accepted only at credential generation zero; tc2 signs the generation. Scanner write predicates compare the current generation, including all demo aliases. QR/Wallet/email generation and token lookups honor current ownership and generation. Old Wallet passes may remain visible but cannot authorize entry.
+- Former transfer participants receive historical metadata only, with masked other-owner emails and no QR/Wallet/resend. The ticket-list alias shares removal of original purchaser email/order ID. Payment access remains with the payer; mapped ticket cancellation follows current ticket ownership.
+
+Residual exposures: email-based legacy ownership until a separately designed email-change/adoption workflow; no remote Wallet removal or physical-device/provider certification; policy approval, retention/key management, runtime DB grants, distributed-load/security review and all M10 release gates remain open. An in-flight email may arrive after transfer, but its old credential is revoked. Never roll back to a scanner that ignores credential generation after enabling transfers.

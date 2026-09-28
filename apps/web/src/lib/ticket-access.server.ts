@@ -7,6 +7,7 @@ import { limit } from "@/lib/security/rate-limit.server";
 
 export type OwnedTicket = {
   id: string; event_id: string; order_id: string; status: string;
+  credential_version: number;
   ticket_type_name: string; event_title: string; buyer_name: string;
   owner_email: string; city: string; venue: string; date_iso: Date | string;
 };
@@ -24,6 +25,7 @@ export async function ownedTicketFromRequest(request: Request): Promise<OwnedTic
   const token = params.get("t");
   let ticketId = params.get("ticketId") || params.get("ticket_id") || "";
   let eventId = params.get("eventId") || params.get("event_id") || "";
+  let credentialVersion:number|undefined;
   if (token) {
     const verified = token.length <= 1024 ? verifyTicketToken(token) : null;
     if (!verified || (ticketId && ticketId !== verified.ticketId) || (eventId && eventId !== verified.eventId)) {
@@ -31,12 +33,13 @@ export async function ownedTicketFromRequest(request: Request): Promise<OwnedTic
     }
     ticketId = verified.ticketId;
     eventId = verified.eventId;
+    credentialVersion=verified.credentialVersion??0;
   }
   if (!identifier(ticketId) || (eventId && !identifier(eventId))) {
     throw new AccessError(400, "INVALID_INPUT", "Entrada inválida.");
   }
   const result = await pool.query<OwnedTicket>(
-    `SELECT t.id, t.event_id, t.order_id, t.status, t.ticket_type_name,
+    `SELECT t.id, t.event_id, t.order_id, t.status, t.ticket_type_name, t.credential_version,
             o.event_title, o.buyer_name, ${TICKET_OWNER_SQL} AS owner_email,
             e.city, e.venue, e.date_iso
      FROM tickets t JOIN orders o ON o.id = t.order_id JOIN events e ON e.id = t.event_id
@@ -46,6 +49,7 @@ export async function ownedTicketFromRequest(request: Request): Promise<OwnedTic
   );
   const ticket = result.rows[0];
   if (!ticket) throw new AccessError(404, "NOT_FOUND", "Entrada no encontrada.");
+  if(credentialVersion!==undefined&&credentialVersion!==(ticket.credential_version??0))throw new AccessError(409,'INVALID_QR','Este QR fue revocado.');
   if (ticket.status !== "VALID") throw new AccessError(409, "INACTIVE_TICKET", "La entrada ya no está disponible para acceso.");
   return ticket;
 }

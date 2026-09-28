@@ -8,7 +8,7 @@ import { buildTicketEmail } from '@/lib/tickets.email';
 import { seal, unseal } from '@/lib/security/crypto.server';
 import { audit } from '@/lib/security/audit.server';
 import { mailConfigured, sendTransactionalMail, type Mail, type MailTransport } from '@/lib/mail/transport.server';
-type Job={id:string;purpose:'TICKET'|'SECURITY';source_id:string;recipient:string;payload_cipher:string|null;lease_token:string;first_attempt_at:Date|null};
+type Job={id:string;purpose:'TICKET'|'SECURITY'|'TRANSFER';source_id:string;recipient:string;payload_cipher:string|null;lease_token:string;first_attempt_at:Date|null;credential_version:number};
 async function ticketRow(ticketId:string,recipient:string) {
   return (await pool.query(`SELECT t.*,${TICKET_OWNER_SQL} AS recipient,o.buyer_name,o.buyer_email,o.event_title,e.city,e.venue,e.date_iso
     FROM tickets t JOIN orders o ON o.id=t.order_id JOIN events e ON e.id=t.event_id
@@ -21,9 +21,9 @@ export async function queueTicketResend(ticketId:string,email:string) {
   const ticket=await ticketRow(ticketId,email);
   if(!ticket) throw new AccessError(404,'NOT_FOUND','Entrada no encontrada.');
   const recipientHash=createHash('sha256').update(email).digest('hex');
-  const result=await pool.query(`INSERT INTO mail_jobs(id,dedupe_key,purpose,source_id,recipient)
-    VALUES($1,$2,'TICKET',$3,$4) ON CONFLICT(dedupe_key) DO UPDATE SET dedupe_key=EXCLUDED.dedupe_key RETURNING id,state`,
-    [randomUUID(),`resend:${ticketId}:${recipientHash}:${Math.floor(Date.now()/900000)}`,ticketId,email]);
+  const result=await pool.query(`INSERT INTO mail_jobs(id,dedupe_key,purpose,source_id,recipient,credential_version)
+    VALUES($1,$2,'TICKET',$3,$4,$5) ON CONFLICT(dedupe_key) DO UPDATE SET dedupe_key=EXCLUDED.dedupe_key RETURNING id,state`,
+    [randomUUID(),`resend:${ticketId}:${ticket.credential_version}:${recipientHash}:${Math.floor(Date.now()/900000)}`,ticketId,email,ticket.credential_version]);
   return {queued:true,state:result.rows[0].state};
 }
 /** Import existing encrypted M3 security messages without replacing or deleting
@@ -40,12 +40,25 @@ function escape(value:string) {return value.replace(/[<>&"']/g,c=>({'<':'&lt;','
 async function authorizeAndBuild(job:Job):Promise<Mail|null> {
   if(job.purpose==='TICKET') {
     const ticket=await ticketRow(job.source_id,job.recipient);
-    if(!ticket) return null;
+    if(!ticket||(ticket.credential_version??0)!==(job.credential_version??0)) return null;
     if(job.payload_cipher) return JSON.parse(unseal(job.payload_cipher,`delivery:${job.id}`));
     const png=await renderTicketQr(ticket);
     return buildTicketEmail({to:[job.recipient],ticket:{id:ticket.id,status:ticket.status,ticketTypeName:ticket.ticket_type_name,qrPngBase64:png.toString('base64')},
-      order:{id:ticket.order_id,buyerName:ticket.buyer_name,buyerEmail:job.recipient,ownerEmail:job.recipient},
+      order:{id:ticket.order_id,buyerName:'',buyerEmail:job.recipient,ownerEmail:job.recipient},
       event:{id:ticket.event_id,title:ticket.event_title,city:ticket.city,venue:ticket.venue,dateISO:new Date(ticket.date_iso).toISOString()}});
+  }
+  if(job.purpose==='TRANSFER') {
+    const source=(await pool.query(`SELECT m.*,t.state,t.invitation_revision,t.expires_at AS claim_expiry FROM ticket_transfer_messages m
+      JOIN ticket_transfers t ON t.id=m.transfer_id WHERE m.id=$1 AND m.expires_at>now()`,[job.source_id])).rows[0];
+    if(!source||(source.kind==='INVITATION'&&(source.state!=='PENDING'||source.revision!==source.invitation_revision||new Date(source.claim_expiry).getTime()<=Date.now())))return null;
+    const payload=JSON.parse(unseal(source.payload_cipher,`transfer-mail:${source.id}`));
+    if(payload.to!==job.recipient)return null;
+    if(job.payload_cipher)return JSON.parse(unseal(job.payload_cipher,`delivery:${job.id}`));
+    const base=new URL(process.env.APP_BASE_URL||'');
+    if(base.username||base.password||(base.protocol!=='https:'&&!(process.env.NODE_ENV!=='production'&&['localhost','127.0.0.1'].includes(base.hostname))))throw Error('Invalid mail origin');
+    const link=new URL('/transferir',base);if(payload.token)link.hash=payload.token;
+    const text=source.kind==='INVITATION'?'Recibiste una invitación para recibir una entrada. Inicia sesión con este correo y acepta antes de su vencimiento.':source.kind==='ACCEPTED'?'La transferencia de tu entrada fue aceptada. El QR anterior ya no permite ingresar.':'La invitación para transferir una entrada fue cancelada.';
+    return {from:process.env.FROM_EMAIL||'',to:[job.recipient],subject:'TicketChile: transferencia de entrada',html:`<p>${text}</p><p><a href="${escape(source.kind==='INVITATION'?link.href:new URL('/mis-tickets',base).href)}">${source.kind==='INVITATION'?'Revisar invitación':'Ver mis tickets'}</a></p>`};
   }
   const source=(await pool.query('SELECT * FROM security_outbox WHERE id=$1 AND delivered_at IS NULL AND expires_at>NOW()',[job.source_id])).rows[0];
   if(!source) return null;
@@ -90,7 +103,7 @@ export async function processMailJobs(options:{transport?:MailTransport;limit?:n
       // Persist exact payload before the first external call. Retry sends the
       // same bytes even if event details or signing timestamps have changed.
       const claimed=await pool.query(`UPDATE mail_jobs SET payload_cipher=COALESCE(payload_cipher,$3),first_attempt_at=COALESCE(first_attempt_at,NOW())
-        WHERE id=$1 AND lease_token=$2 AND lease_until>NOW() RETURNING id`,[job.id,token,seal(JSON.stringify(mail),`delivery:${job.id}`)]);
+        WHERE id=$1 AND lease_token=$2 AND lease_until>NOW() AND state='SENDING' RETURNING id`,[job.id,token,seal(JSON.stringify(mail),`delivery:${job.id}`)]);
       if(!claimed.rowCount) continue;
       await send(mail,`mail:${job.id}`);
       await withTx(async client=>{

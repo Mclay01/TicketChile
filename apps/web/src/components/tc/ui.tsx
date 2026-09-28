@@ -15,6 +15,6 @@ export function PageHeading({ eyebrow, title, children }: { eyebrow?: string; ti
   return <div className="page-heading">{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h1>{title}</h1>{children && <p className="muted">{children}</p>}</div>;
 }
 export function Status({ value }: { value: string }) {
-  const names: Record<string, string> = { VALID: "Disponible", USED: "Utilizada", CANCELLED: "Anulada", PAID: "Pagada", PENDING: "Pendiente", CREATED: "Creada", FAILED: "No completada", REVIEW: "En revisión" };
+  const names: Record<string, string> = { TRANSFERRED_AWAY:'Transferida · sin acceso', PENDING_TRANSFER:'Transferencia pendiente', RECEIVED:'Recibida por transferencia', REFUNDED:'Reembolsada', VALID: "Disponible", USED: "Utilizada", CANCELLED: "Anulada", PAID: "Pagada", PENDING: "Pendiente", CREATED: "Creada", FAILED: "No completada", REVIEW: "En revisión" };
   return <span className={`status ${["VALID", "PAID"].includes(value) ? "" : "inactive"}`}>{names[value] || "En revisión"}</span>;
 }

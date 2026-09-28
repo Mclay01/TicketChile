@@ -10,7 +10,7 @@ import { limit } from "@/lib/security/rate-limit.server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type CheckinRow = { id: string; ticket_type_name: string; status: string; used_at: Date | string | null };
+type CheckinRow = { id: string; ticket_type_name: string; status: string; credential_version:number; used_at: Date | string | null };
 
 export async function POST(request: Request) {
   try {
@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     const qrText = "qrText" in body && typeof body.qrText === "string" ? body.qrText.trim() : "";
     const manualId = "ticketId" in body ? identifier(body.ticketId) : "";
     let ticketId = "";
+    let credentialVersion:number|null=null;
     if (qrText) {
       // A scanner payload must be signed. Manual owner lookup is an explicit,
       // separately authorized mode; it cannot override an invalid signature.
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
       if (parsed.eventId !== eventId) throw new AccessError(409, "WRONG_EVENT", "QR no corresponde a este evento.");
       if (manualId && manualId !== parsed.ticketId) throw new AccessError(400, "INVALID_QR", "QR inválido.");
       ticketId = identifier(parsed.ticketId);
+      credentialVersion=parsed.credentialVersion??0;
     } else { ticketId = manualId; }
     if (!ticketId) throw new AccessError(400, "INVALID_INPUT", "Entrada inválida.");
 
@@ -43,12 +45,13 @@ export async function POST(request: Request) {
       const changed = await client.query<CheckinRow>(
       `UPDATE tickets t SET status='USED', used_at=NOW()
        WHERE t.id=$1 AND t.event_id=$2 AND t.status='VALID'
+         AND ($7::integer IS NULL OR t.credential_version=$7)
          AND NOT EXISTS(SELECT 1 FROM refunds r WHERE r.order_id=t.order_id AND r.status IN ('PROCESSING','UNKNOWN','COMPLETED'))
          AND security_can_event($3,$4,$5,t.event_id,'scanner.checkin')
          AND EXISTS(SELECT 1 FROM events e WHERE e.id=t.event_id AND e.lifecycle NOT IN ('CANCELLED','ENDED'))
          AND NOT EXISTS(SELECT 1 FROM event_access_config ac WHERE ac.event_id=t.event_id AND (NOT ac.enabled OR ac.starts_at>now() OR (cardinality(ac.gates)>0 AND NOT $6=ANY(ac.gates))))
        RETURNING t.id, t.ticket_type_name, t.status, t.used_at`,
-      [ticketId, eventId, access.actor.kind, access.actor.id, access.actor.version,gate],
+      [ticketId, eventId, access.actor.kind, access.actor.id, access.actor.version,gate,credentialVersion],
     );
       if(changed.rowCount)await client.query('INSERT INTO checkin_records(id,ticket_id,event_id,actor_kind,actor_id,method,gate,device) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',[randomUUID(),ticketId,eventId,access.actor.kind,access.actor.id,qrText?'QR':'MANUAL',gate,device]);
       if (changed.rowCount) await audit(client,{actor:access.actor,organizerId:access.organizerId,eventId,action:"ticket.checked_in",targetType:"ticket",targetId:ticketId});
@@ -62,13 +65,14 @@ export async function POST(request: Request) {
       } });
     }
     const existing = await pool.query<CheckinRow>(
-      `SELECT t.id, t.ticket_type_name, t.status, t.used_at FROM tickets t
+      `SELECT t.id, t.ticket_type_name, t.status, t.used_at, t.credential_version FROM tickets t
        WHERE t.id=$1 AND t.event_id=$2
          AND security_can_event($3,$4,$5,t.event_id,'scanner.checkin')`,
       [ticketId, eventId, access.actor.kind, access.actor.id, access.actor.version],
     );
     const row = existing.rows[0];
     if (!row) throw new AccessError(404, "UNKNOWN_TICKET", "Entrada no encontrada.");
+    if(credentialVersion!==null&&credentialVersion!==(row.credential_version??0))throw new AccessError(409,'INVALID_QR','QR revocado. Solicita la entrada actual.');
     if(row.status==="VALID")throw new AccessError(409,"ACCESS_CLOSED","Acceso cerrado, fuera de horario o puerta no habilitada.");
     if (row.status === "USED") return privateJson(409, { ok: false, code: "ALREADY_USED", error: "Ticket ya fue usado.", usedAtISO: row.used_at ? new Date(row.used_at).toISOString() : null });
     throw new AccessError(409, "CANCELLED", "La entrada no está habilitada.");

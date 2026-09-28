@@ -1,5 +1,7 @@
 # Astra execution state
 
+Current outcome: M11 buyer account and secure ticket transfer extension is complete; final evidence and limitations are recorded below. M12 is a recommendation only and has not started.
+
 Updated: 2026-09-28. Branch: `astra/ticketchile-v2`. M10 starting commit: `a3d38370b3b48598f1772148bc8d0f741f7221f1`; initial working tree clean. Earlier sections below retain milestone-specific historical evidence.
 
 ## Historical M0/M1 discovery and containment
@@ -19,6 +21,8 @@ Updated: 2026-09-28. Branch: `astra/ticketchile-v2`. M10 starting commit: `a3d38
 
 ## Current work
 
+M11 is the current user-authorized extension, starting from clean `b72128f3d0cd44722e4b0dae8125e4f477029e4d` on `astra/ticketchile-v2`. M1-M10 are complete and preserved. Final M11 evidence appears at the end of this document.
+
 M1-M9 are complete and preserved: M1 `39a0931`, M2 `319cb5f`, M3 `fd48fc0`, M4 `9e4466e`, M5 `9ac8716`, M6 `3e9b00e`, M7 `fb12b7e`, M8 `50af6da`, M9 `a3d3837`. M10 closes states/accessibility/performance/cleanup and release documentation; final evidence is recorded at the end of this file. No deployment, main merge, push, production credentials/data or real provider calls.
 
 ## M2 completed
@@ -34,7 +38,7 @@ M1-M9 are complete and preserved: M1 `39a0931`, M2 `319cb5f`, M3 `fd48fc0`, M4 `
 
 ## Pending release work
 
-Production remains blocked by schema adoption/restore evidence, production media storage, worker installation, provider certification, business/legal approvals, real-device/security/load validation and retention operations. These are explicit release gates in [RELEASE-READINESS.md](RELEASE-READINESS.md), not permission to deploy or start another milestone. M10 is the final implementation milestone in the approved plan.
+Production remains blocked by schema adoption/restore evidence, production media storage, worker installation, provider certification, business/legal approvals, real-device/security/load validation and retention operations. These are explicit release gates in [RELEASE-READINESS.md](RELEASE-READINESS.md), not permission to deploy or start another milestone. M10 completed the original plan; the user subsequently authorized the M11 extension recorded below.
 
 ## Decisions
 
@@ -52,7 +56,7 @@ Production remains blocked by schema adoption/restore evidence, production media
 - The reconstructed local schema is verified on disposable PostgreSQL 18.1. The actual production schema is still unknown and requires catalog reconciliation; no remote DB inspection was attempted.
 - Three bundled design HTMLs contain their real markup in `__bundler/template`; inspect the template, not the loading thumbnail.
 - Root API/shared-types packages remain placeholders; the maintained application and its tooling stay in `apps/web`. Current whole-repository lint results supersede historical debt counts.
-- Remaining exposures: unverified production catalog/infrastructure, privileged onboarding/key management, scheduler installation and real recovery/mail delivery proof, provider refund certification and policy, production object storage/legacy media transition, distributed abuse/load controls, retention and ticket transfer/QR/Wallet key rotation. Local M1-M10 completion does not certify production readiness.
+- Remaining exposures: unverified production catalog/infrastructure, privileged onboarding/key management, scheduler installation and real recovery/mail delivery proof, provider refund certification and policy, production object storage/legacy media transition, distributed abuse/load controls, retention and provider-level signing-key lifecycle. M11 adds ticket transfer/QR/Wallet credential generation. Local M1-M10 completion does not certify production readiness.
 - M1/M2 retain isolated provider/session/DB doubles; M3-M5 additionally execute actual PostgreSQL migration/identity/permission/payment/media/ownership cases. M5 adds local Chrome public/account QA. External merchant, Google OAuth, Wallet, email-delivery, physical-device and distributed-load end-to-end remain unexecuted.
 
 ## M1 verification (historical)
@@ -393,3 +397,33 @@ Production schema compatibility, credential/key lifecycle and ingress are unveri
 ### Exact next milestone after M10
 
 **None in the approved implementation plan. Stop.** The next activity is separately authorized release-gate resolution and staging/external validation; no new milestone or deployment is started automatically.
+
+
+## M11 completed - buyer account, transfer and credential lifecycle
+
+Starting point: clean `b72128f3d0cd44722e4b0dae8125e4f477029e4d` on `astra/ticketchile-v2`. Read the latest M11 request and current progress/release/security/operations/payment/design documents before implementation. Confirmed M1-M10 complete and preserved them. No deployment, merge, push, production credentials/data, production migration or external provider calls.
+
+- Added current-buyer name/phone editing with server validation and audit, buyer-only security/recovery/logout navigation and buyer verification UX. Email/RUT editing remains disabled.
+- Added explicit fail-closed event/tier transfer policies, durable single-use recipient-bound expiring claims, encrypted HttpOnly claim preservation through registration/verification/login, owner-only cancel and rotating rate-limited resend. No recipient account enumeration or default policy enablement.
+- Acceptance atomically changes owner, increments credential generation, inserts immutable ownership history, accepts the claim, invalidates old ticket mail snapshots, queues the new credential/notifications and records audit. External mail failure cannot change ownership; persistence failure rolls back.
+- Preserved HMAC/timing-safe QR primitives. Legacy tc1 remains valid at generation zero; new tc2 signs the current generation. Scanner/aliases compare it inside the authorized write. Old screenshots and saved Wallet barcodes fail after transfer, including a transfer back to an earlier owner. New Wallet objects include generation; no remote removal promise.
+- Current-owner ticket state, profile, pending/received/away history and acceptance UI use existing 1D components. Original purchaser email/order reference removed from ticket-list responses. Payment ownership is unchanged; refunds cancel the current mapped ticket. Courtesy and unsupported fee/nominative policy remain explicit.
+- Real browser QA found and fixed same-page invitation navigation and stale post-mutation transfer panels. Forms, announcements, keyboard acceptance/focus, controls and responsive states verified. Final build review replaced an inherited Node-only UUID import in error logging with runtime-native crypto, preserving the sanitized log contract and removing its Edge warning.
+- Added migration 0010 without editing 0001-0009; readiness expects ten versions. Generation-zero and canonical initial-owner backfill are tested; unknown historical transfers are not reconstructed.
+
+| Final check | Result |
+|---|---|
+| Full tests: `node --test --experimental-test-isolation=none tests/*.test.mjs` | PASS: **360**, no failures/skips, including 24 new actual PostgreSQL profile/transfer/policy/mail/race cases |
+| Migration rehearsal | PASS: fresh/legacy/idempotent 0001-0010, credential-zero/history preservation, no automatic policies, drift and failure rollback |
+| TypeScript: `node node_modules/typescript/bin/tsc --noEmit --incremental false` | PASS |
+| Scoped lint: `node scripts/lint-changed.mjs` | PASS: **37** changed/new maintained files, zero errors/warnings |
+| Whole repository lint: `node scripts/lint-all.mjs` | PASS: **354** maintained files, zero errors/warnings |
+| Production build: `node scripts/verify-build.mjs` | PASS, isolated inert configuration; Edge logging warning resolved |
+| Browser: `node scripts/m11-browser-qa.mjs` | PASS: **115** states across 390/430/768/1024/1440; actual buyer signup/verification/login, claim handoff, keyboard accept, cancel/resend, historical-owner QR denial, local Wallet signing and invalid invitation states |
+| Root `git diff --check` | PASS |
+
+Evidence: [qa/m11](qa/m11/README.md), including 46 screenshots and structured report. Full semantics, alias/privacy audit, lock ordering, migration/adoption and remaining policies: [TICKET-TRANSFER.md](TICKET-TRANSFER.md). Tests used disposable loopback PostgreSQL and injected transports. Browser preview used scrubbed synthetic configuration; no merchant, issuer or external email call occurred. PowerShell's native-stderr wrapper could report failure despite successful Node output; final gate commands preserve Node's actual exit code explicitly. Intermediate fixture/admin-MFA/legacy-signature expectations were corrected without weakening guards.
+
+Remaining: no secure email-change flow, transfer fees, nominative/age enforcement, remote Wallet deletion or dedicated policy editor. Transfer policies are unapproved and disabled until explicitly configured. Real mail/Wallet/camera/device/accessibility/security/load certification, production schema/restore/grants/media/workers/retention/key operations and all M10 release gates remain pending. Existing migration history describes the owner at adoption, not unknowable original recipients before adoption.
+
+**Recommended next milestone: M12 - production media storage and asset lifecycle.** Implement the missing production MediaStore adapter, authorized asset handling, safe legacy-media adoption and orphan/retention operations with isolated tests and runbooks. M12 is not started or authorized by this recommendation. Stop after the coherent M11 commit; do not deploy or merge.

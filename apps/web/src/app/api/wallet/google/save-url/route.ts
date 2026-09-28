@@ -22,9 +22,9 @@ export async function GET(request: Request) {
       payload: {
         eventTicketClasses: [{ id: classId, issuerName: "Ticket Chile", reviewStatus: "UNDER_REVIEW",
           eventName: { defaultValue: { language: "es-CL", value: ticket.event_title } } }],
-        eventTicketObjects: [{ id: `${issuerId}.${suffix(ticket.id)}`, classId, state: "ACTIVE",
+        eventTicketObjects: [{ id: `${issuerId}.${suffix(ticket.id)}_v${ticket.credential_version??0}`, classId, state: "ACTIVE",
           ticketNumber: ticket.id,
-          barcode: { type: "QR_CODE", value: signTicketToken({ ticketId: ticket.id, eventId: ticket.event_id }) },
+          barcode: { type: "QR_CODE", value: signTicketToken({ ticketId: ticket.id, eventId: ticket.event_id, credentialVersion:ticket.credential_version??0 }) },
           textModulesData: [{ id: "INFO", header: "Ticket", body: `${ticket.ticket_type_name} · ${ticket.venue} · ${ticket.city}` }],
           linksModuleData: { uris: [{ id: "MANAGE", uri: `${base}/mis-tickets`, description: "Ver mis tickets" }] },
         }],

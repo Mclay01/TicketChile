@@ -6,7 +6,7 @@ const loadSource=(entry,overrides={})=>loadRawSource(entry,{
   "@/lib/security/rate-limit.server":{limit:async()=>{},publicLimit:async()=>{}},...overrides,
 });
 
-const ticket = { id: "tkt_1", event_id: "event_1", order_id: "order_1", status: "VALID",
+const ticket = { id: "tkt_1", event_id: "event_1", order_id: "order_1", status: "VALID", credential_version: 0,
   ticket_type_name: "General", event_title: "Test event", city: "Santiago", venue: "Test" };
 
 for (const endpoint of ["qr", "demo/qr", "wallet/google/save-url"]) {
@@ -27,7 +27,7 @@ for (const endpoint of ["qr", "demo/qr", "wallet/google/save-url"]) {
         } } },
         "@/lib/qr-token.server": {
           verifyTicketToken: () => scenario === "tampered-token" ? null : { ticketId: ticket.id, eventId: ticket.event_id },
-          signTicketToken: value => { signs++; assert.deepEqual(value, { ticketId: ticket.id, eventId: ticket.event_id }); return "tc1.signed"; },
+          signTicketToken: value => { signs++; assert.deepEqual(value, { ticketId: ticket.id, eventId: ticket.event_id, credentialVersion: 0 }); return "tc1.signed"; },
         },
         "@/lib/stripe.server": { appBaseUrl: () => "https://ticketchile.test" },
         qrcode: { toBuffer: async value => { assert.equal(value, "tc1.signed"); return Buffer.from("png"); } },

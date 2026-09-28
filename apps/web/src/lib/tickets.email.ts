@@ -130,7 +130,7 @@ export function buildTicketEmail(args: SendTicketEmailArgs): Mail {
       <h2 style="margin:0 0 12px">Tus entradas</h2>
 
       <p style="margin:0 0 8px"><b>Evento:</b> ${esc(args.event.title)}</p>
-      <p style="margin:0 0 8px"><b>Comprador:</b> ${esc(args.order.buyerEmail)}</p>
+      <p style="margin:0 0 8px"><b>Titular:</b> ${esc(args.order.buyerEmail)}</p>
       <p style="margin:0 0 8px"><b>Lugar:</b> ${esc(args.event.venue)} — ${esc(args.event.city)}</p>
       <p style="margin:0 0 16px"><b>Fecha:</b> ${esc(args.event.dateISO)}</p>
 
@@ -139,7 +139,7 @@ export function buildTicketEmail(args: SendTicketEmailArgs): Mail {
       ${htmlTickets}
 
       <p style="margin:16px 0 0;color:#666;font-size:12px">
-        Si no reconoces esta compra, ignora este correo.
+        Esta entrada puede provenir de una compra, cortesía o transferencia. Consulta su estado actual en Mis tickets.
       </p>
     </div>
   `;

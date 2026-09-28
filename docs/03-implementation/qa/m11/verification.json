@@ -1,0 +1,35 @@
+{
+  "tests": {
+    "total": 360,
+    "passed": 360,
+    "failed": 0,
+    "skipped": 0,
+    "newPostgresCases": 24
+  },
+  "browser": {
+    "states": 115,
+    "widths": {
+      "390": 23,
+      "430": 23,
+      "768": 23,
+      "1024": 23,
+      "1440": 23
+    },
+    "screenshots": 46
+  },
+  "typescript": "PASS",
+  "scopedLint": {
+    "files": 37,
+    "errors": 0,
+    "warnings": 0
+  },
+  "repositoryLint": {
+    "files": 354,
+    "errors": 0,
+    "warnings": 0
+  },
+  "productionBuild": "PASS; Edge instrumentation warning resolved",
+  "migration": "0010 added; 0001-0009 unchanged; fresh and populated legacy rehearsal PASS",
+  "diffCheck": "PASS",
+  "environment": "Synthetic disposable loopback PostgreSQL, isolated Chrome, provider doubles; no deployment or production access"
+}

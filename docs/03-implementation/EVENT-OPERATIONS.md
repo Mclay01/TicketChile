@@ -56,3 +56,10 @@ Migration `0008_event_operations.sql` adds operations tables/indexes and role ce
 ## M9 financial access effects
 
 Scanner check-in now excludes orders with PROCESSING, UNKNOWN or COMPLETED refunds inside the atomic authorized write. The global inventory lock orders refund execution claims against check-in. Refund requests/approvals alone do not disable admission; authoritative completion cancels only mapped still-valid tickets. Automatic refund-based stock restoration, used-ticket reversal and offline access remain unavailable. Organizer event navigation includes scoped Liquidaciones under `finance.read`, showing actual gross/refund/commission/adjustment/net snapshots and settlement history. Internal support/admin notes are never included.
+
+
+## M11 transfer-aware event operations
+
+[TICKET-TRANSFER.md](TICKET-TRANSFER.md) supersedes the historical M8 transfer limitation. Door authority remains live scanner.checkin for the assigned event. The signed credential generation must match the database ticket in the atomic write; stale screenshots/Wallet barcodes report INVALID_QR. Manual staff admission retains its separate authorized operation and operational holder-verification responsibility. No event code, ticket ID or transfer link is scanner authentication.
+
+Transfer, check-in, event/courtesy cancellation and refunds share inventory lock ordering. Check-in first blocks acceptance; acceptance first revokes the previous QR. Refund request blocks new transfer; confirmed refund cancels the current owner's mapped ticket while the payment remains owned by the original payer. Complimentary transfers require explicit event permission and retain original issuance metadata. Event.edit can explicitly configure the transfer policy/disabled tiers through the bounded audited API; missing configuration and unsupported charged/nominative rules fail closed. No event defaults, deadlines, fees, counts, age or courtesy policy were approved.

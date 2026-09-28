@@ -50,7 +50,7 @@ before(async()=>{
 after(async()=>{await db?.pool.end();if(previousKey===undefined)delete process.env.SECURITY_DATA_KEY;else process.env.SECURITY_DATA_KEY=previousKey;});
 
 test("migrations execute and are idempotent; checksum drift is rejected",async()=>{
-  await migrate(db.pool);assert.equal((await db.pool.query("SELECT count(*)::int AS n FROM schema_migrations")).rows[0].n,9);
+  await migrate(db.pool);assert.equal((await db.pool.query("SELECT count(*)::int AS n FROM schema_migrations")).rows[0].n,10);
   await db.pool.query("UPDATE schema_migrations SET checksum='changed' WHERE version='0003_capability_policy.sql'");
   await assert.rejects(migrate(db.pool),/checksum mismatch/);
   // Restore only the disposable ledger using the immutable source digest.
@@ -243,12 +243,12 @@ test("migration runner refuses unbaselined existing data and rolls back a failed
   const fs=await import("node:fs/promises"),os=await import("node:os"),path=await import("node:path"),url=await import("node:url");
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),"ticketchile-migration-test-"));
   const source=new URL("../sql/migrations/",import.meta.url);
-  for(const file of ["0001_runtime_baseline.sql","0002_identity_security.sql","0003_capability_policy.sql","0004_payment_lifecycle.sql","0005_discovery_media.sql","0006_event_lifecycle.sql","0007_ai_proposals.sql","0008_event_operations.sql","0009_admin_finance.sql"])
+  for(const file of ["0001_runtime_baseline.sql","0002_identity_security.sql","0003_capability_policy.sql","0004_payment_lifecycle.sql","0005_discovery_media.sql","0006_event_lifecycle.sql","0007_ai_proposals.sql","0008_event_operations.sql","0009_admin_finance.sql","0010_ticket_transfers.sql"])
     await fs.copyFile(new URL(file,source),path.join(directory,file));
-  await fs.writeFile(path.join(directory,"0010_failure.sql"),"CREATE TABLE should_rollback(id int); SELECT intentionally_missing_function();");
+  await fs.writeFile(path.join(directory,"0011_failure.sql"),"CREATE TABLE should_rollback(id int); SELECT intentionally_missing_function();");
   await assert.rejects(migrate(db.pool,url.pathToFileURL(directory+path.sep)),/intentionally_missing_function/);
   assert.equal((await db.pool.query("SELECT to_regclass('public.should_rollback') AS relation")).rows[0].relation,null);
-  assert.equal((await db.pool.query("SELECT count(*)::int AS n FROM schema_migrations")).rows[0].n,9);
+  assert.equal((await db.pool.query("SELECT count(*)::int AS n FROM schema_migrations")).rows[0].n,10);
 });
 test("privileged HTTP login grants only setup access until MFA confirmation and sets host-only cookies",async()=>{
   const p=await admin();const login=load("lib/security/login.server.ts");
