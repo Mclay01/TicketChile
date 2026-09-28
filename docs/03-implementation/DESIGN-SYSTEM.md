@@ -110,3 +110,17 @@ The 1D colors/type/layout direction is preserved. Field descriptions/errors use 
 ## M11 buyer lifecycle extension
 
 Existing 1D AccountShell/AuthShell, fields, buttons, notices, status, ticket details and responsive layouts now support editable name/phone, buyer-only security navigation, recipient invitation/registration/verification/acceptance, pending cancel/resend, received and historical transferred-away tickets, and masked ownership history. Native forms and explicit irreversible-acceptance copy replace the disabled transfer placeholder. Email and RUT editing remain explicitly unavailable. No unrelated organizer/admin/public redesign or approved-reference edit occurred. New states retain labels, status announcements, keyboard acceptance and focus; five-width local evidence is in qa/m11.
+# M12 media state patterns
+
+The existing TicketChile 1D editor keeps its image rows and stable preview boxes.
+File controls remain labelled; status is announced through `role=status`; failures
+use the existing Notice with a distinct “Reintentar carga” action. Upload progress
+transitions to processing, loaded and saved. Revision conflicts retain the M6 reload
+flow. Optional image removal changes the draft and uses normal save; provider/storage
+terms are not exposed. Admin review uses the same Media preview and captions.
+
+Public cards stay lazy; actual hero content is eager/high priority. Precomputed
+thumb/card/hero variants use picture sources with stable layout. Missing media uses
+the existing intentional placeholder and recovers when its source changes. Mobile
+and desktop images do not preload competing variants. No unrelated redesign or
+approved 1D reference artifact was changed.

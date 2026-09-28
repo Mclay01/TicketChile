@@ -51,7 +51,7 @@ test("media upload rejects anonymous, cross-tenant and cross-origin requests bef
 });
 test("private media does not become public from knowledge of its UUID", async () => {
   const access = loadSource("lib/access.server.ts");
-  const route = loadSource("app/api/media/[id]/route.ts", { "@/lib/db": { pool: { query: async () => ({ rows: [{ published: false, organizer_id: "other", event_id: "event", object_key: "object.webp" }] }) } }, "@/lib/access.server": access,
+  const route = loadSource("app/api/media/[id]/route.ts", { "@/lib/db": { pool: { query: async () => ({ rows: [{ state: "READY", published: false, organizer_id: "other", event_id: "event", object_key: "object.webp" }] }) } }, "@/lib/access.server": access,
     "@/lib/event-access.server": { requireEventAccess: async () => { throw new access.AccessError(404, "DENIED", "Denied"); } }, "@/lib/security/capabilities.server": {}, "@/lib/media-storage.server": { localMediaStore: () => assert.fail("Do not read private bytes") } });
   const response = await route.GET(new Request("http://local"), { params: Promise.resolve({ id: "11111111-1111-4111-8111-111111111111" }) }); assert.equal(response.status, 404);
 });

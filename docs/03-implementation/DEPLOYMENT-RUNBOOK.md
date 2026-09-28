@@ -35,3 +35,37 @@ Local `tests/payments.integration.test.mjs` rehearses expiry, reconciliation wit
 ## Post-release
 
 Record artifact, migration checksums, configuration version (no values), enabled providers, smoke evidence and rollback point. Keep the previous compatible artifact and backups through the approved retention window. Review the incident procedures before closing the release. Legal retention durations, service SLOs, alert thresholds and on-call contacts must be filled by their owners before launch.
+# M12 media worker and provider adoption addendum
+
+The adapter is implemented and tested locally/contracts only. No bucket, credentials,
+worker schedule or CDN has been provisioned. Use [MEDIA-ARCHITECTURE.md](MEDIA-ARCHITECTURE.md)
+and [ENVIRONMENT.md](ENVIRONMENT.md) before enabling storage.
+
+- Private worker entry: `cleanupMedia({limit:25})` from `media-lifecycle.server.ts`.
+  Proposed schedule: every 15 minutes, one runner/environment; maximum 100/batch,
+  default seven-day orphan grace. Each asset is independently retryable. Failed
+  deletion backs off ten minutes; row/tombstone locking makes overlapping workers
+  safe, but single concurrency limits pressure. Alert on FAILED outcomes, rising
+  UPLOADING/DELETING counts, repeated attempts and pending quota exhaustion. Logs
+  must contain only IDs/outcomes, never provider responses or signed URLs.
+- Trusted backfill entry: `adoptLegacyMedia({dryRun:true,limit:10,cursor})` from
+  `media-adoption.server.ts`. Do not schedule automatically. After separate release
+  approval, use one bounded batch at a time, persist returned checkpoints, inspect
+  failure/conflict rows, and restart from the beginning to retry reviewed failures.
+  Maximum 50 slots/batch. Verified deterministic retries reuse existing assets.
+- Local-only CLI: `node scripts/media-local.mjs adopt --limit=10 --checkpoint=inspect`;
+  apply/cleanup require explicit `--apply`. It rejects remote/production DBs and
+  remote storage. No public cron endpoint or scheduler was added.
+- Before traffic: verify private bucket/prefix IAM, conditional PUT + SHA256,
+  missing-object HEAD semantics, signed GET/cache overrides, deletion retry/version
+  behavior, exact CSP origin, host memory/concurrency and restoring a backup.
+  Preview and production require independent credentials and buckets. Do not use
+  the production credentials for this rehearsal.
+- Incident: disable uploads with `MEDIA_PROVIDER=disabled` if necessary (media reads
+  also become unavailable and show fallbacks), stop cleanup/adoption workers, retain
+  DB intents/originals/versions, reconcile affected records with storage metadata,
+  then retry. Never delete referenced assets or bulk-clear failure records to recover.
+  Already signed reads can remain valid up to 60 seconds; downloaded bytes persist.
+- Retained event assets and APPLIED adoption assets remain protected. Business/legal
+  retention and physical provider-version expiry are unresolved decisions. Existing
+  untracked pre-M12 filesystem files need a separate reviewed inventory.

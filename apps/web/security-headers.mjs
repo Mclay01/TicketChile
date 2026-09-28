@@ -1,8 +1,10 @@
 // Next hydration needs inline scripts until a nonce-bearing rendering strategy is adopted.
 // Checkout redirects navigate at top level; provider scripts/frames are not embedded.
+import { mediaImageOrigin } from './media-config.mjs';
 export function securityHeaders(production) {
+  const mediaOrigin = mediaImageOrigin();
   const csp = ["default-src 'self'", `script-src 'self' 'unsafe-inline'${production ? '' : " 'unsafe-eval'"}`,
-    "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob:", "font-src 'self'",
+    "style-src 'self' 'unsafe-inline'", `img-src 'self' data: blob:${mediaOrigin ? ` ${mediaOrigin}` : ''}`, "font-src 'self'",
     `connect-src 'self'${production ? '' : ' ws://localhost:* ws://127.0.0.1:*'}`,
     "media-src 'self' blob:", "object-src 'none'", "base-uri 'self'", "frame-ancestors 'none'",
     "form-action 'self' https://webpay3g.transbank.cl https://webpay3gint.transbank.cl"];

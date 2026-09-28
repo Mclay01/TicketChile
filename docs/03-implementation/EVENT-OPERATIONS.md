@@ -63,3 +63,18 @@ Scanner check-in now excludes orders with PROCESSING, UNKNOWN or COMPLETED refun
 [TICKET-TRANSFER.md](TICKET-TRANSFER.md) supersedes the historical M8 transfer limitation. Door authority remains live scanner.checkin for the assigned event. The signed credential generation must match the database ticket in the atomic write; stale screenshots/Wallet barcodes report INVALID_QR. Manual staff admission retains its separate authorized operation and operational holder-verification responsibility. No event code, ticket ID or transfer link is scanner authentication.
 
 Transfer, check-in, event/courtesy cancellation and refunds share inventory lock ordering. Check-in first blocks acceptance; acceptance first revokes the previous QR. Refund request blocks new transfer; confirmed refund cancels the current owner's mapped ticket while the payment remains owned by the original payer. Complimentary transfers require explicit event permission and retain original issuance metadata. Event.edit can explicitly configure the transfer policy/disabled tiers through the bounded audited API; missing configuration and unsupported charged/nominative rules fail closed. No event defaults, deadlines, fees, counts, age or courtesy policy were approved.
+# M12 media operations addendum
+
+Create the private draft before uploading poster/desktop/mobile images. Uploads are
+event-scoped; save still requires current revision and live event-edit capability.
+The editor reports transfer progress, processing, loaded/saved state, decode/network
+errors, retry, replace and remove using existing 1D controls. A replacement is
+verified first; save failure leaves the current event image unchanged. Reloading a
+revision conflict restores the database version. Removing a field only saves the
+reference change; it never directly deletes bytes. Publication requires no re-upload.
+
+Admin review shows current assets through its own persisted capability, without
+storage browsing or new admin image mutations. Cancellation/end retains media.
+Cleanup and legacy adoption use bounded internal workers, documented in
+[MEDIA-ARCHITECTURE.md](MEDIA-ARCHITECTURE.md). Undefined legal retention is not
+inferred from cancellation, a removed form preview or an orphan grace period.

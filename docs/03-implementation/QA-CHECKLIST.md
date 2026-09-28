@@ -248,3 +248,22 @@ M10 completed the original plan. The subsequent user request explicitly extended
 - [x] Additive `0010_ticket_transfers.sql`, legacy-zero/history backfill and no policy enablement tested. Applied migrations 0001-0009 unchanged. No production migration/provider/data/credential use, deployment, push or merge.
 - [x] Transfer/security/migration/operations/payment/design/release/progress documents updated. Recommended M12 is production media storage and asset lifecycle; not started.
 - [ ] Production catalog/restore/runtime grants, real mail/Wallet/device certification, approved transfer/legal/business policies, retention/key management, production security/load and other M10 release gates remain open.
+
+## M12 - production media storage and asset lifecycle
+
+- [x] Confirmed completed M1–M11 and clean `4b2b5e6`; documented actual pre-change architecture.
+- [x] One S3-compatible adapter plus retained local development adapter; explicit disabled state, stage/bucket namespace matching, no ambient credentials and exact CSP origin.
+- [x] Event/tenant/purpose/live capability upload guards, independent admin MFA/read capability and current-reference restriction, same-origin/idempotency/rate/pending/processing bounds.
+- [x] Actual decode versus MIME, malformed/executable/SVG/animation rejection, byte/pixel/dimension bounds, orientation normalization, EXIF/GPS stripping and three measured WebP variants.
+- [x] Durable intent before bytes, atomic READY/audit, storage and DB failure recovery, idempotent/concurrent retries, M6 replacement revisions and current-asset preservation.
+- [x] Database reference/tombstone coordination; bounded grace cleanup, failed-delete backoff, no referenced/draft/published/cancelled/retained/adoption-pinned deletion or cross-store access.
+- [x] Legacy readers preserved; dry-run, bounded checkpoint/resume, checksum and actual-byte verification, retained originals, conflict/failure journal, unchanged slugs/publication.
+- [x] Additive 0011; fresh/legacy/populated-M11 rehearsal and idempotency; migrations 0001–0010 unchanged. Local CLI smoke passes.
+- [x] **95 browser states**, five widths, **38 screenshots**. Actual uploads, progress/processing/status, poster/hero/mobile, retry/replace/remove, offline failure, revision failure/recovery, preview/publish/catalog/admin/fallback. Visual review fixed invisible zero-height previews; assertions now check image dimensions and native lazy loading.
+- [x] Local image measurement and selected resource/LCP records in [qa/m12](qa/m12/README.md); no external CDN or production LCP claim.
+- [x] **388 tests pass**, zero failures/skips; final 36 media/M6 cases rerun after bookkeeping cleanup. TypeScript, scoped lint (**29 files**), whole lint (**365 files**, zero errors/warnings), production build and root diff checks pass.
+- [x] Architecture, environment/template, migration, authorization, event operations, design states, deployment worker/runbook, release and progress records updated. No production credentials/resources/data, deployment, push, merge or scheduling.
+- [ ] Dedicated preview/production storage credentials, IAM/checksum/conditional-write/signed-delivery/delete/version certification and origin/runtime proof.
+- [ ] Production worker installation/alerts, real schema/restore/adoption approval, legacy local-file copying/orphan inventory, legal retention, device/security/load and all prior release gates.
+
+Recommended only: **M13 — Staging provider certification and operational release rehearsal**. Stop after M12; no automatic next milestone or deployment.

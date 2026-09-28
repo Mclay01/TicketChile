@@ -92,13 +92,16 @@ test("authorized media upload stores normalized immutable bytes plus atomic audi
   const storage = loadSource("lib/media-storage.server.ts");
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "m5-upload-test-"));
   const store = storage.localMediaStore(root);
-  const overrides = { "@/lib/db": db, "@/lib/access.server": access,
-    "@/lib/event-access.server": { requireEventAccess: async (id, cap) => { assert.equal(id, "ev0"); assert.equal(cap, "event.edit"); return { organizerId: "org", actor: { kind: "ORGANIZER", id: "org" } }; } },
+  await db.pool.query("UPDATE organizer_users SET verified=true,approved=true WHERE id='org'");
+  const identity = loadSource("lib/security/identity.server.ts", {"@/lib/db":db});
+  const principal = await identity.principal("ORGANIZER","org");
+  const overrides = { "@/lib/db": db, "@/lib/access.server": access, "@/lib/admin/policy.server": {requireAdminCapability: async()=>{throw new access.AccessError(403,"DENIED","Denied");}},
+    "@/lib/event-access.server": { requireEventAccess: async (id, cap) => { assert.equal(id, "ev0"); assert.equal(cap, "event.edit"); return { organizerId: "org", actor: principal }; } },
     "@/lib/security/capabilities.server": {}, "@/lib/security/rate-limit.server": { limit: async () => {} },
-    "@/lib/media-storage.server": { ...storage, localMediaStore: () => store } };
+    "@/lib/media-storage.server": { ...storage, mediaStore: () => store } };
   const route = loadSource("app/api/media/route.ts", overrides);
   const bytes = await sharp({ create: { width: 10, height: 10, channels: 3, background: "blue" } }).png().toBuffer();
-  const response = await route.POST(new Request("http://local/api/media?eventId=ev0", { method: "POST", headers: { origin: "http://local", "content-type": "image/png" }, body: bytes }));
+  const response = await route.POST(new Request("http://local/api/media?eventId=ev0&purpose=POSTER", { method: "POST", headers: { origin: "http://local", "content-type": "image/png", "idempotency-key":"m5-upload-retry-key" }, body: bytes }));
   assert.equal(response.status, 201); const data = await response.json();
   const row = (await db.pool.query("SELECT * FROM media_objects WHERE id=$1", [data.id])).rows[0];
   assert.equal(row.organizer_id, "org"); assert.equal(row.content_type, "image/webp"); assert.equal((await sharp(await store.get(row.object_key)).metadata()).format, "webp");

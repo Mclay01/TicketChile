@@ -24,7 +24,7 @@ export function loadSource(entry, overrides = {}) {
     const loadedModule = { exports: {} };
     cache.set(filename, loadedModule);
     const compiled = ts.transpileModule(fs.readFileSync(filename, "utf8"), {
-      fileName: filename,
+      fileName: filename.replace(/\.mjs$/, ".ts"),
       compilerOptions: {
         module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
         jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,

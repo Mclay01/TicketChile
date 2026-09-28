@@ -166,3 +166,27 @@ M11 supersedes earlier statements that transfer/QR rotation and profile editing 
 - Former transfer participants receive historical metadata only, with masked other-owner emails and no QR/Wallet/resend. The ticket-list alias shares removal of original purchaser email/order ID. Payment access remains with the payer; mapped ticket cancellation follows current ticket ownership.
 
 Residual exposures: email-based legacy ownership until a separately designed email-change/adoption workflow; no remote Wallet removal or physical-device/provider certification; policy approval, retention/key management, runtime DB grants, distributed-load/security review and all M10 release gates remain open. An in-flight email may arrive after transfer, but its old credential is revoked. Never roll back to a scanner that ignores credential generation after enabling transfers.
+# M12 media boundary addendum
+
+- Upload only to a real event draft with server-derived tenant, fresh `event.edit`
+  capability and event grant; recheck inside intent/finalization transactions. Same
+  origin, explicit supported purpose, idempotency key, M3 limits and technical quotas
+  precede storage use. An organizer ID, asset UUID or object path is not authority.
+- Attachment requires READY + matching tenant/event/purpose under the event save
+  transaction. Database reference locks coordinate with cleanup tombstones. M6
+  optimistic revisions still arbitrate concurrent edits.
+- Published **current** references are publicly readable. Draft/unbound reads require
+  the existing event/tenant capability. Admin preview requires live `operations.read`
+  with persisted MFA and a current event reference; no bucket listing or generic
+  administrative upload/delete is exposed. Legacy preview repeats event/admin SQL
+  authorization. Review APIs serialize safe application references, never base64.
+- S3 objects stay private. Authorized no-store redirects issue read capabilities for
+  60 seconds; private responses are no-store, public bytes cache for 60 seconds.
+  Unpublishing withdraws future anonymous authorization but cannot revoke already
+  issued URLs, cached images or downloads instantly. CSP permits only the configured
+  origin. No storage secrets, bucket paths or provider SDK reach feature UI.
+- Cleanup and legacy adoption are internal SYSTEM services, never HTTP endpoints.
+  All event references, including retained/cancelled records, and pinned adoptions
+  prevent deletion. No admin mutation bypass or scanner/ticket/QR rule changed.
+
+Detailed recovery/access/environment model: [MEDIA-ARCHITECTURE.md](MEDIA-ARCHITECTURE.md).

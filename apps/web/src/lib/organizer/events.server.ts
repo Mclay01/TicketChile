@@ -9,6 +9,7 @@ import { audit } from '@/lib/security/audit.server';
 import { limit } from '@/lib/security/rate-limit.server';
 import { lockInventory, expireHoldsTx, releaseHoldTx } from '@/lib/payments/inventory.server';
 import { ownedMediaReference } from '@/lib/media-access.server';
+import { mediaSlots } from '@/lib/media-keys';
 import { eventMedia } from '@/lib/media';
 import { checklist, emptyDraft, transitions, type Draft, type Tier, type EventRecord, type Lifecycle } from './model';
 
@@ -110,7 +111,7 @@ export async function saveEventTx(client:PoolClient,actor:Principal,id:string,re
     const d=validateDraft(input);
     if(d.category_slug&&!(await client.query('SELECT 1 FROM event_categories WHERE slug=$1',[d.category_slug])).rowCount)fail('Categoría inválida.');
     for(const k of ['image','hero_desktop','hero_mobile'] as const)if(d[k]!==old[k]){
-      await ownedMediaReference(d[k],old.organizer_id);
+      await ownedMediaReference(d[k],old.organizer_id,client,id,mediaSlots[k]);
       if(d[k]){
         const media=await client.query(`SELECT 1 FROM media_objects WHERE id::text=$1 AND organizer_id=$2
           AND (event_id IS NULL OR security_can_event($3,$4,$5,event_id,'event.edit'))`,[d[k].split('/').pop(),old.organizer_id,actor.kind,actor.id,actor.version]);
@@ -131,6 +132,9 @@ export async function saveEventTx(client:PoolClient,actor:Principal,id:string,re
     // Preserve existing legacy raster bytes when their safe display reference is unchanged.
     const keys=Object.keys(emptyDraft).filter(k=>k!=='tiers'&&(!['image','hero_desktop','hero_mobile'].includes(k)||d[k as keyof Draft]!==old[k as keyof Draft])) as (keyof Draft)[];
     await client.query(`UPDATE events SET ${keys.map((k,i)=>`${k}=$${i+2}`).join(',')},revision=revision+1,updated_at=now(),lifecycle=CASE WHEN lifecycle='IN_REVIEW' THEN 'DRAFT' ELSE lifecycle END WHERE id=$1`,[id,...keys.map(k=>k==='category_slug'?(d[k]||null):d[k])]);
+    for(const k of ['image','hero_desktop','hero_mobile'] as const)if(d[k]!==old[k]){
+      await audit(client,{actor,organizerId:old.organizer_id,eventId:id,action:'event.media_changed',targetType:'event',targetId:id,metadata:{fields:k}});
+    }
     for(const t of d.tiers)await client.query(`INSERT INTO ticket_types(event_id,id,name,description,price_clp,capacity,max_per_order,sales_start,sales_end,visible,active)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT(event_id,id) DO UPDATE SET name=$3,description=$4,price_clp=$5,capacity=$6,max_per_order=$7,sales_start=$8,sales_end=$9,visible=$10,active=$11`,[id,t.id,t.name,t.description,t.price_clp,t.capacity,t.max_per_order,t.sales_start,t.sales_end,t.visible,t.active]);
     for(const action of ['event.updated',...(priceChange?['event.prices_changed']:[]),...(d.capacity!==old.capacity?['event.capacity_changed']:[]),...((d.tiers.length!==old.tiers.length||d.tiers.some(t=>{const before=old.tiers.find(o=>o.id===t.id);return !before||Object.keys(t).some(k=>!['sold','held'].includes(k)&&t[k as keyof Tier]!==before[k as keyof Tier]);}))?['event.tiers_changed']:[])])await audit(client,{actor,organizerId:old.organizer_id,eventId:id,action,targetType:'event',targetId:id});

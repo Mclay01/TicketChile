@@ -123,3 +123,30 @@ Append immutable version 0010 after 0009. Files 0001-0009 remain unchanged. Adds
 No transfer policy is inserted. Existing ticket/payment status, paid evidence and payment/order owner remain unchanged. History sequence zero snapshots the canonical owner at adoption; unknown earlier transfers are not reconstructed as original issuance evidence. tc1 stays valid at zero and becomes invalid on first transfer; tc2 signs the current generation. Readiness now requires ten migration versions. Legacy baseline, empty/idempotent adoption, drift and failure rollback are tested locally; the synthetic failure migration is 0011 in a temporary test directory.
 
 Before any separately authorized production adoption, reconcile actual catalog/ownership, back up and restore, rehearse lock/index/backfill cost and history triggers, verify runtime grants and mail/scanner worker version sequencing, and approve policies. Deploy all scanner aliases and workers with generation support before enabling any policy. After a transfer exists, old scanner code is unsafe to restore; use a forward-compatible repair or suspend affected admission/transfer. Never drop ownership/audit records or reset credential generations to roll back. No production migration was run.
+# M12 / 0011 media lifecycle addendum
+
+Append `0011_media_lifecycle.sql`; migrations 0001–0010 remain unchanged. Readiness
+now expects eleven versions. It extends `media_objects` with purpose, provider/store
+identity, dimensions/hash, creator/idempotency, recovery state and cleanup timing;
+adds immutable variant metadata and a private legacy-adoption journal; adds an event
+reference trigger that locks assets, refuses non-READY attachments and tracks
+detachment. Existing rows remain local READY objects with nullable purpose/dimensions,
+so their references and bytes are not rewritten by the schema migration.
+
+Schema application does **not** upload, rewrite base64 or delete any media. New
+storage intent precedes object writes. Event replacement continues to use the M6
+revision and transaction boundary. All retained event references protect assets.
+Adoption stores original base64 and checksum privately, verifies actual object bytes,
+then conditionally updates only the still-matching field/revision. It never changes
+slug/publication. Dry run and bounded checkpoint/resume are documented in
+[MEDIA-ARCHITECTURE.md](MEDIA-ARCHITECTURE.md).
+
+Production procedure remains separately approved: catalog reconciliation, DB/object
+backup and restore rehearsal, 0011 on a sanitized clone, preview-only storage checks,
+dry-run inventory, reviewed batch sizes/checkpoints, failure/conflict review, and
+comparison of current/private/public/admin images. Do not remove legacy readers or
+original values until adoption and rollback have been verified. To roll back one
+adoption, lock the event and media and require its current field still equals the
+mapped asset before restoring `original_value` and increasing revision. Never
+overwrite later edits. Retain the metadata migration and audit/journal history.
+No production schema, base64 or object-store operation occurred in M12.

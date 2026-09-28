@@ -1,0 +1,38 @@
+{
+  "input": {
+    "bytes": 1536111,
+    "width": 4000,
+    "height": 3000
+  },
+  "processingMs": 763,
+  "rssBefore": 116461568,
+  "rssPeak": 176140288,
+  "rssDelta": 59678720,
+  "variants": [
+    {
+      "name": "hero",
+      "width": 2400,
+      "height": 1800,
+      "bytes": 284496
+    },
+    {
+      "name": "card",
+      "width": 960,
+      "height": 720,
+      "bytes": 94270
+    },
+    {
+      "name": "thumb",
+      "width": 320,
+      "height": 240,
+      "bytes": 21678
+    }
+  ],
+  "limits": {
+    "inputBytes": 5242880,
+    "pixels": 24000000,
+    "parallelPerProcess": 2
+  },
+  "method": "One 12MP JPEG generated from repository photography; RSS sampled every 5ms in a separate Node process. Includes Sharp native memory. Not a sustained load benchmark or hosting budget.",
+  "limitations": "Local CPU/storage only. No network, S3 connectivity, CDN latency or production LCP measured."
+}

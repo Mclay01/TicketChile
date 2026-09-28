@@ -427,3 +427,75 @@ Evidence: [qa/m11](qa/m11/README.md), including 46 screenshots and structured re
 Remaining: no secure email-change flow, transfer fees, nominative/age enforcement, remote Wallet deletion or dedicated policy editor. Transfer policies are unapproved and disabled until explicitly configured. Real mail/Wallet/camera/device/accessibility/security/load certification, production schema/restore/grants/media/workers/retention/key operations and all M10 release gates remain pending. Existing migration history describes the owner at adoption, not unknowable original recipients before adoption.
 
 **Recommended next milestone: M12 - production media storage and asset lifecycle.** Implement the missing production MediaStore adapter, authorized asset handling, safe legacy-media adoption and orphan/retention operations with isolated tests and runbooks. M12 is not started or authorized by this recommendation. Stop after the coherent M11 commit; do not deploy or merge.
+
+## M12 completed - production media storage and asset lifecycle
+
+Started from clean `4b2b5e6013cc3b171d4a36182d5fd1ef93cc9aa9` on
+`astra/ticketchile-v2`. The latest user request separately authorized M12. Read the
+progress/release/migration/design/authorization/operations records, confirmed M1–M11
+complete and audited the media paths before implementation. The baseline audit and
+final architecture are in [MEDIA-ARCHITECTURE.md](MEDIA-ARCHITECTURE.md).
+
+- Extended the existing MediaStore with metadata/head/delete/read URL and one
+  S3-compatible production adapter using pinned AWS SDK packages. Local development
+  remains available; production defaults disabled. Explicit stage/bucket/prefix
+  matching, dedicated credentials and persisted store identity prevent accidental
+  preview-to-production writes. No actual provider connectivity is claimed.
+- Bound uploads to real editable events and explicit poster/desktop/mobile purposes;
+  repeat live capability checks at intent/finalization, enforce MIME versus decoded
+  format, streaming bytes/pixels/dimensions/animation limits, safe WebP normalization,
+  EXIF/GPS removal, three bounded variants, processing admission and pending quotas.
+- Commit durable intents before object writes; checksum-verified retries reuse keys;
+  READY plus audit commit together. M6 revision saves attach only authorized READY
+  assets. A DB reference trigger tracks detachment and coordinates tombstones with
+  cleanup. Storage/DB failures preserve current event media; cleanup is bounded,
+  grace-delayed, retryable and retains every referenced/retained/pinned asset.
+- Keep draft media private and publication-dependent reads current. S3 uses private
+  objects and short signed redirects for direct byte delivery. Exact CSP origin,
+  lazy cards, eager/high actual heroes, mobile/desktop variants and source-aware
+  fallback preserve QR/Wallet/other providers. Admin review has independent persisted
+  MFA/capability checks and shows current assets without broad storage browsing.
+- Add bounded dry-run/checkpoint legacy adoption with deterministic upload retries,
+  retained original/checksum journal, actual-byte verification and revision conflicts.
+  Legacy readers remain. No schema migration automatically adopts/deletes objects.
+- Improve image progress/processing/retry/replace/remove/preview using existing 1D.
+  Screenshot review found and fixed an inherited zero-height inner preview container;
+  new browser assertions verify visible dimensions. No unrelated redesign occurred.
+
+| Final check | Result |
+|---|---|
+| Full regression suite | PASS: **388**, zero failures/skips; 28 new media/storage/adoption/migration cases; M1–M11 boundaries retained |
+| Final media/M6 boundary rerun | PASS: **36** after removing duplicate bookkeeping in favor of the reference trigger |
+| PostgreSQL migration rehearsal | PASS: fresh, reconstructed legacy and populated M11 through **0011**; existing local/base64 references untouched; 0001–0010 unchanged |
+| TypeScript `tsc --noEmit --incremental false` | PASS |
+| Scoped lint | PASS: **29** maintained changed/new JS/TS files, zero errors/warnings |
+| Whole repository lint | PASS: **365** maintained files including API/shared types, zero errors/warnings |
+| Production build | PASS using scrubbed environment and inert build credentials |
+| Browser | PASS: **95 states** at 390/430/768/1024/1440, **38 screenshots**, labels/geometry/native lazy loading, actual uploads, private/admin/public access, offline retry, replacement conflict/recovery and fallback |
+| Local performance | 12MP / 1,536,111-byte JPEG → 284,496 / 94,270 / 21,678-byte variants; 763ms processing; sampled RSS delta 59,678,720 bytes |
+| Guarded local media CLI | PASS: dry-run/checkpoint resume and zero-eligible cleanup smoke; substantive recovery/deletion/adoption covered by PostgreSQL tests |
+| Root `git diff --check` | PASS |
+
+Evidence: [qa/m12](qa/m12/README.md). Browser LCP observations were 444–1452ms in
+local development, with other local checks running; they are not production/CDN
+performance claims. Fixture/harness failures (MFA, animation frame deduplication,
+refresh timing, missing-source selection and required legacy fields) were corrected
+without weakening policy. Windows sandbox process/log limitations were handled with
+authorized local execution. No deployment, merge, push, production credentials/data,
+remote storage resources, DNS/CDN changes or production scheduling occurred.
+
+Production adapter status: **IMPLEMENTED / LOCAL-CONTRACT TESTED / PRODUCTION
+CREDENTIALS REQUIRED / PRODUCTION VALIDATION REQUIRED**. Remaining: separate private
+buckets/IAM/provider certification, private worker installation/alerts, real schema/
+backup/restore/adoption rehearsal, physical-device/security/load checks, legal event/
+original/version retention, reviewed copying of existing local objects and inventory
+of pre-M12 untracked files. Signed URLs/public cached bytes briefly outlive revocation;
+downloaded images cannot be recalled. No new AI image generation, gallery/avatar,
+admin replacement, provisioned CDN or production worker is claimed. Prior release
+gates remain; M12 does not authorize release.
+
+**Exact recommended M13: Staging provider certification and operational release
+rehearsal.** Separately authorize isolated staging services/credentials and certify
+media, mail, payments/Wallet, private workers/alerts, restore/schema adoption and
+runtime/security/load behavior against the release matrix. M13 is recommended only,
+not started. Stop after the coherent M12 commit; do not deploy or merge.

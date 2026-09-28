@@ -3,6 +3,7 @@ import {pool} from '@/lib/db';
 import {audit} from '@/lib/security/audit.server';
 import {requireAdminCapability,fail,type AdminCapability} from './policy.server';
 import type {Principal} from '@/lib/security/identity.server';
+import {mediaSource} from '@/lib/media';
 export const sections={overview:'Resumen',organizers:'Organizadores',events:'Eventos',orders:'Compradores y órdenes',payments:'Pagos',refunds:'Reembolsos',commissions:'Comisiones',settlements:'Liquidaciones',support:'Soporte',reports:'Reportes',audit:'Auditoría',settings:'Configuración'};
 export type Section=keyof typeof sections;
 export const sectionCapability=(s:Section):AdminCapability=>['payments','refunds','commissions','settlements'].includes(s)?'finance.read':s==='audit'?'audit.read':s==='reports'?'reports.read':'operations.read';
@@ -69,7 +70,11 @@ export async function adminDetail(section:Section,id:string,actor?:Principal){
   related.events=(await adminList('events',{organizer:id},p)).rows;
   related.staff=(await pool.query('SELECT role,count(*)::int AS count FROM organizer_staff WHERE organizer_id=$1 AND revoked_at IS NULL GROUP BY role',[id])).rows;
  }
- if(section==='events')related.tiers=(await pool.query('SELECT id,name,price_clp,capacity,sold,held FROM ticket_types WHERE event_id=$1 ORDER BY id LIMIT 50',[id])).rows;
+ if(section==='events'){
+  related.tiers=(await pool.query('SELECT id,name,price_clp,capacity,sold,held FROM ticket_types WHERE event_id=$1 ORDER BY id LIMIT 50',[id])).rows;
+  const assets=(await pool.query("SELECT image,hero_desktop,hero_mobile FROM events WHERE id=$1 AND security_can_admin($2,$3,$4,'operations.read')",[id,p.kind,p.id,p.version])).rows[0];
+  if(assets)for(const [field,slot] of [['image','poster'],['hero_desktop','desktop'],['hero_mobile','mobile']])row[field]=assets[field]?.startsWith('data:')?`/api/event-preview-media/${id}/${slot}`:mediaSource(assets[field]);
+ }
  if(section==='orders'){
   related.tickets=(await pool.query('SELECT id,ticket_type_name,status,used_at FROM tickets WHERE order_id=$1 ORDER BY id LIMIT 100',[id])).rows;
   related.delivery=(await pool.query('SELECT state,attempts,created_at,sent_at FROM mail_jobs WHERE source_id IN (SELECT id FROM tickets WHERE order_id=$1) AND purpose=\'TICKET\' ORDER BY created_at DESC LIMIT 20',[id])).rows;
