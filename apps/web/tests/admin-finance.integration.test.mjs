@@ -5,7 +5,7 @@ import {localDatabase} from './local-postgres.mjs';
 import {loadSource} from './load-source.mjs';
 let db,identity,admin,superadmin,actor,owner,policy,operations,refunds,settlements,queries,checkout,finalizer;
 let providerCalls=0,providerFailure=false,providerStatus='succeeded';
-const saved=Object.fromEntries(['CHECKOUT_FEE_POLICY','STRIPE_REFUNDS_ENABLED'].map(k=>[k,process.env[k]]));
+const saved=Object.fromEntries(['CHECKOUT_FEE_POLICY','STRIPE_REFUNDS_ENABLED','STRIPE_SECRET_KEY'].map(k=>[k,process.env[k]]));
 const provider={refunds:{create:async(body,opts)=>{providerCalls++;assert.equal(opts.idempotencyKey,`ticketchile-refund-${body.metadata.refundId}`);if(providerFailure)throw Error('Uncertain response');return {id:`re_${body.metadata.refundId}`,amount:body.amount,currency:'clp',payment_intent:body.payment_intent,metadata:body.metadata,status:providerStatus};},retrieve:async()=>{throw Error('Unexpected retrieve');}}};
 const load=(file,extra={})=>loadSource(file,{'@/lib/db':db,'./adapters.server':{adapter:()=>{throw Error('No checkout provider calls');}},'@/lib/stripe.server':{stripe:provider},'@/auth':{authOptions:{}},'next-auth/next':{getServerSession:async()=>null},'@/lib/security/http.server':{cookieIdentity:async()=>actor},'./http.server':{cookieIdentity:async()=>actor},'@/lib/security/rate-limit.server':{limit:async()=>{}},...extra});
 const input=(action,target,extra={})=>({action,target,reason:'Approved synthetic test decision',confirmation:`${action} ${target}`,requestKey:randomUUID(),...extra});
@@ -24,7 +24,7 @@ async function fixture({commission=true,provider='stripe'}={}){
 async function requested(f){return (await refunds.refundOperation(input('refund.request',f.payment.id),superadmin)).result.id;}
 async function approved(f){const id=await requested(f);await refunds.refundOperation(input('refund.approve',id,{policyReference:'Synthetic policy'}),superadmin);return id;}
 before(async()=>{
- Object.assign(process.env,{CHECKOUT_FEE_POLICY:'none',STRIPE_REFUNDS_ENABLED:'true'});db=await localDatabase();identity=load('lib/security/identity.server.ts');
+ Object.assign(process.env,{CHECKOUT_FEE_POLICY:'none',STRIPE_REFUNDS_ENABLED:'true',STRIPE_SECRET_KEY:'sk_test_local_stub'});db=await localDatabase();identity=load('lib/security/identity.server.ts');
  for(const role of ['ADMIN','SUPERADMIN']){await db.pool.query("INSERT INTO admin_users(id,username,password_hash,role) VALUES($1,$1,'disabled',$2)",[role,role]);await db.pool.query("INSERT INTO identity_mfa(kind,principal_id,enabled) VALUES('ADMIN',$1,true)",[role]);}
  await db.pool.query("INSERT INTO organizer_users(id,username,password_hash,verified,approved) VALUES('finance-owner','finance-owner','disabled',true,true)");
  admin=await identity.principal('ADMIN','ADMIN');superadmin=await identity.principal('ADMIN','SUPERADMIN');owner=await identity.principal('ORGANIZER','finance-owner');actor=superadmin;
@@ -146,4 +146,9 @@ test('organizer settlement visibility requires explicit finance capability and e
  await db.pool.query("INSERT INTO organizer_staff(id,organizer_id,buyer_id,role,capabilities,event_ids) VALUES($1,$2,$3,'ORGANIZER_FINANCE',ARRAY['finance.read'],ARRAY[$4])",[randomUUID(),owner.id,buyer,f.event]);actor=await identity.principal('BUYER',buyer);assert.equal((await finance.eventSettlements(f.event)).length,1);
  const other=await fixture();await assert.rejects(finance.eventSettlements(other.event));await db.pool.query("UPDATE organizer_staff SET revoked_at=now() WHERE buyer_id=$1",[buyer]);await assert.rejects(finance.eventSettlements(f.event));
  const newOwner=`org_${randomUUID()}`;await db.pool.query("INSERT INTO organizer_users(id,username,password_hash,verified,approved) VALUES($1,$1,'disabled',true,true)",[newOwner]);await db.pool.query('UPDATE organizer_events SET organizer_id=$2 WHERE event_id=$1',[f.event,newOwner]);actor=await identity.principal('ORGANIZER',newOwner);assert.equal((await finance.eventSettlements(f.event)).length,0,'reassigning an event must not expose the prior tenant settlement');actor=superadmin;
+});
+
+test('refund execution is unavailable when the enable flag has no usable credential',()=>{
+ const key=process.env.STRIPE_SECRET_KEY;
+ try{process.env.STRIPE_SECRET_KEY='';assert.equal(refunds.refundProviderStatus().enabled,false);process.env.STRIPE_SECRET_KEY='malformed';assert.equal(refunds.refundProviderStatus().enabled,false);}finally{process.env.STRIPE_SECRET_KEY=key;}
 });

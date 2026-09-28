@@ -407,21 +407,21 @@ export default function CheckoutBuyerForm({ event, methods }: { event: Event; me
         <p className="mt-1 text-sm text-white/60">Las entradas y sus QR se enviarán al correo de tu cuenta.</p>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <input
+          <label className="grid gap-2 text-sm text-white/80"><span>Nombre y apellido</span><input
             value={buyerName}
             onChange={(e) => setBuyerName(e.target.value)}
             placeholder="Nombre y apellido"
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus-visible:outline-2 placeholder:text-white/40"
             disabled={paying}
-          />
+          /></label>
 
-          <input
+          <label className="grid gap-2 text-sm text-white/80"><span>Email</span><input
             value={buyerEmail}
             onChange={(e) => setBuyerEmail(e.target.value)}
             placeholder="Email"
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus-visible:outline-2 placeholder:text-white/40"
             disabled={paying || emailLocked}
-          />
+          /></label>
 
           {sessionEmail ? (
             <div className="md:col-span-2 -mt-1 flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -443,30 +443,30 @@ export default function CheckoutBuyerForm({ event, methods }: { event: Event; me
             </div>
           ) : null}
 
-          <input
+          <label className="grid gap-2 text-sm text-white/80"><span>Teléfono (WhatsApp)</span><input
             value={buyerPhone}
             onChange={(e) => setBuyerPhone(e.target.value)}
             placeholder="Teléfono (WhatsApp)"
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus-visible:outline-2 placeholder:text-white/40"
             disabled={paying}
             inputMode="tel"
-          />
+          /></label>
 
-          <input
+          <label className="grid gap-2 text-sm text-white/80"><span>RUT (obligatorio)</span><input
             value={buyerRut}
             onChange={(e) => setBuyerRut(e.target.value)}
             onBlur={() => {
               if (buyerRut.trim()) setBuyerRut(rutFormat(buyerRut));
             }}
             placeholder="RUT (obligatorio)"
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus-visible:outline-2 placeholder:text-white/40"
             disabled={paying}
-          />
+          /></label>
 
-          <select
+          <label className="grid gap-2 text-sm text-white/80"><span>Región</span><select
             value={buyerRegion}
             onChange={(e) => setBuyerRegion(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus-visible:outline-2 placeholder:text-white/40"
             disabled={paying}
           >
             <option value="">Región</option>
@@ -475,12 +475,12 @@ export default function CheckoutBuyerForm({ event, methods }: { event: Event; me
                 {r.name}
               </option>
             ))}
-          </select>
+          </select></label>
 
-          <select
+          <label className="grid gap-2 text-sm text-white/80"><span>Comuna</span><select
             value={buyerComuna}
             onChange={(e) => setBuyerComuna(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus-visible:outline-2 placeholder:text-white/40"
             disabled={paying || !buyerRegion}
           >
             <option value="">{buyerRegion ? "Comuna" : "Selecciona región primero"}</option>
@@ -489,23 +489,23 @@ export default function CheckoutBuyerForm({ event, methods }: { event: Event; me
                 {c}
               </option>
             ))}
-          </select>
+          </select></label>
 
-          <input
+          <label className="grid gap-2 text-sm text-white/80 md:col-span-2"><span>Dirección (calle y número)</span><input
             value={buyerAddress1}
             onChange={(e) => setBuyerAddress1(e.target.value)}
             placeholder="Dirección (calle y número)"
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 md:col-span-2"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus-visible:outline-2 placeholder:text-white/40"
             disabled={paying}
-          />
+          /></label>
 
-          <input
+          <label className="grid gap-2 text-sm text-white/80 md:col-span-2"><span>Depto / Casa / Referencia (opcional)</span><input
             value={buyerAddress2}
             onChange={(e) => setBuyerAddress2(e.target.value)}
             placeholder="Depto / Casa / Referencia (opcional)"
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 md:col-span-2"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus-visible:outline-2 placeholder:text-white/40"
             disabled={paying}
-          />
+          /></label>
         </div>
 
         <div className="mt-4 space-y-2 text-xs text-white/55">

@@ -4,9 +4,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 export function Button({ variant = "primary", className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "quiet" }) {
   return <button {...props} className={`btn ${variant} ${className}`} />;
 }
-export function Field({ label, children, hint, error }: { label: string; children: ReactNode; hint?: string; error?: string }) {
-  return <label className="field"><span className="field-label">{label}</span>{children}{hint && <span className="hint">{hint}</span>}{error && <span className="field-error" role="alert">{error}</span>}</label>;
-}
+export { Field } from './Field';
 export function Notice({ children, error = false }: { children: ReactNode; error?: boolean }) {
   return <div className={`notice ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{children}</div>;
 }

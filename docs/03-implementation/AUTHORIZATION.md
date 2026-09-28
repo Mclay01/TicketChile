@@ -1,5 +1,7 @@
 # Authorization boundaries — current through M7
 
+Current release status (M10): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
+
 M1 (`39a0931`) and M2 (`319cb5f`) remain implemented. M3 extends their server guards with the shared persisted identity and staff model; client roles, cookie presence, event codes and knowledge of identifiers never authorize access. Full identity/session/recovery/MFA/delivery/rate/audit details are in [IDENTITY-SECURITY.md](IDENTITY-SECURITY.md).
 
 ## Identity authority
@@ -147,3 +149,7 @@ Legacy admin list/detail aliases use bounded canonical readers. The old organize
 The existing M3 identity administration endpoint and last-superadmin safeguards remain separate. Fine-grained grant provisioning is a controlled server/database operation, not a self-service browser setting. See [Finance operations](FINANCE-OPERATIONS.md) for capability model, audit boundaries and provider limitations.
 
 An event reassignment does not expose its previous organizer's settlement: organizer reads require both current event authority and a matching snapshot organizer ID. A PostgreSQL regression explicitly exercises this case.
+
+## M10 operational hardening
+
+Ticket/order/payment IDs still confer no authority; existing persisted identity, owner and event/capability predicates are unchanged. Unknown admin detail now maps to not-found, and inherited object-property names cannot select an admin section. Public health/readiness expose only booleans and no identities, schema names or provider secrets. Unexpected API failures return a correlation ID and generic text; operational logs never serialize raw Error, URL, headers or body. Security headers preserve camera=(self); CSP retains inline hydration/styles and requires external provider/HTTPS acceptance before release. See the M10 audit and release gates for limitations.

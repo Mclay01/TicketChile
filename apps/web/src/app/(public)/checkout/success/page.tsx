@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 type SP = Record<string, string | string[] | undefined>;
 
-function pickString(v: any) {
+function pickString(v: unknown) {
   return typeof v === "string" ? v.trim() : "";
 }
 
@@ -41,7 +41,7 @@ export default async function CheckoutSuccessPage(props: {
         <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
           <h1 className="text-2xl font-semibold tracking-tight">No hay datos para confirmar</h1>
           <p className="mt-2 text-sm text-white/70">
-            Falta <span className="text-white/90 font-semibold">payment_id</span> en la URL, así que no puedo validar el pago.
+            Abre tu compra desde Mis tickets para revisar el estado y tus entradas.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-2">

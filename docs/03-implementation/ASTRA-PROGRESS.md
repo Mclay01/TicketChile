@@ -1,8 +1,8 @@
 # Astra execution state
 
-Updated: 2026-09-18. Branch: `astra/ticketchile-v2`. Starting commit: `6104fd9`. Initial working tree: clean.
+Updated: 2026-09-28. Branch: `astra/ticketchile-v2`. M10 starting commit: `a3d38370b3b48598f1772148bc8d0f741f7221f1`; initial working tree clean. Earlier sections below retain milestone-specific historical evidence.
 
-## Completed
+## Historical M0/M1 discovery and containment
 
 - Inspected repository tree, recent commits, packages/configuration, routes, authentication, database schema, holds/finalization, scanner, payments, email/media paths and audit/product/design documentation.
 - Confirmed critical admin authorization and organizer tenant leaks against current code; found the unguarded payments page and ticket resend ownership problem.
@@ -19,7 +19,7 @@ Updated: 2026-09-18. Branch: `astra/ticketchile-v2`. Starting commit: `6104fd9`.
 
 ## Current work
 
-M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df1875d392abc7b7ad60a67`; M3 in `fd48fc02df1408a299157d7308b644b102a532cd`; M4 in `9e4466e34a69192761a36a918c56e430c849c9be`; M5 in `9ac87167614db44fbfe05c2c685fd006bcee818a`. M6 is complete in `3e9b00ec43505f0df3dc7ee34ac9134d4fdcb45e`. M7 is complete in the coherent commit containing the M7 entry below. Prior milestones were extended, not reimplemented. No deployment, production credentials/data, live provider calls, merge or push.
+M1-M9 are complete and preserved: M1 `39a0931`, M2 `319cb5f`, M3 `fd48fc0`, M4 `9e4466e`, M5 `9ac8716`, M6 `3e9b00e`, M7 `fb12b7e`, M8 `50af6da`, M9 `a3d3837`. M10 closes states/accessibility/performance/cleanup and release documentation; final evidence is recorded at the end of this file. No deployment, main merge, push, production credentials/data or real provider calls.
 
 ## M2 completed
 
@@ -32,9 +32,9 @@ M1 remains complete in `39a0931`; M2 remains complete in `319cb5f09140ddd09df187
 - Added 141 M2 regression cases, retaining all 36 M1 cases (177 total), plus provider/SDK blocking in the isolated test loader.
 - Complete route/alias inventory, guest policy and remaining limitations are in [AUTHORIZATION.md](AUTHORIZATION.md).
 
-## Pending
+## Pending release work
 
-M8-M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). M1-M7 are complete locally. Production schema adoption, external worker installation, provider end-to-end certification and the remaining product milestones are pending. The full platform remains incomplete and is not production-ready.
+Production remains blocked by schema adoption/restore evidence, production media storage, worker installation, provider certification, business/legal approvals, real-device/security/load validation and retention operations. These are explicit release gates in [RELEASE-READINESS.md](RELEASE-READINESS.md), not permission to deploy or start another milestone. M10 is the final implementation milestone in the approved plan.
 
 ## Decisions
 
@@ -51,8 +51,8 @@ M8-M10 in [ASTRA-IMPLEMENTATION-PLAN.md](ASTRA-IMPLEMENTATION-PLAN.md). M1-M7 ar
 - `pnpm` is absent from PATH; direct Node CLI checks work. M5 used cached Corepack pnpm with auto-pin disabled and --ignore-workspace to add Sharp without changing parent workspace configuration.
 - The reconstructed local schema is verified on disposable PostgreSQL 18.1. The actual production schema is still unknown and requires catalog reconciliation; no remote DB inspection was attempted.
 - Three bundled design HTMLs contain their real markup in `__bundler/template`; inspect the template, not the loading thumbnail.
-- Existing root package/config and lint debt need dedicated follow-up.
-- Remaining exposures: unverified production catalog/infrastructure, privileged onboarding/key management, scheduler installation and recovery/mail delivery proof, review/refund operations, production object storage/legacy media transition, distributed abuse/load controls, and ticket transfer/QR/Wallet key rotation. M1-M5 local completion does not certify production readiness.
+- Root API/shared-types packages remain placeholders; the maintained application and its tooling stay in `apps/web`. Current whole-repository lint results supersede historical debt counts.
+- Remaining exposures: unverified production catalog/infrastructure, privileged onboarding/key management, scheduler installation and real recovery/mail delivery proof, provider refund certification and policy, production object storage/legacy media transition, distributed abuse/load controls, retention and ticket transfer/QR/Wallet key rotation. Local M1-M10 completion does not certify production readiness.
 - M1/M2 retain isolated provider/session/DB doubles; M3-M5 additionally execute actual PostgreSQL migration/identity/permission/payment/media/ownership cases. M5 adds local Chrome public/account QA. External merchant, Google OAuth, Wallet, email-delivery, physical-device and distributed-load end-to-end remain unexecuted.
 
 ## M1 verification (historical)
@@ -347,3 +347,49 @@ No deployment, production credentials/data, real email, live merchant/model/Wall
 ## Exact next milestone after M9
 
 **M10: Complete states, accessibility, performance, cleanup and release documentation.** Completion evidence: **full gates and responsive end-to-end acceptance matrix**. M10 has not begun. Stop after the coherent M9 commit.
+
+
+## M10 starting baseline - 2026-09-28
+
+Clean `astra/ticketchile-v2` at `a3d38370b3b48598f1772148bc8d0f741f7221f1`; M1-M9 confirmed complete. No code was changed before measuring this baseline.
+
+- Tests: 328/328 passed on a fresh disposable PostgreSQL rerun. The first concurrently loaded run exceeded the local helper's 3-second connection timeout during setup; no assertion regression was hidden. PostgreSQL remained running; rerun completed successfully.
+- TypeScript: PASS (`--noEmit --incremental false`). M9 commit scoped lint: PASS, 35 source/test/script files. Clean checkout had no new-file scope yet.
+- Whole maintained application lint: **15 errors / 1 warning** from both `eslint .` (generated preview/local artifacts explicitly excluded) and explicit src/scripts/tests/config inventory. Categories: 12 unsafe explicit-any, one CommonJS config import, one set-state-in-effect, one ref-during-render; one stale suppression warning. The historical 287/35 figure is superseded, not silently carried forward.
+- Isolated optimized production build: PASS, including TypeScript/page generation. Migration state: additive 0001-0009 tested locally only; production catalog/adoption unknown.
+- Provider state: no production credentials inspected; baseline verification uses disabled/inert integrations. Live merchant/model/email/Wallet certification, production media adapter, worker scheduling/retention, historical financial adoption and legal/business policies remain blockers.
+- M10 scope: state/accessibility/keyboard/responsive pass, measured performance/query review, safe logging/headers/config/readiness, verified dead-code and lint cleanup, end-to-end/migration/worker rehearsal and release/runbook documentation. No new large product feature, deployment, main merge or production operation is authorized.
+
+## M10 complete - 2026-09-28
+
+M1-M9 were confirmed complete before changes and were not reimplemented. M10 is complete in the coherent commit containing this entry. Production release remains blocked; no deployment, main merge, push, production credentials/data or live provider calls occurred.
+
+- Fixed persistent checkout/login/registration labels, described hints/errors, registration step focus, dialog Tab/Escape/return focus, mobile target sizing and duplicate auth landmarks. Preserved the 1D design direction and four immutable approved HTML references.
+- Added useful error/navigation recovery across route groups and root failures; safe admin detail 404; own-property section dispatch. Added closed-schema operational error logs/correlation IDs, safe liveness/readiness, core configuration validation and security headers that preserve self camera access.
+- Deferred the 437,028-byte QR decoder until camera activation; paused scanner refresh when hidden/offline or already running; stopped redundant initial terminal-payment polling and aborted abandoned status work. Added 5-second DB connection and 15-second statement bounds. No overall bundle reduction is claimed: total production JS changed from 1,319,923 to 1,348,326 bytes.
+- Removed verified dead checkout/carousel/ticket/Wallet/auth/UI code, unused Radix select dependency and obsolete password-argv hash tool. Retained regression-covered boundary helpers and isolated development fixtures. Offline lockfile update only; no major dependency upgrades.
+- Added eight meaningful regression cases (336 total), migration data rehearsal, production-browser workflows and measured query/resource reports. Added an empty-value environment template, provider/feature/business matrices, release/runbook/incident/retention procedures and a complete state audit.
+
+| Final check | Result |
+|---|---|
+| Full tests: `node --test --experimental-test-isolation=none tests/*.test.mjs` | PASS: **336**, zero failures/skips; retained M1-M9 authorization/payment/inventory/MFA/finance/worker cases |
+| Empty and populated reconstructed baseline migration rehearsal | PASS through unchanged **0001-0009**; no invented legacy verification/commission; drift, unbaselined-schema refusal and rollback tests retained |
+| TypeScript: `node node_modules/typescript/bin/tsc --noEmit --incremental false` | PASS |
+| Scoped lint: `node scripts/lint-changed.mjs` | PASS: **44** changed/new maintained files, zero errors/warnings |
+| Whole-repository lint: `node scripts/lint-all.mjs` | PASS: **338** maintained JS/TS files including API/shared types, **0 errors / 0 warnings**; generated/local output excluded |
+| Production build: `node scripts/verify-build.mjs` | PASS with scrubbed environment and inert build credentials |
+| Browser: `m10-browser-qa.mjs` | PASS: **260** states at 390/430/768/1024/1440; real password/MFA login, purchase/service-fake fulfillment/QR, actual QR decoding, organizer edit/publication/staff, admin moderation/support/refund/settlement/permission denial |
+| Focused auth: `m10-auth-qa.mjs` | PASS: **15** states; one main landmark, registration labels/focus and password minimum; no registration submitted |
+| Production-browser resource/motion/header verification | PASS: decoder deferred before camera, reduced motion respected, safe header/health responses |
+| Query rehearsal | PASS: 20 local events / 10,000 tickets, two catalog queries and bounded scanner/export reads; no new index needed for this fixture |
+| Root `git diff --check` | PASS |
+
+The initial 3-second disposable DB setup timeout under concurrent baseline checks was resolved by a 15-second test-only connection budget; reruns and the final full suite pass. Browser harness assertion corrections are not application failures; actual discovered label/focus/landmark defects were fixed and rechecked. Browser QA used the production artifact. The configuration root path was normalized; a separate fresh isolated development-server smoke check subsequently returned HTTP 200 for home, resolving the initial compiler-path failure.
+
+### Remaining security / release exposures
+
+Production schema compatibility, credential/key lifecycle and ingress are unverified. Media production storage, worker deployment/alerts, physical retention jobs, merchant/email/OAuth/Wallet certification, business/legal/accounting policies, real-device/screen-reader/security/dependency/load reviews remain gates. CSP intentionally permits inline hydration/styles. QR/Wallet transfer/key rotation, very large organizer portfolios and unsupported Fintoc/manual-transfer/partial-refund features are not silently declared solved. See RELEASE-READINESS.md for the decision matrix.
+
+### Exact next milestone after M10
+
+**None in the approved implementation plan. Stop.** The next activity is separately authorized release-gate resolution and staging/external validation; no new milestone or deployment is started automatically.

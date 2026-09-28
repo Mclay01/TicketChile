@@ -1,0 +1,10 @@
+import {execFileSync,spawnSync} from 'node:child_process';
+import fs from 'node:fs';
+import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('../../../',import.meta.url));
+const tracked=execFileSync('git',['ls-files','-z','--cached','--others','--exclude-standard'],{cwd:root,encoding:'utf8',windowsHide:true});
+const files=[...new Set(tracked.split('\0'))].filter(f=>/\.(?:js|mjs|ts|tsx)$/.test(f)&&!f.endsWith('next-env.d.ts')&&fs.existsSync(new URL('../../../'+f,import.meta.url)));
+console.log(`Whole repository lint: ${files.length} maintained JavaScript/TypeScript files, including apps/api and packages/types.`);
+const result=spawnSync(process.execPath,[fileURLToPath(new URL('../node_modules/eslint/bin/eslint.js',import.meta.url)),'--config',fileURLToPath(new URL('../eslint.config.mjs',import.meta.url)),'--max-warnings','0',...files],{cwd:root,stdio:'inherit',windowsHide:true});
+if(result.error)throw result.error;
+process.exit(result.status??1);

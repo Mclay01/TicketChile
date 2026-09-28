@@ -1,0 +1,151 @@
+{
+  "environment": "Production build, disposable loopback fixture, Chrome cache disabled",
+  "decoder": {
+    "file": "fdb7e635e82e899e.js",
+    "bytes": 437028
+  },
+  "initialScriptResources": [
+    {
+      "file": "11174d7c23ccde7c.js",
+      "encodedBytes": 7956,
+      "decodedBytes": 26985
+    },
+    {
+      "file": "6898bd8004c6d2bf.js",
+      "encodedBytes": 7310,
+      "decodedBytes": 33747
+    },
+    {
+      "file": "5898fad2080ddf1a.js",
+      "encodedBytes": 70110,
+      "decodedBytes": 224519
+    },
+    {
+      "file": "turbopack-66fb37dd108b4dc5.js",
+      "encodedBytes": 4014,
+      "decodedBytes": 10250
+    },
+    {
+      "file": "6faab77ded91b984.js",
+      "encodedBytes": 9020,
+      "decodedBytes": 32371
+    },
+    {
+      "file": "685abc5fdf3992c5.js",
+      "encodedBytes": 31631,
+      "decodedBytes": 114800
+    },
+    {
+      "file": "d4e2cd663489d6e9.js",
+      "encodedBytes": 282,
+      "decodedBytes": 282
+    },
+    {
+      "file": "f025e1e20197c585.js",
+      "encodedBytes": 677,
+      "decodedBytes": 677
+    },
+    {
+      "file": "c656033ce795f0b9.js",
+      "encodedBytes": 3862,
+      "decodedBytes": 9866
+    },
+    {
+      "file": "56ad6c09be076d67.js",
+      "encodedBytes": 3576,
+      "decodedBytes": 9122
+    },
+    {
+      "file": "3714bc2dd3d8b61b.js",
+      "encodedBytes": 7444,
+      "decodedBytes": 30715
+    },
+    {
+      "file": "c1d954573bc12475.js",
+      "encodedBytes": 7052,
+      "decodedBytes": 18296
+    }
+  ],
+  "afterCameraScriptResources": [
+    {
+      "file": "11174d7c23ccde7c.js",
+      "encodedBytes": 7956,
+      "decodedBytes": 26985
+    },
+    {
+      "file": "6898bd8004c6d2bf.js",
+      "encodedBytes": 7310,
+      "decodedBytes": 33747
+    },
+    {
+      "file": "5898fad2080ddf1a.js",
+      "encodedBytes": 70110,
+      "decodedBytes": 224519
+    },
+    {
+      "file": "turbopack-66fb37dd108b4dc5.js",
+      "encodedBytes": 4014,
+      "decodedBytes": 10250
+    },
+    {
+      "file": "6faab77ded91b984.js",
+      "encodedBytes": 9020,
+      "decodedBytes": 32371
+    },
+    {
+      "file": "685abc5fdf3992c5.js",
+      "encodedBytes": 31631,
+      "decodedBytes": 114800
+    },
+    {
+      "file": "d4e2cd663489d6e9.js",
+      "encodedBytes": 282,
+      "decodedBytes": 282
+    },
+    {
+      "file": "f025e1e20197c585.js",
+      "encodedBytes": 677,
+      "decodedBytes": 677
+    },
+    {
+      "file": "c656033ce795f0b9.js",
+      "encodedBytes": 3862,
+      "decodedBytes": 9866
+    },
+    {
+      "file": "56ad6c09be076d67.js",
+      "encodedBytes": 3576,
+      "decodedBytes": 9122
+    },
+    {
+      "file": "3714bc2dd3d8b61b.js",
+      "encodedBytes": 7444,
+      "decodedBytes": 30715
+    },
+    {
+      "file": "c1d954573bc12475.js",
+      "encodedBytes": 7052,
+      "decodedBytes": 18296
+    },
+    {
+      "file": "fdb7e635e82e899e.js",
+      "encodedBytes": 115234,
+      "decodedBytes": 437028
+    }
+  ],
+  "reducedMotion": {
+    "matches": true,
+    "transition": "0s",
+    "scroll": "auto"
+  },
+  "health": {
+    "status": 200,
+    "body": {
+      "alive": true
+    },
+    "cache": "private, no-store",
+    "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self' https://webpay3g.transbank.cl https://webpay3gint.transbank.cl",
+    "camera": "camera=(self), microphone=(), geolocation=()"
+  },
+  "scope": "Deferred decoder transfer and reduced-motion/header checks only; no Lighthouse/Core Web Vitals or production load claim."
+}

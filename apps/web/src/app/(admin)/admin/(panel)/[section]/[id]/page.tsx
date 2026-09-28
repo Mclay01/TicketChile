@@ -1,3 +1,4 @@
+import { AccessError } from '@/lib/access.server';
 import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {adminDetail,sections,sectionCapability,type Section} from '@/lib/admin/queries.server';
@@ -7,9 +8,9 @@ import Action from '@/components/admin/Action';
 import {refundProviderStatus} from '@/lib/payments/refunds.server';
 const relatedLabels:Record<string,string>={events:'Portafolio de eventos',staff:'Equipo activo',tiers:'Entradas y stock',tickets:'Entradas de la orden',delivery:'Entrega de correos',evidence:'Evidencia del proveedor',commission:'Comisión al comprar',payments:'Pagos incluidos',adjustments:'Ajustes documentados',payout:'Registro de pago externo',notes:'Notas internas',history:'Historial de decisiones'};
 export default async function Page({params}:{params:Promise<{section:string;id:string}>}){
- const {section:raw,id}=await params;if(!(raw in sections))notFound();const section=raw as Section,ctx=await adminContext(),can=(c:string)=>ctx.capabilities.includes(c);
+ const {section:raw,id}=await params;if(!(Object.hasOwn(sections,raw)))notFound();const section=raw as Section,ctx=await adminContext(),can=(c:string)=>ctx.capabilities.includes(c);
  if(!can(sectionCapability(section)))return <div className="admin-panel"><h1>Acceso restringido</h1><p>Tu cuenta no tiene permiso para este registro.</p><Link href="/admin">Volver al resumen</Link></div>;
- const {row,related}=await adminDetail(section,id);
+ const {row,related}=await adminDetail(section,id).catch(error=>{if(error instanceof AccessError && error.status===404)notFound();throw error;});
  return <div className="stack"><Link href={`/admin/${section}`}>← {sections[section]}</Link><header className="admin-heading"><p className="eyebrow">REVISIÓN OPERATIVA</p><h1>{String(row.title||row.display_name||row.subject||sections[section])}</h1><p className="hint">{id}</p></header><div className="admin-panel"><RecordFields row={row}/></div><div className="admin-actions">
  {section==='organizers'&&can('moderation.write')&&<Action action="organizer.review" target={id} label="Decidir verificación" description="Aprobar habilita la operación del organizador; suspender revoca su acceso. La verificación de correo es independiente." fields={[{name:'state',label:'Decisión',options:['APPROVED','NEEDS_INFORMATION','REJECTED','SUSPENDED']}]}/>}
  {section==='events'&&<><Link href={`/admin/payments?event=${id}`}>Pagos afectados y revisión de reembolsos →</Link>{can('moderation.write')&&<Action action="event.moderate" target={id} label="Moderar evento" description="Publicar exige la lista de publicación completa. Pausar bloquea nuevas ventas y republicación. Cancelar invalida entradas vigentes, libera reservas y crea seguimiento; no ejecuta reembolsos." values={{revision:row.revision}} fields={[{name:'state',label:'Decisión',options:['PUBLISHED','PAUSED','CHANGES_REQUESTED','CANCELLED','ENDED']}]}/>} {can('settlement.write')&&<Action action="settlement.create" target={id} label="Preparar liquidación" description="Incluye los pagos emitidos, verificados y aún no liquidados del evento. Bloquea pagos sin comisión histórica conocida o con reembolsos pendientes."/>}</>}

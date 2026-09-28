@@ -1,5 +1,7 @@
 # TicketChile QA gates
 
+Current release status (M10): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
+
 Record executed results in ASTRA-PROGRESS.md. Unchecked items are not accepted as complete.
 
 ## Security containment
@@ -208,6 +210,23 @@ Whole-repository lint remains unclaimed (historical 287 errors/35 warnings). No 
 - [x] Progress, finance, payment, authorization, lifecycle, operations, design and migration documentation updated.
 - [ ] Live test-merchant/provider/webhook certification, production schema/grants/worker/key/delivery rehearsal and formal accessibility/device/load testing remain release gates.
 - [ ] Business policies for verification evidence, commission/refund treatment, taxes/processor fees, settlement timing and adjustment governance require approval; unsupported partial/used-ticket/post-allocation refunds and automatic bank transfer are not presented as complete capabilities.
-- [ ] **Next: M10 - Complete states, accessibility, performance, cleanup and release documentation.** Not started.
+- [x] M9 handoff to M10 completed; see the current M10 release verification section below.
 
 No production access or deployment occurred. Whole-repository lint remains unclaimed (historical 287 errors/35 warnings).
+
+## Current M10 release verification - 2026-09-28
+
+- [x] Baseline recorded before code edits: clean `a3d3837`, M1-M9 complete, 328 tests, TypeScript/build/scoped lint pass; whole application lint 15 errors / 1 warning.
+- [x] State inventory covers public/account/auth/AI, all Event Center sections, scanner and admin/finance/support; error recovery and authorization-safe not-found behavior reviewed.
+- [x] Persistent labels, described hints/errors, login alerts, dialog keyboard loop/Escape/return focus, registration step focus, single main landmark and mobile targets fixed.
+- [x] 260 browser states + 15 focused auth states at all five requested widths; screenshots and JSON under `qa/m10/`. DOM names/labels/alt/overflow and Chrome accessibility tree checked; no WCAG/screen-reader certification claimed.
+- [x] Real buyer/organizer/admin password/MFA browser login; selection/checkout plus isolated fake provider evidence/finalization/owned QR; organizer save/preview/publish/staff; scanner actual decoder/duplicates/wrong event/camera failures/offline; admin support/moderation/refund/settlement and permission denial.
+- [x] Deferred decoder verified in a production browser; bounded polling, query/pagination/export/media/font/cache behavior reviewed; 10,000-ticket EXPLAIN fixture recorded, no speculative indexes.
+- [x] Logs/correlation, health versus readiness, config failure, headers/CSP/camera, CSRF/input/upload boundaries reviewed and tested; empty-value `.env.example` covers runtime keys.
+- [x] Whole-repository lint: **0 errors / 0 warnings, 338 files**. Scoped lint: **44 files**. No global source exclusions or wholesale rule disabling; historical lint counts above are superseded.
+- [x] **336 tests**, zero failures/skips; TypeScript, production build and diff checks pass. Worker retry/concurrency/reconciliation/expiry tests use injected transports only.
+- [x] Empty and populated baseline-to-0009 rehearsal passes; immutable 0001-0009 unchanged; no new schema migration.
+- [x] Provider/feature/business matrices, ENVIRONMENT, RELEASE-READINESS, DEPLOYMENT-RUNBOOK, INCIDENT-ROLLBACK and M10-AUDIT published in the repository. Approved designs unchanged; no deployment.
+- [ ] External release gates: production catalog/restore, media adapter, scheduler/alerts/retention, approved policies, provider certification, real-device/accessibility/security/dependency/load acceptance. These remain explicitly blocked, not inferred from local test success.
+
+No implementation milestone follows M10 in the approved plan.

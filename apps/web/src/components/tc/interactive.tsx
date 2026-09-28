@@ -3,8 +3,15 @@ import { useRef, type ReactNode } from "react";
 import { Minus, Plus, X } from "lucide-react";
 export function Dialog({ label, title, children }: { label: ReactNode; title: string; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
-  return <><button className="icon-btn mobile-only" type="button" aria-label={title} onClick={() => ref.current?.showModal()}>{label}</button>
-    <dialog ref={ref} aria-label={title}><div className="dialog-head"><h2>{title}</h2><button type="button" className="icon-btn" aria-label="Cerrar" onClick={() => ref.current?.close()}><X size={20} /></button></div>
+  const opener = useRef<HTMLButtonElement>(null);
+  return <><button ref={opener} className="icon-btn mobile-only" type="button" aria-haspopup="dialog" aria-label={title} onClick={() => ref.current?.showModal()}>{label}</button>
+    <dialog ref={ref} aria-label={title} onClose={() => opener.current?.focus()} onKeyDown={event => {
+      if (event.key !== 'Tab') return;
+      const targets = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('a[href],button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')).filter(e => e.getClientRects().length);
+      const first = targets[0], last = targets.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }}><div className="dialog-head"><h2>{title}</h2><button type="button" className="icon-btn" aria-label="Cerrar" onClick={() => ref.current?.close()}><X size={20} /></button></div>
       <div onClick={e => { if ((e.target as HTMLElement).closest("a")) ref.current?.close(); }}>{children}</div>
     </dialog></>;
 }

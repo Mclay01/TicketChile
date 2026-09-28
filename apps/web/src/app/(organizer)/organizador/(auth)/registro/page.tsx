@@ -2,7 +2,7 @@
 "use client";
 
 import HandoffNotice from '@/components/ai/HandoffNotice';
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 type FormState = {
@@ -51,6 +51,8 @@ export default function OrganizerRegisterPage() {
     []
   );
 
+  const stepTitle = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { stepTitle.current?.focus(); }, [step]);
   const progress = Math.round(((step + 1) / steps.length) * 100);
 
   function canGoNext() {
@@ -108,7 +110,7 @@ export default function OrganizerRegisterPage() {
     v.password2 !== v.password;
 
   const inputCls =
-    "w-full rounded-lg border border-black/10 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-black/10";
+    "w-full rounded-lg border border-black/10 bg-white px-3 py-2 focus-visible:outline-2 focus:ring-2 focus:ring-black/10";
 
   const pillCls = (active: boolean) =>
     [
@@ -117,7 +119,7 @@ export default function OrganizerRegisterPage() {
     ].join(" ");
 
   return (
-    <main className="min-h-[80vh] flex items-center justify-center px-4"><HandoffNotice/>
+    <div className="min-h-[80vh] flex items-center justify-center px-4"><HandoffNotice/>
       <div className="w-full max-w-lg">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold tracking-tight text-white">Registro de Organizador</h1>
@@ -126,7 +128,7 @@ export default function OrganizerRegisterPage() {
 
         <div className="rounded-xl border border-black/10 bg-white p-6 text-black shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">{steps[step].title}</div>
+            <h2 id="registration-step-title" ref={stepTitle} tabIndex={-1} className="text-sm font-semibold">{steps[step].title}</h2>
             <div className="text-xs text-black/60">{progress}%</div>
           </div>
 
@@ -139,14 +141,14 @@ export default function OrganizerRegisterPage() {
               <div className="flex gap-2">
                 <button
                   className={pillCls(v.orgType === "persona")}
-                  onClick={() => setV((x) => ({ ...x, orgType: "persona" }))}
+                  aria-pressed={v.orgType === "persona"} onClick={() => setV((x) => ({ ...x, orgType: "persona" }))}
                   type="button"
                 >
                   Persona
                 </button>
                 <button
                   className={pillCls(v.orgType === "empresa")}
-                  onClick={() => setV((x) => ({ ...x, orgType: "empresa" }))}
+                  aria-pressed={v.orgType === "empresa"} onClick={() => setV((x) => ({ ...x, orgType: "empresa" }))}
                   type="button"
                 >
                   Empresa
@@ -155,7 +157,7 @@ export default function OrganizerRegisterPage() {
             ) : null}
 
             {step === 1 ? (
-              <input
+              <input aria-labelledby="registration-step-title"
                 className={inputCls}
                 value={v.legalName}
                 onChange={(e) => setV((x) => ({ ...x, legalName: e.target.value }))}
@@ -164,7 +166,7 @@ export default function OrganizerRegisterPage() {
             ) : null}
 
             {step === 2 ? (
-              <input
+              <input aria-labelledby="registration-step-title"
                 className={inputCls}
                 value={v.rut}
                 onChange={(e) => setV((x) => ({ ...x, rut: e.target.value }))}
@@ -173,7 +175,7 @@ export default function OrganizerRegisterPage() {
             ) : null}
 
             {step === 3 ? (
-              <input
+              <input aria-labelledby="registration-step-title"
                 className={inputCls}
                 value={v.displayName}
                 onChange={(e) => setV((x) => ({ ...x, displayName: e.target.value }))}
@@ -182,7 +184,7 @@ export default function OrganizerRegisterPage() {
             ) : null}
 
             {step === 4 ? (
-              <input
+              <input aria-labelledby="registration-step-title"
                 className={inputCls}
                 value={v.email}
                 onChange={(e) => setV((x) => ({ ...x, email: e.target.value }))}
@@ -195,7 +197,7 @@ export default function OrganizerRegisterPage() {
               <div className="space-y-2">
                 <button
                   className={["w-full rounded-lg border border-black/10 px-3 py-2 text-sm font-medium", v.channel === "email" ? "bg-black text-white" : "bg-white hover:bg-black/5"].join(" ")}
-                  onClick={() => setV((x) => ({ ...x, channel: "email" }))}
+                  aria-pressed={v.channel === "email"} onClick={() => setV((x) => ({ ...x, channel: "email" }))}
                   type="button"
                 >
                   Email (recomendado)
@@ -204,7 +206,7 @@ export default function OrganizerRegisterPage() {
                 <button
                   className={["w-full rounded-lg border border-black/10 px-3 py-2 text-sm font-medium", v.channel === "whatsapp" ? "bg-black text-white" : "bg-white hover:bg-black/5"].join(" ")}
                   disabled
-                  onClick={() => setV((x) => ({ ...x, channel: "whatsapp" }))}
+                  aria-pressed={v.channel === "whatsapp"} onClick={() => setV((x) => ({ ...x, channel: "whatsapp" }))}
                   type="button"
                 >
                   WhatsApp
@@ -220,7 +222,7 @@ export default function OrganizerRegisterPage() {
               v.channel === "email" ? (
                 <div className="text-sm text-black/60">No necesitas teléfono si eliges Email.</div>
               ) : (
-                <input
+                <input aria-labelledby="registration-step-title"
                   className={inputCls}
                   value={v.phone}
                   onChange={(e) => setV((x) => ({ ...x, phone: e.target.value }))}
@@ -231,11 +233,11 @@ export default function OrganizerRegisterPage() {
             ) : null}
 
             {step === 7 ? (
-              <input
+              <input aria-labelledby="registration-step-title"
                 className={inputCls}
                 value={v.password}
                 onChange={(e) => setV((x) => ({ ...x, password: e.target.value }))}
-                placeholder="Mínimo 8 caracteres"
+                placeholder="Mínimo 12 caracteres"
                 type="password"
                 autoComplete="new-password"
               />
@@ -243,7 +245,7 @@ export default function OrganizerRegisterPage() {
 
             {step === 8 ? (
               <>
-                <input
+                <input aria-labelledby="registration-step-title"
                   className={inputCls}
                   value={v.password2}
                   onChange={(e) => setV((x) => ({ ...x, password2: e.target.value }))}
@@ -260,7 +262,7 @@ export default function OrganizerRegisterPage() {
             ) : null}
           </div>
 
-          {err ? <div className="mt-4 text-sm text-red-600">{err}</div> : null}
+          {err ? <div role="alert" className="mt-4 text-sm text-red-600">{err}</div> : null}
 
           <div className="mt-6 flex items-center justify-between">
             <button
@@ -294,6 +296,6 @@ export default function OrganizerRegisterPage() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

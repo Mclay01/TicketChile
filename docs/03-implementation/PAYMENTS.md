@@ -1,5 +1,7 @@
 # Payment lifecycle - M4
 
+Current release status (M10): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
+
 ## Pre-change inventory
 
 The audit started from clean M3 `fd48fc0`. Stripe, Webpay and Flow create routes each reserve inventory and persist payments differently. Stripe webhook/status, Webpay return, Flow reconcile and the disabled Fintoc provider's still-active webhook each mark payments and invoke a legacy issuer. The issuer also exports an unused demo-paid bypass. Transfer creation supplies fabricated fallback bank details. Ticket delivery claims tickets before sending, with no crash recovery; resend sends directly. There are no implemented refund mutations.
@@ -95,3 +97,7 @@ The original M4 paid-evidence/finalization/worker model remains authoritative. A
 New payment creation snapshots effective commission policy immutably; missing policy remains NULL and legacy values are not reconstructed from current rates. Settlement drafts allocate actual verified issued payments, subtract confirmed refunds and historical commission, and retain explicit adjustments. Accounting approval and external payout recording are separate states. Recording an external payout never sends money. Processor/tax/commission-refund policies and payout cadence remain unresolved, documented approval inputs.
 
 [FINANCE-OPERATIONS.md](FINANCE-OPERATIONS.md) is the detailed lifecycle, adapter, accounting and production runbook. M9 tests use disposable PostgreSQL and injected provider responses only.
+
+## M10 verification and operations
+
+Initial issued/failed/cancelled confirmation responses no longer start a redundant poll; abandoned initial status reads are aborted. Checkout controls have persistent labels. Stripe refund availability now requires both the explicit flag and a recognized secret-key format; flag-only configuration stays unavailable. Production secrets were not inspected. Full local provider/worker/financial regressions pass; browser fake evidence is injected only into isolated Node services, never through a production backdoor. Scheduling, merchant certification, email delivery proof and business/accounting policy remain release gates in DEPLOYMENT-RUNBOOK.md and RELEASE-READINESS.md.

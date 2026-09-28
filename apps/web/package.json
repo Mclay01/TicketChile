@@ -15,10 +15,10 @@
     "db:local:start": "node scripts/local-db.mjs start",
     "db:local:stop": "node scripts/local-db.mjs stop",
     "db:migrate:local": "node scripts/migrate.mjs",
-    "lint:changed": "node scripts/lint-changed.mjs"
+    "lint:changed": "node scripts/lint-changed.mjs",
+    "lint:all": "node scripts/lint-all.mjs"
   },
   "dependencies": {
-    "@radix-ui/react-select": "^2.2.6",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
     "bcryptjs": "^3.0.3",

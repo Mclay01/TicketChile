@@ -1,5 +1,7 @@
 # TicketChile AI — M7
 
+Current release status (M10): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
+
 ## Scope and architecture
 
 M7 extends M1–M6 on `astra/ticketchile-v2`. The audited baseline had a disabled public simulator, an opt-in organizer regex parser, M6 current/proposed review, and real capability-scoped event/inventory/finance services. PRD-AI and approved Fase 1B describe a task-oriented simulator and contextual review, not a floating chatbot. Existing 1D components, shared event preview, M3 authority/rates/audit and M6 normal saves remain the foundation.
@@ -83,7 +85,7 @@ Configuration outside numeric bounds falls back to conservative defaults. No API
 
 Append-only `0007_ai_proposals.sql` adds editable summary/SEO fields, encrypted proposal/request metadata and temporary simulator sessions. Migrations 0001–0006 remain unchanged. Local PostgreSQL covers scope/revocation, atomic confirmation/claim/replay/expiry, revisions, audit, rate and rollback. Contract tests use fake transports/providers and validate malformed/refused/incomplete responses, privacy minimization and timeout. Browser evidence: [qa/m7](qa/m7/README.md). Build verification scrubs inherited/file AI credentials as well as prior providers.
 
-Remaining: actual model/account/schema/usage validation, content-quality/injection evaluations, approved provider privacy terms, trusted production ingress, deployed migrations/keys/restricted grants, physical retention scheduling and load testing; production media/storage and other prior release gates. The local provider is intentionally modest. No mass communications, operational promotions, new financial actions or generic chatbot are implemented. Next milestone is M8; M7 does not deploy or start it.
+Remaining: actual model/account/schema/usage validation, content-quality/injection evaluations, approved provider privacy terms, trusted production ingress, deployed migrations/keys/restricted grants, physical retention scheduling and load testing; production media/storage and other prior release gates. The local provider is intentionally modest. The AI module does not execute mass communications, operational promotions or financial actions; it proposes reviewed content. M8 and M9 subsequently implemented operational/financial workflows separately. Current release gates are tracked in RELEASE-READINESS.md; no deployment is authorized.
 
 
 ## M8 promotion handoff

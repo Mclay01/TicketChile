@@ -98,7 +98,7 @@ export default function CheckoutConfirmClient() {
       if (!silent) setErr(null);
 
       if (!endpoint) {
-        setErr("Falta payment_id o session_id en la URL.");
+        setErr("Abre tu compra desde Mis tickets para revisar su estado.");
         setData(null);
         setLoading(false);
         return null;
@@ -209,7 +209,7 @@ export default function CheckoutConfirmClient() {
     flowKickRef.current = false;
 
     if (!paymentId && !sessionId) {
-      setErr("Falta payment_id o session_id en la URL.");
+      setErr("Abre tu compra desde Mis tickets para revisar su estado.");
       setLoading(false);
       setPolling(false);
       return () => {
@@ -222,8 +222,13 @@ export default function CheckoutConfirmClient() {
     setPolling(true);
 
     (async () => {
+      const ac = new AbortController();
+      abortRef.current = ac;
       await flowKick();
-      await loadOnce({ silent: false });
+      if (ac.signal.aborted) return;
+      const initial = await loadOnce({ silent: false, signal: ac.signal });
+      if (ac.signal.aborted) return;
+      if (!initial || initial.tickets?.length || ["FAILED", "CANCELLED"].includes(String(initial.payment?.status).toUpperCase())) { stopAll(); return; }
       clearTimer();
       timerRef.current = window.setTimeout(poll, POLL_MS);
     })();

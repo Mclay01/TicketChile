@@ -2,7 +2,7 @@ import pg from "pg";
 import { migrate } from "../scripts/migrate.mjs";
 // Fixed disposable loopback cluster, never application environment variables.
 export async function localDatabase({applyMigrations=true}={}) {
-  const config={host:"127.0.0.1",port:55439,user:"ticket_local",connectionTimeoutMillis:3000};
+  const config={host:"127.0.0.1",port:55439,user:"ticket_local",connectionTimeoutMillis:15000};
   const root=new pg.Pool({...config,database:"postgres"});
   const database=`ticketchile_test_m3_${Date.now()}_${Math.floor(Math.random()*100000)}`;
   try {await root.query(`CREATE DATABASE ${database}`);} finally {await root.end();}

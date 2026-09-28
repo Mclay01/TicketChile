@@ -1,9 +1,9 @@
 # TicketChile — implementation plan
 
 Baseline: 2026-09-18, branch `astra/ticketchile-v2`, commit `6104fd9`.
-Execution state lives in [ASTRA-PROGRESS.md](ASTRA-PROGRESS.md). This is a multi-milestone implementation, not a production-readiness claim.
+Execution state lives in [ASTRA-PROGRESS.md](ASTRA-PROGRESS.md). M1-M9 are complete; M10 is the final implementation milestone. Current release gates live in [RELEASE-READINESS.md](RELEASE-READINESS.md); the baseline findings below are historical, not current vulnerabilities.
 
-## Current state and verified audit differences
+## Historical starting baseline and verified audit differences
 
 The working application is `apps/web`: Next 16.1.1, React 19, TypeScript, Tailwind 4, PostgreSQL via `pg`. Root package configuration is a `.bak`; `apps/api/src/main.ts` is empty, no worker exists, and shared types are unused. Keep the functioning application and stack.
 

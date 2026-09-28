@@ -42,16 +42,18 @@ export default function AdminLoginClient() {
         <h1 className="text-xl font-semibold">Admin — TicketChile</h1>
         <p className="text-sm text-white/60 mt-1">Acceso privado.</p>
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-3">
-          <input
-            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+        <form aria-describedby={err ? "login-error" : undefined} aria-busy={busy} onSubmit={onSubmit} className="mt-6 space-y-3">
+          <label htmlFor="admin-user">Usuario</label>
+          <input id="admin-user" required
+            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 focus-visible:outline-2"
             placeholder="Usuario"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
           />
-          <input
-            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none"
+          <label htmlFor="admin-password">Contraseña</label>
+          <input id="admin-password" required
+            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 focus-visible:outline-2"
             placeholder="Contraseña"
             type="password"
             value={password}
@@ -60,7 +62,7 @@ export default function AdminLoginClient() {
           />
 
           <label className="block text-sm">Codigo TOTP o recuperacion (si esta activo)<input className="w-full rounded border border-current bg-transparent px-3 py-2" value={code} onChange={e=>setCode(e.target.value)} autoComplete="one-time-code" /></label>
-          {err ? <div className="text-sm text-red-400">{err}</div> : null}
+          {err ? <div id="login-error" role="alert" className="text-sm text-red-400">{err}</div> : null}
 
           <button
             className="w-full rounded-xl bg-white text-black font-medium py-2 disabled:opacity-60"

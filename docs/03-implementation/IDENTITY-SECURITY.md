@@ -1,5 +1,7 @@
 # Identity and security foundation — M3
 
+Current release status (M10): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
+
 Implemented on `astra/ticketchile-v2`, extending M1/M2. This is a local, tested foundation, not a production-readiness certification. No production credentials, provider calls, emails, migrations or deployment were used.
 
 ## Identity and sessions
@@ -78,6 +80,6 @@ There is no public AI provider endpoint in this checkout to rate-limit; M7 must 
 
 A trigger rejects UPDATE/DELETE, but this is not tamper-proof against a database owner/superuser or someone able to disable triggers/TRUNCATE. Production must use a restricted runtime DB role, separate migration/maintenance roles and external archival/monitoring. Refund, settlement, bank-account, event cancellation and complimentary-ticket mutations are not implemented; their future domain transactions must call this audit service.
 
-Local PostgreSQL tests verify grants, expiry, row-lock races, session invalidation, MFA replay, quotas and audit creation. Browser/camera/Google OAuth/provider/email/Wallet end-to-end tests, distributed load, production catalog compatibility, secure key operations, delivery workers and retention remain unverified. Email-based ticket ownership and previously issued QR/Wallet transfer/key rotation remain M2 follow-up exposures. M4 completion and its limitations are recorded in the progress/payment documents. M5 is the next milestone.
+Local PostgreSQL tests verify grants, expiry, row-lock races, session invalidation, MFA replay, quotas and audit creation. Browser/camera/Google OAuth/provider/email/Wallet end-to-end tests, distributed load, production catalog compatibility, secure key operations, delivery workers and retention remain unverified. Email-based ticket ownership and previously issued QR/Wallet transfer/key rotation remain M2 follow-up exposures. M4 completion and its limitations are recorded in the progress/payment documents. M5-M10 subsequently extend local verification; current external release gates are in RELEASE-READINESS.md.
 
 Design references: [OWASP Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html), [RFC 6238](https://www.rfc-editor.org/rfc/rfc6238), [NextAuth callbacks](https://next-auth.js.org/configuration/callbacks). Documentation review only; no provider requests.

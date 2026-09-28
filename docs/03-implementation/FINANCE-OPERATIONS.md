@@ -1,5 +1,7 @@
 # Admin and finance operations — M9
 
+Current release status (M10): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
+
 Implemented locally on 2026-09-28. Migration `0009_admin_finance.sql`; no production adoption or provider certification was performed.
 
 ## Authority and operational boundaries

@@ -4,7 +4,6 @@ import { Pool, type PoolClient } from "pg";
 export const runtime = "nodejs";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __pgPool: Pool | undefined;
 }
 
@@ -94,6 +93,8 @@ export const pool: Pool = (() => {
   global.__pgPool = new Pool({
     connectionString,
     max,
+    connectionTimeoutMillis: 5000,
+    statement_timeout: 15000,
     ssl: useSSL ? { rejectUnauthorized } : undefined,
   });
 

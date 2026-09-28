@@ -1,5 +1,7 @@
 # TicketChile 1D implementation — M5
 
+Current release status (M10): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
+
 ## Reference and audit
 
 Priority: approved `00-TicketChile-1D-FINAL.html`, then public Fase 1A, public Fase 1B, then organizer 2A shell language. Read the actual JSON `__bundler/template` markup in the three bundled files. The approved files are unchanged. Temporary decoded frames stayed under ignored `.local/m5-design`; no artifact runtime or inline prototype implementation entered the application.
@@ -99,3 +101,7 @@ Responsive evidence is recorded in [qa/m8](qa/m8/README.md). Browser QA uses rea
 The admin surface reuses TicketChile 1D dark surfaces, typography, red accent, borders, focus treatment and organizer shell primitives. It adds a persistent 248px desktop navigation, visible identity/role/MFA, responsive section navigation below 1024px, dense labeled record grids and progressive detail. It does not introduce an unrelated template or redesign public/organizer pages. Financial values, state and evidence are shown before confirmed actions; unknown policy is explicit and external payout recording is labeled as such.
 
 Lists have filters, bounded pagination and empty states. Native labeled forms require reason and exact action/target confirmation, show pending/result/error messages and preserve request keys for idempotent retries. Dedicated loading/error/access-denied states avoid displaying secrets or mistaking a failed read for a successful operation. Local QA covers 390/430/768/1024/1440; evidence is in [qa/m9](qa/m9/README.md). Formal assistive-technology and cross-browser certification remains a release gate.
+
+## M10 accessibility acceptance
+
+The 1D colors/type/layout direction is preserved. Field descriptions/errors use unique associations, checkout/login labels remain visible, mobile controls target 44px, dialog focus wraps and returns on Escape/close, registration steps receive focus, and duplicate organizer-auth main landmarks are removed. Measured token contrast: primary white 4.72:1, muted/surface 8.29:1, accent/background 5.93:1, warning/surface 8.90:1. Reduced motion was verified in Chrome. Four reference HTML hashes and separate final screenshots are in `qa/m10/`; no approved artifact was overwritten. Real screen-reader, content-overlay contrast, zoom/device and visual stakeholder acceptance remain external validation, not silently certified by a DOM audit.

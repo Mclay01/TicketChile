@@ -1,5 +1,6 @@
 import "server-only";
 import { NextResponse } from "next/server";
+import { operationalLog } from './observability.server';
 
 export class AccessError extends Error {
   constructor(public status: number, public code: string, message: string) {
@@ -12,9 +13,13 @@ export function privateJson(status: number, body: unknown) {
 }
 
 export function accessResponse(error: unknown) {
-  return error instanceof AccessError
-    ? privateJson(error.status, { ok: false, code: error.code, error: error.message })
-    : privateJson(503, { ok: false, code: "UNAVAILABLE", error: "No se pudo completar la solicitud. Intenta nuevamente." });
+  if (!(error instanceof AccessError)) {
+    const requestId = operationalLog({ action: 'request.failed', category: 'unexpected', severity: 'error' });
+    const response = privateJson(503, { ok: false, code: 'UNAVAILABLE', error: 'No se pudo completar la solicitud. Intenta nuevamente.', requestId });
+    response.headers.set('X-Request-ID', requestId);
+    return response;
+  }
+  return privateJson(error.status, { ok: false, code: error.code, error: error.message });
 }
 
 export function identifier(value: unknown): string {

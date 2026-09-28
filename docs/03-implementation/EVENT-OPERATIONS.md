@@ -1,5 +1,7 @@
 # Event operations — M8
 
+Current release status (M10): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
+
 This document describes implemented behavior, not final commercial policy. It supplements M3 authorization, M4 payments, M6 lifecycle and M7 AI. All verification used synthetic local data. No production migration, provider call, email or deployment occurred.
 
 ## Staff and event scope

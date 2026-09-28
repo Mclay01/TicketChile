@@ -1,5 +1,7 @@
 # Organizer event lifecycle — M6
 
+Current release status (M10): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
+
 M6 builds on M1–M5. This is an application contract tested on disposable local PostgreSQL databases, not authorization to migrate or operate production.
 
 ## Authority and architecture

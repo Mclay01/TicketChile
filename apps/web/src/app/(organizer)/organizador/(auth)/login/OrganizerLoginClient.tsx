@@ -69,7 +69,7 @@ export default function OrganizerLoginClient() {
   }
 
   return (
-    <main className="min-h-[72vh] flex items-center justify-center px-4">
+    <div className="min-h-[72vh] flex items-center justify-center px-4">
       <div className="w-full max-w-md"><HandoffNotice/>
         <div className="mb-6">
           <h1 className="text-2xl font-semibold tracking-tight">Panel Organizador</h1>
@@ -83,11 +83,11 @@ export default function OrganizerLoginClient() {
         ) : null}
 
         <div className="rounded-xl border border-black/10 bg-white p-6 text-black shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
-          <form onSubmit={onSubmit} className="space-y-3">
+          <form aria-describedby={err ? "login-error" : undefined} aria-busy={busy} onSubmit={onSubmit} className="space-y-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-black/70">Usuario o correo</label>
-              <input
-                className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+              <label htmlFor="org-user" className="text-xs font-medium text-black/70">Usuario o correo</label>
+              <input id="org-user"
+                className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 focus-visible:outline-2 focus:ring-2 focus:ring-black/10"
                 placeholder="Ej: productorax"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -97,9 +97,9 @@ export default function OrganizerLoginClient() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-black/70">Contraseña</label>
-              <input
-                className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+              <label htmlFor="org-password" className="text-xs font-medium text-black/70">Contraseña</label>
+              <input id="org-password"
+                className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 focus-visible:outline-2 focus:ring-2 focus:ring-black/10"
                 placeholder="Tu contraseña"
                 type="password"
                 value={password}
@@ -110,7 +110,7 @@ export default function OrganizerLoginClient() {
             </div>
 
           <label className="block text-sm">Codigo TOTP o recuperacion (si esta activo)<input className="w-full rounded border border-current bg-transparent px-3 py-2" value={code} onChange={e=>setCode(e.target.value)} autoComplete="one-time-code" /></label>
-            {err ? <div className="text-sm text-red-600">{err}</div> : null}
+            {err ? <div id="login-error" role="alert" className="text-sm text-red-600">{err}</div> : null}
 
             <button
               className="w-full rounded-lg bg-black py-2 text-sm font-semibold text-white disabled:opacity-60"
@@ -131,10 +131,8 @@ export default function OrganizerLoginClient() {
         </form>
         </div>
 
-        <p className="mt-4 text-[11px] text-white/40">
-          Tip: si te manda a “sesión inválida”, es porque el cookie existe pero la sesión ya no está en DB (cookie zombie).
-        </p>
+
       </div>
-    </main>
+    </div>
   );
 }

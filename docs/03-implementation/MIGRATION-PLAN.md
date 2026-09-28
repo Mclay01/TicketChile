@@ -1,5 +1,7 @@
 # Versioned migration strategy ? M3
 
+Current release status (M10): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
+
 Only disposable local PostgreSQL databases have been created/migrated. No existing or production database was dropped, recreated, inspected or changed. `apps/web/sql/schema.sql` remains a legacy bootstrap, not an authoritative production snapshot.
 
 ## Reconstructed baseline and inventory
@@ -108,3 +110,7 @@ The payment insert trigger captures only new purchases. No historical commission
 Production process: review actual catalog and existing function/trigger ownership; back up and restore to a rehearsal environment; apply 0009 once through the existing checksum/transaction runner; review row counts and review-state mapping, runtime grants on new tables/functions, index plans, rollback and worker/webhook order; deploy compatible code only after adoption. Keep refund execution disabled until dedicated test-merchant certification and approved operational policy. Never apply this document as authorization to access production. Local tests exercise migrations through 0009, idempotency, checksum drift and complete rollback of a synthetic failing 0010.
 
 Rollback is a reviewed restore/code-adoption procedure once new financial records exist; do not drop evidence tables to roll back. No automatic legacy financial backfill or production migration was performed during M9.
+
+## M10 rehearsal outcome
+
+No schema migration was added and no applied file 0001-0009 was edited. `release-migrations.integration.test.mjs` applies all nine migrations to an empty disposable PostgreSQL database, and separately applies only the immutable 0001 baseline, inserts synthetic historical orders/tickets/PAID payment data, then applies 0002-0009 twice. Ownership/status survive, ticket issuance slots backfill uniquely, old PAID remains unverified and no commission history is invented. Existing tests still reject checksum drift, out-of-order/unknown migrations and unbaselined existing tables, and roll back failed DDL. This is reconstructed baseline evidence, not a production snapshot. Actual catalog reconciliation, backups/restore and an approved remote executor remain required; the checked-in migration runner intentionally permits loopback only.

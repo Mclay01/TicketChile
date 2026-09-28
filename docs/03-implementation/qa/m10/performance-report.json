@@ -1,0 +1,155 @@
+{
+  "before": {
+    "chunks": 37,
+    "bytes": 1319923,
+    "gzip": 402069,
+    "largest": [
+      {
+        "name": "ca07b3efe094393d.js",
+        "bytes": 443438,
+        "gzip": 117888
+      },
+      {
+        "name": "5898fad2080ddf1a.js",
+        "bytes": 224519,
+        "gzip": 70110
+      },
+      {
+        "name": "685abc5fdf3992c5.js",
+        "bytes": 114800,
+        "gzip": 31631
+      },
+      {
+        "name": "a6dad97d9634a72d.js",
+        "bytes": 112594,
+        "gzip": 39627
+      },
+      {
+        "name": "c196d635bcbe4025.js",
+        "bytes": 35929,
+        "gzip": 10469
+      },
+      {
+        "name": "b8385f95bfac468a.js",
+        "bytes": 34709,
+        "gzip": 12387
+      },
+      {
+        "name": "ff1dc2434f545c53.js",
+        "bytes": 33322,
+        "gzip": 7276
+      },
+      {
+        "name": "6faab77ded91b984.js",
+        "bytes": 32371,
+        "gzip": 9020
+      },
+      {
+        "name": "3714bc2dd3d8b61b.js",
+        "bytes": 30715,
+        "gzip": 7444
+      },
+      {
+        "name": "ce634bab34f55afb.js",
+        "bytes": 28389,
+        "gzip": 10325
+      }
+    ]
+  },
+  "after": {
+    "chunks": 41,
+    "bytes": 1348326,
+    "gzip": 412779,
+    "largest": [
+      {
+        "name": "fdb7e635e82e899e.js",
+        "bytes": 437028,
+        "gzip": 115234,
+        "decoder": true
+      },
+      {
+        "name": "5898fad2080ddf1a.js",
+        "bytes": 224519,
+        "gzip": 70110,
+        "decoder": false
+      },
+      {
+        "name": "685abc5fdf3992c5.js",
+        "bytes": 114800,
+        "gzip": 31631,
+        "decoder": false
+      },
+      {
+        "name": "a6dad97d9634a72d.js",
+        "bytes": 112594,
+        "gzip": 39627,
+        "decoder": false
+      },
+      {
+        "name": "15529fe904d4d40a.js",
+        "bytes": 35994,
+        "gzip": 10510,
+        "decoder": false
+      },
+      {
+        "name": "1c1f9dc199ba17a2.js",
+        "bytes": 34524,
+        "gzip": 12314,
+        "decoder": false
+      },
+      {
+        "name": "6898bd8004c6d2bf.js",
+        "bytes": 33747,
+        "gzip": 7310,
+        "decoder": false
+      },
+      {
+        "name": "6faab77ded91b984.js",
+        "bytes": 32371,
+        "gzip": 9020,
+        "decoder": false
+      },
+      {
+        "name": "3714bc2dd3d8b61b.js",
+        "bytes": 30715,
+        "gzip": 7444,
+        "decoder": false
+      },
+      {
+        "name": "205d2f9e266527b8.js",
+        "bytes": 28594,
+        "gzip": 10468,
+        "decoder": false
+      }
+    ]
+  },
+  "contrast": {
+    "whiteOnPrimary": 4.72,
+    "mutedOnSurface": 8.29,
+    "accentTextOnBackground": 5.93,
+    "warningOnSurface": 8.9
+  },
+  "approvedDesigns": [
+    {
+      "name": "00-TicketChile-1D-FINAL.html",
+      "sha256": "f37339393e425946b57c3647a0fca93da9d36fd8e851af87197efe21c874c165"
+    },
+    {
+      "name": "01-TicketChile-Fase-1A-Web-Publica.html",
+      "sha256": "ecfa94efdab392348755b4dbde9098940de3218ce460e0cb799336aa566104da"
+    },
+    {
+      "name": "02-TicketChile-Fase-1B-Web-Publica.html",
+      "sha256": "ef908f88b34a7af601ffbb84b5b15446e1ac4c8da4dd92923763cc50ce3e6a18"
+    },
+    {
+      "name": "03-TicketChile-Fase-2A-Organizador.html",
+      "sha256": "2ea357eb9a33a6b3c5078b96d76695a6b22f325e8cd374c21115e8bf727debf0"
+    }
+  ],
+  "limitations": [
+    "Whole-build chunk sum is not per-route transfer size.",
+    "The 437,028-byte decoder is absent before camera activation and present afterward in the production-browser resource check.",
+    "Local token contrast is not a complete WCAG certification."
+  ]
+}

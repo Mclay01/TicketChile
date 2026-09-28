@@ -1,0 +1,214 @@
+{
+  "fixture": {
+    "events": 20,
+    "tickets": 10000
+  },
+  "catalogQueries": 2,
+  "results": [
+    {
+      "query": "catalog page (12)",
+      "executionMs": 0.54,
+      "planningMs": 2.992,
+      "nodes": [
+        {
+          "type": "Limit",
+          "rows": 12,
+          "loops": 1
+        },
+        {
+          "type": "Nested Loop",
+          "rows": 12,
+          "loops": 1
+        },
+        {
+          "type": "Nested Loop",
+          "rows": 12,
+          "loops": 1
+        },
+        {
+          "type": "Nested Loop",
+          "rows": 12,
+          "loops": 1
+        },
+        {
+          "type": "Nested Loop",
+          "rows": 12,
+          "loops": 1
+        },
+        {
+          "type": "Index Scan",
+          "index": "events_discovery_idx",
+          "rows": 12,
+          "loops": 1
+        },
+        {
+          "type": "Materialize",
+          "rows": 7,
+          "loops": 12
+        },
+        {
+          "type": "Seq Scan",
+          "rows": 7,
+          "loops": 1
+        },
+        {
+          "type": "Materialize",
+          "rows": 12.33,
+          "loops": 12
+        },
+        {
+          "type": "Seq Scan",
+          "rows": 19,
+          "loops": 1
+        },
+        {
+          "type": "Materialize",
+          "rows": 1,
+          "loops": 12
+        },
+        {
+          "type": "Seq Scan",
+          "rows": 1,
+          "loops": 1
+        },
+        {
+          "type": "Aggregate",
+          "rows": 1,
+          "loops": 12
+        },
+        {
+          "type": "Sort",
+          "rows": 1,
+          "loops": 12
+        },
+        {
+          "type": "Seq Scan",
+          "rows": 1,
+          "loops": 12
+        }
+      ]
+    },
+    {
+      "query": "catalog count",
+      "executionMs": 0.044,
+      "planningMs": 0.147,
+      "nodes": [
+        {
+          "type": "Aggregate",
+          "rows": 1,
+          "loops": 1
+        },
+        {
+          "type": "Seq Scan",
+          "rows": 20,
+          "loops": 1
+        }
+      ]
+    },
+    {
+      "query": "scanner statistics",
+      "executionMs": 0.782,
+      "planningMs": 0.39,
+      "nodes": [
+        {
+          "type": "Sort",
+          "rows": 1,
+          "loops": 1
+        },
+        {
+          "type": "Aggregate",
+          "rows": 1,
+          "loops": 1
+        },
+        {
+          "type": "Nested Loop",
+          "rows": 500,
+          "loops": 1
+        },
+        {
+          "type": "Seq Scan",
+          "rows": 1,
+          "loops": 1
+        },
+        {
+          "type": "Bitmap Heap Scan",
+          "rows": 500,
+          "loops": 1
+        },
+        {
+          "type": "Bitmap Index Scan",
+          "index": "tickets_event_order",
+          "rows": 500,
+          "loops": 1
+        }
+      ]
+    },
+    {
+      "query": "recent check-ins (20)",
+      "executionMs": 11.839,
+      "planningMs": 0.476,
+      "nodes": [
+        {
+          "type": "Limit",
+          "rows": 20,
+          "loops": 1
+        },
+        {
+          "type": "Sort",
+          "rows": 20,
+          "loops": 1
+        },
+        {
+          "type": "Nested Loop",
+          "rows": 250,
+          "loops": 1
+        },
+        {
+          "type": "Bitmap Heap Scan",
+          "rows": 250,
+          "loops": 1
+        },
+        {
+          "type": "Bitmap Index Scan",
+          "index": "idx_tickets_event_status",
+          "rows": 250,
+          "loops": 1
+        },
+        {
+          "type": "Seq Scan",
+          "rows": 0,
+          "loops": 250
+        }
+      ]
+    },
+    {
+      "query": "scoped CSV batch (500)",
+      "executionMs": 26.737,
+      "planningMs": 0.44,
+      "nodes": [
+        {
+          "type": "Limit",
+          "rows": 500,
+          "loops": 1
+        },
+        {
+          "type": "Sort",
+          "rows": 500,
+          "loops": 1
+        },
+        {
+          "type": "Bitmap Heap Scan",
+          "rows": 500,
+          "loops": 1
+        },
+        {
+          "type": "Bitmap Index Scan",
+          "index": "tickets_event_order",
+          "rows": 500,
+          "loops": 1
+        }
+      ]
+    }
+  ],
+  "interpretation": "Local fixture only; no production latency or load claim. Existing indexes retained; no speculative schema change."
+}
