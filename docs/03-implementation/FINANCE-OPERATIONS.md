@@ -75,3 +75,15 @@ The existing global inventory advisory lock orders local financial writes and id
 - Confirm runtime versus migration privileges, key rotation, worker/email delivery, retention/PII governance, load, physical devices and formal accessibility before release.
 
 M9 was implemented and verified locally. No deployment, production credentials/data, real email or live provider operations were used.
+
+## M13 operational rehearsal
+
+Local PostgreSQL/browser regressions rerun financial scope, refunds/replay/races,
+commission snapshots, settlement authority/accounting and synthetic external payout
+records. The restore rehearsal preserves payer/current-ticket-owner separation and
+historical commission. No real money, sandbox refund or production accounting
+certification occurred. Stripe refund availability now also requires compatible
+application/provider mode. All commission, payer, refund, tax/processor, settlement
+cadence, reserve and external payout policies remain explicit business decisions.
+Current provider status and rollout/rollback boundaries are in
+[PROVIDER-CERTIFICATION.md](PROVIDER-CERTIFICATION.md) and [PRODUCTION-CUTOVER.md](PRODUCTION-CUTOVER.md).

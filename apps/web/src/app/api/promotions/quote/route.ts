@@ -8,6 +8,7 @@ import {feePolicy} from '@/lib/payments/config.server';
 export async function POST(req:Request){try{
  requireSameOrigin(req);const owner=await requireBuyerEmail();await limit('promotion-quote',owner,{hits:30,seconds:60});const b=await readBody(req),code=codeValue(b.code);
  if(typeof b.eventId!=='string'||!Array.isArray(b.items)||!b.items.length||b.items.length>10)invalid();
+ if(code&&process.env.PROMOTIONS_ENABLED==='false')invalid();
  const quantities=new Map<string,number>();for(const it of b.items){if(!it||typeof it.ticketTypeId!=='string'||!Number.isSafeInteger(it.qty)||it.qty<1||it.qty>10)invalid();quantities.set(it.ticketTypeId,(quantities.get(it.ticketTypeId)||0)+it.qty);}
  if([...quantities.values()].reduce((a,b)=>a+b,0)>10)invalid();
  const rows=(await pool.query(`SELECT tt.id AS ticket_type_id,tt.price_clp AS unit_price_clp,tt.max_per_order,tt.capacity-tt.sold-tt.held AS remaining FROM ticket_types tt JOIN events e ON e.id=tt.event_id WHERE e.id=$1 AND e.lifecycle='PUBLISHED' AND e.date_iso>now() AND tt.active AND tt.visible AND (tt.sales_start IS NULL OR tt.sales_start<=now()) AND (tt.sales_end IS NULL OR tt.sales_end>now()) AND tt.id=ANY($2)`,[b.eventId,[...quantities.keys()]])).rows;

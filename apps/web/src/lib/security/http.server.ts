@@ -1,4 +1,5 @@
 import "server-only";
+import { deploymentStage } from "../../../environment-config.mjs";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { AccessError } from "@/lib/access.server";
@@ -23,7 +24,7 @@ export const cookieName=(kind:IdentityKind)=>kind==="ADMIN"?"tc_admin_sess":"tc_
 export function setIdentityCookie(response:NextResponse,kind:IdentityKind,token:string,maxAge=28800) {
   response.cookies.set(cookieName(kind),token,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge});
   // Expire the old broad-domain cookie during the transition. New cookies are host-only.
-  if (process.env.NODE_ENV==="production") response.headers.append("Set-Cookie",`${cookieName(kind)}=; Domain=.ticketchile.com; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
+  if (process.env.NODE_ENV==="production" && deploymentStage()==="production") response.headers.append("Set-Cookie",`${cookieName(kind)}=; Domain=.ticketchile.com; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
 }
 export async function cookieIdentity(kind:IdentityKind,allowPending=false) {
   const jar=await cookies();

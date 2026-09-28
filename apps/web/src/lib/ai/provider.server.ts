@@ -1,4 +1,5 @@
 import 'server-only';
+import { assertProviderEnvironment, deploymentStage } from '../../../environment-config.mjs';
 import {AccessError} from '@/lib/access.server';
 import {localProposal} from '@/lib/organizer/proposals';
 import {allowedFields,features,type Feature,type Metric,type ProviderStatus} from './model';
@@ -13,8 +14,10 @@ export function aiConfig(){
  return {provider,enabled,maxInput:bounded('AI_MAX_INPUT_CHARS',4000,100,8000),maxOutput:bounded('AI_MAX_OUTPUT_TOKENS',2500,256,4000),timeout:bounded('AI_TIMEOUT_MS',20000,100,30000),publicRate:bounded('AI_PUBLIC_HOURLY_LIMIT',5,1,20),userRate:bounded('AI_USER_HOURLY_LIMIT',30,1,100),globalRate:bounded('AI_GLOBAL_HOURLY_LIMIT',200,1,1000),model:process.env.AI_MODEL||'',allowedModels:(process.env.AI_ALLOWED_MODELS||'').split(',').filter(Boolean)};
 }
 export function providerStatus():ProviderStatus {
- const c=aiConfig(),development=c.provider==='development'&&process.env.NODE_ENV!=='production';
- const enabled=development||c.provider==='openai'&&!!process.env.OPENAI_API_KEY&&/^[a-zA-Z0-9._:-]{1,80}$/.test(c.model)&&c.allowedModels.includes(c.model);
+ const c=aiConfig(); let isolated=false;
+ try { if(c.provider==='openai')assertProviderEnvironment('openai'); else if(deploymentStage()!=='development')throw Error(); isolated=true; } catch { /* unavailable */ }
+ const development=isolated&&c.provider==='development'&&process.env.NODE_ENV!=='production';
+ const enabled=development||isolated&&c.provider==='openai'&&!!process.env.OPENAI_API_KEY&&/^[a-zA-Z0-9._:-]{1,80}$/.test(c.model)&&c.allowedModels.includes(c.model);
  return {enabled,development,label:development?'Desarrollo: reglas locales, sin modelo de IA.':enabled?'TicketChile AI · propuestas generadas por un modelo':'TicketChile AI no está disponible. Puedes continuar manualmente.'};
 }
 export function configuredProvider():AIProvider {

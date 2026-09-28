@@ -43,3 +43,28 @@ origin is added to img-src; image optimization uses stored variants, no remotePa
 See [MEDIA-ARCHITECTURE.md](MEDIA-ARCHITECTURE.md) for policy, signed URL/cache limits,
 permissions, migration/cleanup and outstanding live certification. No real values
 were inspected or used in M12.
+
+## M13 strict deployment isolation
+
+[STAGING-RUNBOOK.md](STAGING-RUNBOOK.md) defines the current LOCAL/PREVIEW/PRODUCTION
+contract, variable ownership and complete setup/recovery commands. New values are
+server-only and empty in `.env.example`: STAGING_ORIGIN, DATABASE_RESOURCE_ENVIRONMENT,
+DATABASE_EXPECTED_HOST, DATABASE_EXPECTED_NAME, STAGING_MIGRATION_DATABASE_URL,
+AI_RESOURCE_ENVIRONMENT, MAIL_RESOURCE_ENVIRONMENT, MAIL_ALLOWED_RECIPIENTS,
+WALLET_RESOURCE_ENVIRONMENT, MEDIA_UPLOADS_ENABLED, TRANSFERS_ENABLED, PROMOTIONS_ENABLED.
+
+APP_ENVIRONMENT must agree with VERCEL_ENV. Hosted database aliases must be identical
+and endpoint/name/stage explicitly bound, with certificate-verifying TLS. Preview
+requires a dedicated named staging DB and matching HTTPS application/auth/callback
+origin. Production rejects obvious fixture/development secret patterns; format checks
+do not replace secure random generation and account verification. Opaque provider
+resource labels are explicit operator attestations, not automatic proof of isolation.
+Nonproduction Resend requires at most 20 exact controlled recipients; no wildcard.
+
+Write switches are deny controls only: `false` stops new transfers, new promotion
+reservations/quotes or media uploads respectively; existing authorization still applies.
+No hosted account/environment was inspected for secret values or enabled by M13.
+
+`MAIL_MAX_ATTEMPTS` is a technical worker retry cap, default 10 and accepted range 1-20.
+Exhaustion moves the job to REVIEW; it is not a legal retention period or permission to
+reset idempotency keys. Invalid numeric configuration uses the conservative default.

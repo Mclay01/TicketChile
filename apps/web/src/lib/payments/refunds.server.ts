@@ -1,4 +1,5 @@
 import 'server-only';
+import {assertProviderEnvironment} from '../../../environment-config.mjs';
 import {randomUUID} from 'node:crypto';
 import type Stripe from 'stripe';
 import {pool,withTx} from '@/lib/db';
@@ -9,7 +10,7 @@ import {operation,requireAdminCapability,fail,text,type OperationInput} from '@/
 import type {Principal} from '@/lib/security/identity.server';
 type Refund={id:string;payment_id:string;order_id:string;amount_clp:number;status:string;provider_ref:string|null;first_attempt_at:Date|null;lease_until:Date|null;provider:string;provider_intent:string|null;currency:string};
 const select=`SELECT r.*,p.provider,p.provider_intent,p.currency FROM refunds r JOIN payments p ON p.id=r.payment_id WHERE r.id::text=$1`;
-export function refundProviderStatus(){return {provider:'stripe',enabled:process.env.STRIPE_REFUNDS_ENABLED==='true'&&/^sk_(test|live)_/.test(process.env.STRIPE_SECRET_KEY||''),mode:'FULL_ORDER_ONLY',otherProviders:'MANUAL_REVIEW'};}
+export function refundProviderStatus(){let isolated=false;try{assertProviderEnvironment('stripe');isolated=true;}catch{/* unavailable */}return {provider:'stripe',enabled:isolated&&process.env.STRIPE_REFUNDS_ENABLED==='true'&&/^sk_(test|live)_/.test(process.env.STRIPE_SECRET_KEY||''),mode:'FULL_ORDER_ONLY',otherProviders:'MANUAL_REVIEW'};}
 export async function refundOperation(input:OperationInput,actor?:Principal){
  if(input.action==='refund.execute')return executeRefund(input,actor);
  return operation(input,'refund.write',async(db,p,id)=>{

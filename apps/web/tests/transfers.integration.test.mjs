@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import {localDatabase} from './local-postgres.mjs';
 import {loadSource} from './load-source.mjs';
 let db,identity,crypto,service,sender,recipient,stranger,owner,actor;
-const envKeys=['SECURITY_DATA_KEY','TICKETCHILE_QR_SECRET','APP_BASE_URL','GOOGLE_WALLET_ISSUER_ID','GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL','GOOGLE_WALLET_PRIVATE_KEY'];
+const envKeys=['WALLET_RESOURCE_ENVIRONMENT','NEXTAUTH_URL','SECURITY_DATA_KEY','TICKETCHILE_QR_SECRET','APP_BASE_URL','GOOGLE_WALLET_ISSUER_ID','GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL','GOOGLE_WALLET_PRIVATE_KEY'];
 const saved=Object.fromEntries(envKeys.map(k=>[k,process.env[k]]));
 const guard=loadSource('lib/buyer-guard.server.ts',{'@/auth':{},'next-auth/next':{getServerSession:async()=>null}});
 const load=(file,extra={})=>loadSource(file,{'@/lib/db':db,'@/auth':{},'next-auth/next':{getServerSession:async()=>null},'@/lib/security/current.server':{currentIdentity:async()=>actor},'@/lib/buyer-guard.server':{...guard,getBuyerEmail:async()=>actor?.email},'@/lib/stripe.server':{stripe:{},appBaseUrl:()=>process.env.APP_BASE_URL},'@/lib/event-access.server':{requireEventAccess:async()=>({actor:owner,organizerId:owner.id})},'@/lib/mail/transport.server':{mailConfigured:()=>false,sendTransactionalMail:()=>{throw Error('External mail prohibited');}},'@/lib/tickets.email':{buildTicketEmail:({to,ticket})=>({to,from:'local@test.invalid',subject:'Ticket',html:ticket.qrPngBase64})},...extra});
@@ -26,7 +26,7 @@ async function tokenFor(id){const m=(await db.pool.query("SELECT * FROM ticket_t
 const row=async id=>(await db.pool.query('SELECT * FROM tickets WHERE id=$1',[id])).rows[0];
 const scan=async(id,qrText)=>load('app/api/scanner/checkin/route.ts').POST(new Request('https://local/api/scanner/checkin',{method:'POST',headers:{origin:'https://local','content-type':'application/json'},body:JSON.stringify({eventId:id,qrText})}));
 before(async()=>{
- Object.assign(process.env,{SECURITY_DATA_KEY:Buffer.alloc(32,11).toString('base64'),TICKETCHILE_QR_SECRET:'m11-only-synthetic-qr-key',APP_BASE_URL:'https://ticketchile.test'});
+ Object.assign(process.env,{WALLET_RESOURCE_ENVIRONMENT:'development',NEXTAUTH_URL:'https://ticketchile.test',SECURITY_DATA_KEY:Buffer.alloc(32,11).toString('base64'),TICKETCHILE_QR_SECRET:'m11-only-synthetic-qr-key',APP_BASE_URL:'https://ticketchile.test'});
  db=await localDatabase();crypto=load('lib/security/crypto.server.ts');identity=load('lib/security/identity.server.ts');
  const users=[];for(const name of ['sender','recipient','stranger']){const id=randomUUID();await db.pool.query('INSERT INTO usuarios(id,nombre,email,email_verified_at) VALUES($1,$2,$3,now())',[id,name,`${name}@m11.test`]);users.push(await identity.principal('BUYER',id));}
  [sender,recipient,stranger]=users;actor=sender;
@@ -53,6 +53,17 @@ test('transfer policy fails closed for absent, disabled, charged, identity-requi
  await db.pool.query('DELETE FROM ticket_transfer_policies WHERE event_id=$1',[id]);await assert.rejects(invite(id),{code:'TRANSFER_UNAVAILABLE'});
 });
 test('used, cancelled and checked-in tickets are ineligible',async()=>{for(const status of ['USED','CANCELLED']){const id=await fixture();await db.pool.query('UPDATE tickets SET status=$2 WHERE id=$1',[id,status]);await assert.rejects(invite(id),{code:'TRANSFER_UNAVAILABLE'});}const id=await fixture();await db.pool.query('UPDATE tickets SET used_at=now() WHERE id=$1',[id]);await assert.rejects(invite(id),{code:'TRANSFER_UNAVAILABLE'});});
+
+test('global transfer incident switch denies initiation and acceptance but retains owner cancellation',async()=>{
+ const id=await fixture(),claim=await invite(id),old=process.env.TRANSFERS_ENABLED;
+ process.env.TRANSFERS_ENABLED='false';
+ try{
+  await assert.rejects(service.acceptTransfer(claim.token,recipient),{code:'TRANSFER_UNAVAILABLE'});
+  await assert.rejects(invite(await fixture()),{code:'TRANSFER_UNAVAILABLE'});
+  await service.manageTransfer(claim.id,'cancel',sender);
+  assert.equal((await row(id)).credential_version,0);
+ }finally{if(old===undefined)delete process.env.TRANSFERS_ENABLED;else process.env.TRANSFERS_ENABLED=old;}
+});
 test('duplicate initiation has one pending claim and replay cannot alter recipient',async()=>{
  const id=await fixture(),key=randomUUID();const r=await Promise.all(Array.from({length:5},()=>service.initiateTransfer(id,recipient.email,key,sender)));assert.equal(new Set(r.map(x=>x.id)).size,1);
  await assert.rejects(service.initiateTransfer(id,stranger.email,key,sender),{code:'REQUEST_CONFLICT'});await assert.rejects(invite(id),{code:'TRANSFER_PENDING'});

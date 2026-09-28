@@ -41,6 +41,7 @@ for (const endpoint of ["qr", "demo/qr", "wallet/google/save-url"]) {
       for (const key of ["GOOGLE_WALLET_ISSUER_ID", "GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL", "GOOGLE_WALLET_PRIVATE_KEY"]) {
         previous[key] = process.env[key]; process.env[key] = "test-only";
       }
+      for(const [key,value] of Object.entries({WALLET_RESOURCE_ENVIRONMENT:'development',APP_BASE_URL:'https://ticketchile.test',NEXTAUTH_URL:'https://ticketchile.test'})){previous[key]=process.env[key];process.env[key]=value;}
       try {
         const params = new URLSearchParams({ ticket_id: ticket.id, format: "json", buyerEmail: "attacker@test.cl" });
         if (scenario.includes("token") || scenario === "conflicting-event") params.set("t", "test-token");

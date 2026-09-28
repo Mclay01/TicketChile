@@ -1,0 +1,9 @@
+{
+  "at": "2026-09-28T20:38:09.761Z",
+  "restoredRevision": "7f34bf0aa3c2e1af6ec9447ee15315a42b24e46d",
+  "buildId": "z9Rppyv8shfMQmSywY2nB",
+  "database": "ticketchile_test_m3_1790627339558_95453",
+  "result": "Previous immutable M12 source rebuilt, started and read restored current schema; anonymous QR denied; ledger unchanged",
+  "providers": "disabled",
+  "limitations": "Local artifact rollback only; no hosted routing switch, production migration reversal or managed restore certification"
+}

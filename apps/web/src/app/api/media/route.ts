@@ -20,5 +20,5 @@ export async function POST(request: Request) {
     const bytes = await readImageBody(request, mediaSettings().maxBytes);
     const result = await persistMedia({ eventId:eventId!, organizerId:access.organizerId, actor:access.actor, purpose, requestKey, bytes, mime:request.headers.get('content-type')! }, store);
     return privateJson(201, { ok: true, ...result });
-  } catch (error) { return accessResponse(error); }
+  } catch (error) { return accessResponse(error,'media'); }
 }

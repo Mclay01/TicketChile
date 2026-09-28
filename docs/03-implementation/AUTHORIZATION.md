@@ -190,3 +190,27 @@ Residual exposures: email-based legacy ownership until a separately designed ema
   prevent deletion. No admin mutation bypass or scanner/ticket/QR rule changed.
 
 Detailed recovery/access/environment model: [MEDIA-ARCHITECTURE.md](MEDIA-ARCHITECTURE.md).
+
+## M13 infrastructure isolation and operational gates
+
+All M1-M12 identity, buyer/current-owner, event/tenant, staff capability, MFA, QR
+generation, refund and settlement boundaries are preserved and rerun. Environment
+labels and incident flags are never authority. New hosted DB binding rejects stale
+connection aliases, unexpected host/name/stage, insecure TLS and URL endpoint overrides.
+Callback clients reject live/test mode mismatch even when creation is disabled.
+APP_BASE_URL/NEXTAUTH_URL/STAGING_ORIGIN must agree for Preview. Explicit opaque-provider
+resource labels still require independent account verification; they cannot prove key
+ownership cryptographically. Never copy live records or credentials into staging.
+
+Nonproduction mail uses exact recipients checked before every SDK send, including
+retry snapshots. Wallet issuance uses the validated origin and matching resource-stage
+label after current-owner authorization. Preview identity cookies remain Secure/HttpOnly/
+SameSite=Lax/host-only in compiled runtimes and do not emit the legacy production-domain
+cookie deletion header. Actual hosted HTTPS behavior remains externally unverified.
+
+Global transfer freeze blocks initiate/accept while retaining cancel/history; new
+promotion freeze preserves historical reservations; media write freeze preserves reads.
+Private workers have bounded dispatch and advisory session locks, never public cron
+authority. Full secret-manager/least-privilege grants, HTTPS ingress, provider callbacks,
+physical QR/Wallet and independent security review remain release gates. See the
+authoritative [provider matrix](PROVIDER-CERTIFICATION.md) and [staging runbook](STAGING-RUNBOOK.md).

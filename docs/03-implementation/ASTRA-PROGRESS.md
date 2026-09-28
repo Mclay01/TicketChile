@@ -1,6 +1,6 @@
 # Astra execution state
 
-Current outcome: M11 buyer account and secure ticket transfer extension is complete; final evidence and limitations are recorded below. M12 is a recommendation only and has not started.
+Current outcome: M1–M12 are complete and preserved. M13 staging preparation and local operational rehearsal are complete under the user's missing-credentials fallback. Real hosted/provider/HTTPS/physical-device certification remains explicitly pending. Production remains blocked. Exact recommended M14: external staging certification, physical-device acceptance, and business-policy sign-off; do not start without a new request.
 
 Updated: 2026-09-28. Branch: `astra/ticketchile-v2`. M10 starting commit: `a3d38370b3b48598f1772148bc8d0f741f7221f1`; initial working tree clean. Earlier sections below retain milestone-specific historical evidence.
 
@@ -499,3 +499,85 @@ rehearsal.** Separately authorize isolated staging services/credentials and cert
 media, mail, payments/Wallet, private workers/alerts, restore/schema adoption and
 runtime/security/load behavior against the release matrix. M13 is recommended only,
 not started. Stop after the coherent M12 commit; do not deploy or merge.
+
+## M13 completed — staging preparation and local operational rehearsal
+
+Started from clean `7f34bf0aa3c2e1af6ec9447ee15315a42b24e46d` on
+`astra/ticketchile-v2`. Read the latest M13 request and required progress/release/
+deployment/migration/payment/AI/media/authorization/finance records; confirmed M1–M12
+complete and preserved them. The user's explicit missing-credentials fallback applies:
+no dedicated provider account/key or authorized Vercel project was supplied. A Vercel
+CLI exists, but the repository has no project link; account authority was not inferred.
+No real Preview deployment or external provider certification is claimed.
+
+- Added explicit LOCAL/Preview/production configuration boundaries: hosted database
+  endpoint/name/stage/TLS binding, stale alias rejection, restricted URL options,
+  consistent HTTPS staging/auth/callback origins, provider live/test mode checks at
+  availability/network/callback boundaries, opaque-provider resource labels and
+  obvious development-secret rejection. Resource labels require independent account
+  verification; they are not cryptographic proof of a provider account.
+- Added exact nonproduction Resend recipient allowlisting and sender binding before
+  every send/retry. Removed an unused direct-send legacy helper. Added bounded poison
+  job retries (`MAIL_MAX_ATTEMPTS`, default10/range1–20), durable REVIEW and generic audit;
+  purchase/transfer commits remain independent of delivery. No real email was sent.
+- Added media-write, transfer and new-promotion incident switches while preserving
+  image reads, owner cancellation/history and historical reserved discounts. Flags
+  do not grant authority. Wallet now uses the validated origin/resource label.
+  Compiled Preview cookies retain Secure/HttpOnly/Lax/host-only flags and omit the
+  legacy production-domain deletion header.
+- Added private bounded worker dispatch with per-job PostgreSQL session locks,
+  sanitized overlap/completion/failure logging and cleanup after failure. No public
+  cron route, standalone deployed worker or scheduler was installed. AI/scanner/media/
+  readiness logging gained sanitized context. Physical retention remains policy-gated.
+- Prepared a Preview-only guarded migration CLI; no new or changed SQL migration.
+  Executed fresh/reconstructed legacy/populated M11 adoption through0011, actual local
+  custom backup/fresh restore, full-table hashes, application reads and retained-key/
+  media checks. Rebuilt/restored the prior M12 app against that schema without a down
+  migration. A compiled local process correctly reports unavailable DB readiness.
+- Ran bounded measured catalog/checkout/issuance/check-in/attendee/admin/promotion/
+  worker loads and real PostgreSQL concurrency. Reused existing buyer/organizer/scanner/
+  admin/transfer/media browser harnesses with focused viewports and reliable hydration,
+  camera-frame and save-completion waits. No unrelated UI redesign occurred.
+- Created authoritative provider certification, staging setup/recovery and future
+  production cutover documents. All real sandbox/HTTPS/device/provider-account and
+  unresolved business gates remain explicit; no successful certification was invented.
+
+| Final check | Result |
+|---|---|
+| Full tests, including provider contracts and PostgreSQL integration/concurrency | PASS: **401**, no failures/skips |
+| Migrations | PASS: immutable **0001–0011**, fresh/legacy/populated media, repeat/checksum/drift/failed-DDL |
+| Backup/restore | PASS: **58** table snapshots equal; **73** validated FKs; ownership/payment/commission/transfer/AI/media reads and hashes |
+| Application rollback | PASS: M12 `7f34bf0` rebuilt in original Turbopack mode, served restored0011 data, anonymous QR denied, ledger unchanged |
+| Bounded local load | PASS: max5 concurrent operations;20 purchases/check-ins,10 promotion uses; invariant checks retained |
+| Compiled DB outage | PASS: health200/ready503, generic no-store response, no credentials/stack |
+| Browser | PASS: **188 states** (104 cross-role,46 transfer,38 media),390/1440 widths,**16** selected screenshots |
+| TypeScript | PASS: `tsc --noEmit --incremental false` |
+| Scoped lint | PASS: **44** changed/new maintained files, zero errors/warnings |
+| Whole repository lint | PASS: **373** maintained files, zero errors/warnings |
+| Production build | PASS: scrubbed/inert environment; build ID in QA manifest/failure report |
+| Repository diff and secret heuristic | PASS: diff check; no long live Stripe key/embedded private key matches in452 text files at scan time; not comprehensive security certification |
+
+Evidence: [qa/m13](qa/m13/README.md). The alternate webpack rollback build exposed a
+legacy generated PageProps mismatch; the original supported Turbopack build passed.
+Browser harness timing failures were corrected and rerun without weakening application
+checks. The restored old app lacks M13 guards: external providers/workers must remain
+disabled during that emergency fallback. Local restore/load/browser success does not
+certify managed PITR, production capacity, real HTTPS, physical cameras or live providers.
+
+Created [PROVIDER-CERTIFICATION.md](PROVIDER-CERTIFICATION.md),
+[STAGING-RUNBOOK.md](STAGING-RUNBOOK.md), [PRODUCTION-CUTOVER.md](PRODUCTION-CUTOVER.md).
+Updated release/QA/migration/deployment/payment/AI/media/authorization/finance/environment
+records and the empty environment template. No deployment, merge, push, DNS/domain/
+Production Branch change, production credentials/customer data, live money/email/model/
+storage operation or production scheduling occurred. Fixture data is synthetic.
+
+Remaining: dedicated nonproduction accounts/resources and actual callback/provider/HTTPS
+certification; private worker packaging/scheduling/alerts/grants; two-phone QR/Wallet;
+managed schema/backup/object/key/hosted rollback/security/accessibility/capacity reviews;
+commission/fee payer/refund/settlement/transfer/nominative/retention/organizer verification/
+legal identity decisions. Fintoc remains incomplete/disabled. Production remains BLOCKED.
+
+**Exact recommended M14: External staging certification, physical-device acceptance,
+and business-policy sign-off.** Obtain dedicated nonproduction account access, execute
+the pending provider/HTTPS/worker/device matrix and record approved policies. This is
+recommendation only. Stop after the coherent M13 commit; do not deploy or merge.

@@ -33,6 +33,7 @@ async function ticket(db:Db,id:string,lock=false):Promise<Ticket> {
     JOIN ticket_types tt ON tt.event_id=t.event_id AND tt.id=t.ticket_type_id
     LEFT JOIN ticket_transfer_policies p ON p.event_id=t.event_id WHERE t.id=$1 ${lock?'FOR UPDATE OF t':''}`,[id])).rows[0];
   if(!row) fail('NOT_FOUND','Entrada no encontrada.',404);
+  row.eligible &&= process.env.TRANSFERS_ENABLED !== 'false';
   return row;
 }
 function eligible(t:Ticket) { if(!t.eligible) fail('TRANSFER_UNAVAILABLE','Esta entrada no permite transferencias en su estado o configuración actual.'); }

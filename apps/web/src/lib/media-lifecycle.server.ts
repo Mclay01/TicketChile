@@ -22,6 +22,7 @@ async function checkUploadScope(db: PoolClient, input: Upload) {
 /** Durable intent before object writes. Row locks serialize retry, finalization and cleanup. */
 export async function persistMedia(input: Upload, store: MediaStore = mediaStore()) {
   if (!/^[A-Za-z0-9_-]{16,100}$/.test(input.requestKey)) throw new AccessError(400, 'INVALID_KEY', 'Reintenta la carga desde el editor.');
+  if (process.env.MEDIA_UPLOADS_ENABLED === 'false') throw new AccessError(503, 'MEDIA_WRITES_DISABLED', 'La carga de imágenes no está disponible.');
   const settings = mediaSettings();
   if (input.bytes.length > settings.maxBytes) throw new AccessError(413, 'MEDIA_SIZE', 'La imagen supera el límite permitido.');
   const fingerprint = checksum(`${input.eventId}:${input.purpose}:${input.mime}:${checksum(input.bytes)}`);

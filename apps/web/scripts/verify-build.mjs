@@ -14,13 +14,13 @@ for (const name of [".env", ".env.local", ".env.production", ".env.production.lo
 }
 // Clear inherited provider settings as well as file-loaded settings.
 for (const key of Object.keys(env)) {
-  if (/^(MEDIA_|AI_|OPENAI_|STRIPE_|FLOW_|WEBPAY_|FINTOC_|RESEND_|MAIL_|CHECKOUT_|FROM_EMAIL$|GOOGLE_|AUTH_|SECURITY_|NEXTAUTH_|TRANSFER_|ORGANIZER_|ADMIN_BOOTSTRAP_|APP_|NEXT_PUBLIC_)/.test(key)) env[key] = "";
+  if (/^(WALLET_|TRANSFERS_|PROMOTIONS_|STAGING_|VERCEL_|DATABASE_|MEDIA_|AI_|OPENAI_|STRIPE_|FLOW_|WEBPAY_|FINTOC_|RESEND_|MAIL_|CHECKOUT_|FROM_EMAIL$|GOOGLE_|AUTH_|SECURITY_|NEXTAUTH_|TRANSFER_|ORGANIZER_|ADMIN_BOOTSTRAP_|APP_|NEXT_PUBLIC_)/.test(key)) env[key] = "";
 }
 for (const key of ["TICKETCHILE_DB_POSTGRES_URL", "TICKETCHILE_DB_POSTGRES_URL_NON_POOLING", "POSTGRES_URL", "POSTGRES_URL_NON_POOLING", "POSTGRES_PRISMA_URL", "DATABASE_URL"]) {
   env[key] = "postgresql://local:local@127.0.0.1:1/ticketchile_build";
 }
 Object.assign(env, {
-  DATABASE_SSL: "false", TICKETCHILE_BUILD_DIR: ".next-astra",
+  DATABASE_SSL: "false", APP_ENVIRONMENT: "development", VERCEL_ENV: "", TICKETCHILE_BUILD_DIR: ".next-astra",
   NEXTAUTH_SECRET: "isolated-build-not-a-real-session-secret", NEXTAUTH_URL: "http://localhost:3000",
   NEXTAUTH_URL_INTERNAL: "http://localhost:3000",
   STRIPE_SECRET_KEY: "sk_test_build_placeholder", RESEND_API_KEY: "re_build_placeholder",

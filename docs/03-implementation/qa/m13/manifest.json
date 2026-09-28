@@ -1,0 +1,147 @@
+{
+  "date": "2026-09-28T21:02:02.986Z",
+  "baseline": "7f34bf0aa3c2e1af6ec9447ee15315a42b24e46d",
+  "branch": "astra/ticketchile-v2",
+  "source": "M13 candidate; this commit contains source and reports",
+  "finalSourceSha256": "7a60f2e74ccf8c38b1ee491157b45af2b9b94cd41bd27e9493f030effa55b255",
+  "finalProductionBuildId": "PNXoKZ336Un6gh5Y8zn7T",
+  "browser": "Chrome/153.0.8010.54",
+  "mode": "headless Chrome; desktop/mobile viewport emulation, no physical device",
+  "browserBuildBoundary": "Subsequent changes affected hosted secret-length validation and worker retry/error handling; browser UI and ownership/session flows unchanged.",
+  "states": {
+    "workflows": 104,
+    "transfers": 46,
+    "media": 38,
+    "total": 188
+  },
+  "screenshots": [
+    {
+      "file": "workflows/admin-1440.png",
+      "date": "2026-09-28T20:43:59.387Z",
+      "viewportWidth": 1440,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 81167
+    },
+    {
+      "file": "workflows/admin-390.png",
+      "date": "2026-09-28T20:43:46.887Z",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 51109
+    },
+    {
+      "file": "workflows/event-1440.png",
+      "date": "2026-09-28T20:42:09.203Z",
+      "viewportWidth": 1440,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 467120
+    },
+    {
+      "file": "workflows/event-390.png",
+      "date": "2026-09-28T20:41:47.684Z",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 236795
+    },
+    {
+      "file": "workflows/home-1440.png",
+      "date": "2026-09-28T20:42:02.306Z",
+      "viewportWidth": 1440,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 1304167
+    },
+    {
+      "file": "workflows/home-390.png",
+      "date": "2026-09-28T20:41:42.236Z",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 864582
+    },
+    {
+      "file": "workflows/organizer-1440.png",
+      "date": "2026-09-28T20:43:21.265Z",
+      "viewportWidth": 1440,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 141710
+    },
+    {
+      "file": "workflows/organizer-390.png",
+      "date": "2026-09-28T20:42:58.014Z",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 108893
+    },
+    {
+      "file": "workflows/scanner-1440.png",
+      "date": "2026-09-28T20:42:49.307Z",
+      "viewportWidth": 1440,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 71084
+    },
+    {
+      "file": "workflows/scanner-390.png",
+      "date": "2026-09-28T20:42:47.600Z",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 56605
+    },
+    {
+      "file": "workflows/simulator-1440.png",
+      "date": "2026-09-28T20:42:18.080Z",
+      "viewportWidth": 1440,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 112582
+    },
+    {
+      "file": "workflows/simulator-390.png",
+      "date": "2026-09-28T20:41:58.565Z",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 88998
+    },
+    {
+      "file": "workflows/tickets-1440.png",
+      "date": "2026-09-28T20:42:12.791Z",
+      "viewportWidth": 1440,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 315683
+    },
+    {
+      "file": "workflows/tickets-390.png",
+      "date": "2026-09-28T20:41:51.872Z",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 207386
+    },
+    {
+      "file": "transfers/profile-edit-390.png",
+      "date": "2026-09-28T20:52:22.760Z",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 80188
+    },
+    {
+      "file": "media/create-media-390.png",
+      "date": "2026-09-28T20:46:49.440Z",
+      "viewportWidth": 390,
+      "viewportHeight": 1000,
+      "deviceScaleFactor": 1,
+      "bytes": 82822
+    }
+  ]
+}

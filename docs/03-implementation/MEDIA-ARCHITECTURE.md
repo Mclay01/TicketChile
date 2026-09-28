@@ -193,3 +193,19 @@ restoring retained `original_value` and incrementing revision; never overwrite a
 intervening edit. Verify legacy rendering before considering asset cleanup. Do not
 drop 0011 tables or legacy readers as rollback. Original-data purge and existing
 local-object copying into S3 remain separately reviewed operational work.
+
+## M13 operational certification addendum
+
+No dedicated preview S3 bucket/key was available; adapter status remains implemented
+and locally contract-tested, with **EXTERNAL VALIDATION REQUIRED**. The M13 local
+restore rehearsal exercises dry-run/no-write behavior, one-slot adoption, deterministic
+replay, retained originals and checksums after DB restore. Full lifecycle tests and
+focused real-browser upload/private/public/replacement/failure regressions rerun.
+
+`MEDIA_UPLOADS_ENABLED=false` rejects persistMedia before normalization/DB/object writes,
+including internal adoption, while configured reads keep working. Stop cleanup/adoption
+scheduling separately during an incident; a call already executing may finish.
+`MEDIA_PROVIDER=disabled` disables both reads and writes. `runWorkerBatch('media',25)`
+is the trusted bounded/session-locked wrapper, not an HTTP scheduler. Provider/IAM/
+versioned deletion/cache/CSP/backup validation and installation remain pending; follow
+[PROVIDER-CERTIFICATION.md](PROVIDER-CERTIFICATION.md) and [STAGING-RUNBOOK.md](STAGING-RUNBOOK.md).

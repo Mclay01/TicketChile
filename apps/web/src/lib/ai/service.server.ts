@@ -49,8 +49,9 @@ export async function generate(input:AIInput,subject:string,baseRevision=0,scope
  }catch(error){
   const outcome=error instanceof Error&&['AI_SCHEMA','AI_TIMEOUT'].includes(error.message)?error.message:'AI_PROVIDER';
   await pool.query("UPDATE ai_requests SET state='FAILED',outcome=$2,latency_ms=$3 WHERE id=$1",[input.requestId,outcome,Date.now()-started]);
+  console.error(JSON.stringify({requestId:input.requestId,action:'ai.failed',severity:'error',feature:input.feature,outcome}));
   throw new AccessError(503,outcome,'No pudimos validar la propuesta. Tu borrador sigue intacto. Puedes reintentar o editar manualmente.');
- }finally{if(timer)clearTimeout(timer);console.info(JSON.stringify({requestId:input.requestId,feature:input.feature,provider:adapter.name,model:adapter.model,latencyMs:Date.now()-started}));}
+ }finally{if(timer)clearTimeout(timer);console.info(JSON.stringify({requestId:input.requestId,action:'ai.request',severity:'info',feature:input.feature,provider:adapter.name,model:adapter.model,latencyMs:Date.now()-started}));}
 }
 export async function proposeEvent(id:string,prompt:unknown,feature:unknown='event',key:unknown=randomUUID()){
  const actor=await organizerActor(),task=featureValue(feature),{event,context,facts}=await aiContext(id,task,actor);

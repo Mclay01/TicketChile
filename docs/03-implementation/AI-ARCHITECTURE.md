@@ -91,3 +91,19 @@ Remaining: actual model/account/schema/usage validation, content-quality/injecti
 ## M8 promotion handoff
 
 Event Center promotion suggestions remain copy/concept proposals under the M7 closed schema with no action or active/coupon fields. Organizers separately review and create an inactive code through M8, then explicitly activate it under promotions.manage. No AI callback dispatches a promotion mutation. Domain pricing, tier/window/usage validation, no-stacking and immutable terms are documented in [EVENT-OPERATIONS.md](EVENT-OPERATIONS.md).
+
+## M13 staging preparation
+
+OpenAI remains **EXTERNAL VALIDATION REQUIRED**. No nonproduction key was explicitly
+supplied and no real model call was made. `AI_RESOURCE_ENVIRONMENT` must now match the
+application deployment stage; hosted providers additionally require the exact origin
+binding. Development rules cannot activate on Preview. Missing/mismatched configuration
+is unavailable; existing schema, scope, rate, encrypted persistence and explicit apply
+remain unchanged. Error logs add closed action/severity/outcome fields, never prompts.
+
+The six representative Chilean event cases, task coverage, minimal-call budget and
+quality criteria are in [PROVIDER-CERTIFICATION.md](PROVIDER-CERTIFICATION.md). Model
+access/schema acceptance/latency/cost/quality and provider privacy terms remain unverified.
+`AI_PROVIDER=disabled` is the operational kill switch. Access expiry is enforced, but
+physical encrypted-data cleanup still requires approved retention/legal holds and a
+private job; no legal retention period was invented.

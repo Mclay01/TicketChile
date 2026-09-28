@@ -1,0 +1,1061 @@
+{
+  "states": [
+    {
+      "page": "home",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "signup",
+      "width": 390,
+      "scroll": 375,
+      "title": "Crea tu cuenta",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "recovery",
+      "width": 390,
+      "scroll": 375,
+      "title": "Recupera tu acceso",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "organizer-register",
+      "width": 390,
+      "scroll": 375,
+      "title": "Registro de Organizador",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "catalog",
+      "width": 390,
+      "scroll": 375,
+      "title": "Encuentra tu próximo plan",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "search-empty",
+      "width": 390,
+      "scroll": 375,
+      "title": "Resultados para “no-such-event”",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "category",
+      "width": 390,
+      "scroll": 375,
+      "title": "Conciertos",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "event",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "checkout",
+      "width": 390,
+      "scroll": 375,
+      "title": "Checkout",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "confirmation",
+      "width": 390,
+      "scroll": 375,
+      "title": "Compra confirmada",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "account",
+      "width": 390,
+      "scroll": 375,
+      "title": "Tu perfil",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "tickets",
+      "width": 390,
+      "scroll": 375,
+      "title": "Mis tickets",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "ticket",
+      "width": 390,
+      "scroll": 375,
+      "title": "Tu entrada",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "history",
+      "width": 390,
+      "scroll": 375,
+      "title": "Mis compras",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "help",
+      "width": 390,
+      "scroll": 375,
+      "title": "Estamos para orientarte",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "contact",
+      "width": 390,
+      "scroll": 375,
+      "title": "Conversemos",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "legal",
+      "width": 390,
+      "scroll": 375,
+      "title": "Privacidad",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "simulator",
+      "width": 390,
+      "scroll": 375,
+      "title": "Dale forma a tu próxima idea",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "missing-event",
+      "width": 390,
+      "scroll": 375,
+      "title": "Página no disponible",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "missing-ticket",
+      "width": 390,
+      "scroll": 375,
+      "title": "Página no disponible",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "home",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "signup",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Crea tu cuenta",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "recovery",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Recupera tu acceso",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "organizer-register",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Registro de Organizador",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "catalog",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Encuentra tu próximo plan",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "search-empty",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Resultados para “no-such-event”",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "category",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Conciertos",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "event",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "checkout",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Checkout",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "confirmation",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Compra confirmada",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "account",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Tu perfil",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "tickets",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Mis tickets",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "ticket",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Tu entrada",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "history",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Mis compras",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "help",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Estamos para orientarte",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "contact",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Conversemos",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "legal",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Privacidad",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "simulator",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Dale forma a tu próxima idea",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "missing-event",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Página no disponible",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "missing-ticket",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Página no disponible",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "scanner-events",
+      "width": 390,
+      "scroll": 390,
+      "title": "Tus eventos asignados",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "scanner",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "scanner-events",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Tus eventos asignados",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "scanner",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "organizer",
+      "width": 390,
+      "scroll": 375,
+      "title": "Cada evento, bajo control.",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "events",
+      "width": 390,
+      "scroll": 375,
+      "title": "Mis eventos",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "create",
+      "width": 390,
+      "scroll": 390,
+      "title": "Dale forma al encuentro.",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-overview",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-editor",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-preview",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-checklist",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-tiers",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-sales",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-attendees",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-promotions",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-courtesy",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-staff",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-access",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-analytics",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-settings",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-settlements",
+      "width": 390,
+      "scroll": 390,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-ai",
+      "width": 390,
+      "scroll": 375,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "organizer",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Cada evento, bajo control.",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "events",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Mis eventos",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "create",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Dale forma al encuentro.",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-overview",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-editor",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-preview",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-checklist",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-tiers",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-sales",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-attendees",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-promotions",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-courtesy",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-staff",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-access",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-analytics",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-settings",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-settlements",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "org-ai",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Ritual Nocturno",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin",
+      "width": 390,
+      "scroll": 375,
+      "title": "Lo que necesita atención.",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-organizers",
+      "width": 390,
+      "scroll": 375,
+      "title": "Organizadores",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-events",
+      "width": 390,
+      "scroll": 375,
+      "title": "Eventos",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-orders",
+      "width": 390,
+      "scroll": 375,
+      "title": "Compradores y órdenes",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-payments",
+      "width": 390,
+      "scroll": 375,
+      "title": "Pagos",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-refunds",
+      "width": 390,
+      "scroll": 375,
+      "title": "Reembolsos",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-settlements",
+      "width": 390,
+      "scroll": 375,
+      "title": "Liquidaciones",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-support",
+      "width": 390,
+      "scroll": 375,
+      "title": "Soporte",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-reports",
+      "width": 390,
+      "scroll": 375,
+      "title": "Reportes",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-audit",
+      "width": 390,
+      "scroll": 375,
+      "title": "Auditoría",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-settings",
+      "width": 390,
+      "scroll": 390,
+      "title": "Configuración operativa",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "missing-admin",
+      "width": 390,
+      "scroll": 390,
+      "title": "Página no disponible",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Lo que necesita atención.",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-organizers",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Organizadores",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-events",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Eventos",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-orders",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Compradores y órdenes",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-payments",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Pagos",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-refunds",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Reembolsos",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-settlements",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Liquidaciones",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-support",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Soporte",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-reports",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Reportes",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-audit",
+      "width": 1440,
+      "scroll": 1425,
+      "title": "Auditoría",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "admin-settings",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Configuración operativa",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    },
+    {
+      "page": "missing-admin",
+      "width": 1440,
+      "scroll": 1440,
+      "title": "Página no disponible",
+      "main": 1,
+      "labels": [],
+      "images": 0,
+      "unnamedButtons": 0
+    }
+  ],
+  "workflows": [
+    "keyboard dialog: Enter, 15 Tabs trapped, Escape, return focus",
+    "buyer password login with persisted session",
+    "catalog quantity → checkout; isolated service hold/fake evidence/concurrent finalize → authenticated confirmation/QR (no hosted provider UI)",
+    "camera denied and absent recovery before real QR decoding from synthetic video",
+    "assigned door staff actual QR decoder: valid, duplicate, wrong event, invalid; foreign event denied",
+    "organizer password + TOTP login",
+    "organizer create, edit/save form, preview, review/publish transitions and event-scoped staff invitation",
+    "admin password + TOTP login",
+    "admin support form, refund review/disabled HTTP execution/fake service evidence, settlement accounting/external record, moderation",
+    "Chrome accessibility tree exposes headings; DOM labels, image alternatives and button names across matrix"
+  ],
+  "externalProviderCalls": 0,
+  "limitations": [
+    "DOM/AX and keyboard checks are not a screen-reader or WCAG certification",
+    "Fake payment evidence is injected only into an isolated Node service harness; merchant UI certification remains external"
+  ]
+}

@@ -8,7 +8,7 @@ import { buildTicketEmail } from '@/lib/tickets.email';
 import { seal, unseal } from '@/lib/security/crypto.server';
 import { audit } from '@/lib/security/audit.server';
 import { mailConfigured, sendTransactionalMail, type Mail, type MailTransport } from '@/lib/mail/transport.server';
-type Job={id:string;purpose:'TICKET'|'SECURITY'|'TRANSFER';source_id:string;recipient:string;payload_cipher:string|null;lease_token:string;first_attempt_at:Date|null;credential_version:number};
+type Job={attempts:number;id:string;purpose:'TICKET'|'SECURITY'|'TRANSFER';source_id:string;recipient:string;payload_cipher:string|null;lease_token:string;first_attempt_at:Date|null;credential_version:number};
 async function ticketRow(ticketId:string,recipient:string) {
   return (await pool.query(`SELECT t.*,${TICKET_OWNER_SQL} AS recipient,o.buyer_name,o.buyer_email,o.event_title,e.city,e.venue,e.date_iso
     FROM tickets t JOIN orders o ON o.id=t.order_id JOIN events e ON e.id=t.event_id
@@ -75,6 +75,8 @@ async function authorizeAndBuild(job:Job):Promise<Mail|null> {
 export async function processMailJobs(options:{transport?:MailTransport;limit?:number}={}) {
   if(!options.transport && !mailConfigured()) return {attempted:false,sent:0,failed:0};
   const send=options.transport||sendTransactionalMail;
+  const configuredAttempts=Number(process.env.MAIL_MAX_ATTEMPTS||10);
+  const maxAttempts=Number.isSafeInteger(configuredAttempts)&&configuredAttempts>=1&&configuredAttempts<=20?configuredAttempts:10;
   let sent=0,failed=0;
   await importSecurityMail();
   for(let i=0;i<Math.min(options.limit||25,100);i++) {
@@ -84,9 +86,9 @@ export async function processMailJobs(options:{transport?:MailTransport;limit?:n
         (state='PENDING' AND next_attempt_at<=NOW()) OR (state='SENDING' AND lease_until<NOW())
         ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED`)).rows[0];
       if(!row) return null;
-      if(row.first_attempt_at && Date.now()-new Date(row.first_attempt_at).getTime()>23*3600000) {
+      if(row.attempts>=maxAttempts || row.first_attempt_at && Date.now()-new Date(row.first_attempt_at).getTime()>23*3600000) {
         await client.query("UPDATE mail_jobs SET state='REVIEW' WHERE id=$1",[row.id]);
-        await audit(client,{actor:{kind:'SYSTEM',id:'mail-worker'},action:'mail.delivery_review',targetType:'mail',targetId:row.id,metadata:{outcome:'DEDUPE_WINDOW_EXPIRED'}});
+        await audit(client,{actor:{kind:'SYSTEM',id:'mail-worker'},action:'mail.delivery_review',targetType:'mail',targetId:row.id,metadata:{outcome:row.attempts>=maxAttempts?'ATTEMPTS_EXHAUSTED':'DEDUPE_WINDOW_EXPIRED'}});
         return {review:true} as const;
       }
       await client.query(`UPDATE mail_jobs SET state='SENDING',lease_token=$2,lease_until=NOW()+interval '2 minutes',attempts=attempts+1 WHERE id=$1`,[row.id,token]);

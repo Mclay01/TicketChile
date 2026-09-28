@@ -1,0 +1,138 @@
+{
+  "at": "2026-09-28T20:29:02.513Z",
+  "migrations": 11,
+  "source": "ticketchile_test_m3_1790627338749_27046",
+  "target": "ticketchile_test_m3_1790627339558_95453",
+  "tables": 58,
+  "nonemptyTables": [
+    {
+      "name": "admin_users",
+      "count": 1
+    },
+    {
+      "name": "ai_requests",
+      "count": 1
+    },
+    {
+      "name": "commission_versions",
+      "count": 1
+    },
+    {
+      "name": "event_categories",
+      "count": 7
+    },
+    {
+      "name": "events",
+      "count": 1
+    },
+    {
+      "name": "hold_items",
+      "count": 1
+    },
+    {
+      "name": "holds",
+      "count": 1
+    },
+    {
+      "name": "identity_accounts",
+      "count": 4
+    },
+    {
+      "name": "mail_jobs",
+      "count": 6
+    },
+    {
+      "name": "media_legacy_adoptions",
+      "count": 1
+    },
+    {
+      "name": "media_objects",
+      "count": 1
+    },
+    {
+      "name": "media_variants",
+      "count": 3
+    },
+    {
+      "name": "orders",
+      "count": 1
+    },
+    {
+      "name": "organizer_events",
+      "count": 1
+    },
+    {
+      "name": "organizer_users",
+      "count": 1
+    },
+    {
+      "name": "payment_evidence",
+      "count": 1
+    },
+    {
+      "name": "payment_finance_snapshots",
+      "count": 1
+    },
+    {
+      "name": "payments",
+      "count": 1
+    },
+    {
+      "name": "schema_migrations",
+      "count": 11
+    },
+    {
+      "name": "security_audit",
+      "count": 8
+    },
+    {
+      "name": "security_rate_limits",
+      "count": 2
+    },
+    {
+      "name": "ticket_ownership_history",
+      "count": 3
+    },
+    {
+      "name": "ticket_transfer_messages",
+      "count": 3
+    },
+    {
+      "name": "ticket_transfer_policies",
+      "count": 1
+    },
+    {
+      "name": "ticket_transfers",
+      "count": 1
+    },
+    {
+      "name": "ticket_types",
+      "count": 1
+    },
+    {
+      "name": "tickets",
+      "count": 2
+    },
+    {
+      "name": "usuarios",
+      "count": 2
+    }
+  ],
+  "foreignKeys": 73,
+  "backupBytes": 164701,
+  "dumpAndFixtureMs": 1690,
+  "restoreMs": 676,
+  "verified": [
+    "all table row counts and hashes identical",
+    "migration checksum ledger",
+    "real catalog and current-owner account reads",
+    "payer unchanged; transferred credential/history retained",
+    "commission snapshot",
+    "AI ciphertext decrypts with retained synthetic key",
+    "legacy original retained; adoption replay; variant hashes"
+  ],
+  "limitations": [
+    "Local PostgreSQL only; no managed-provider PITR or production RTO/RPO certification",
+    "Object files retained separately; database backup does not back up a bucket"
+  ]
+}

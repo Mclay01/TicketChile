@@ -1,4 +1,5 @@
 import "server-only";
+import { assertProviderEnvironment } from "../../environment-config.mjs";
 import { pool } from "@/lib/db";
 import { requireBuyerEmail } from "@/lib/ticket-access.server";
 import { TICKET_OWNER_SQL } from "@/lib/buyer-guard.server";
@@ -46,4 +47,4 @@ export async function buyerPurchases(page = 1) {
     WHERE lower(COALESCE(NULLIF(BTRIM(o.owner_email),''),o.buyer_email))=$1 ORDER BY o.created_at DESC,o.id LIMIT 13 OFFSET $2`, [email, (Math.min(1000, Math.max(1, page)) - 1) * 12]);
   return { purchases: result.rows.slice(0, 12), hasMore: result.rows.length > 12 };
 }
-export function walletAvailable() { return ["GOOGLE_WALLET_ISSUER_ID", "GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL", "GOOGLE_WALLET_PRIVATE_KEY", "APP_BASE_URL"].every(key => Boolean(process.env[key]?.trim())); }
+export function walletAvailable() { try { assertProviderEnvironment("wallet"); } catch { return false; } return ["GOOGLE_WALLET_ISSUER_ID", "GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL", "GOOGLE_WALLET_PRIVATE_KEY", "APP_BASE_URL"].every(key => Boolean(process.env[key]?.trim())); }

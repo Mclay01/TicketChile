@@ -12,9 +12,9 @@ export function privateJson(status: number, body: unknown) {
   return NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 }
 
-export function accessResponse(error: unknown) {
+export function accessResponse(error: unknown, category: 'unexpected'|'database'|'configuration'|'mail'|'payments'|'media'|'scanner'|'ai' = 'unexpected') {
   if (!(error instanceof AccessError)) {
-    const requestId = operationalLog({ action: 'request.failed', category: 'unexpected', severity: 'error' });
+    const requestId = operationalLog({ action: 'request.failed', category, severity: 'error' });
     const response = privateJson(503, { ok: false, code: 'UNAVAILABLE', error: 'No se pudo completar la solicitud. Intenta nuevamente.', requestId });
     response.headers.set('X-Request-ID', requestId);
     return response;

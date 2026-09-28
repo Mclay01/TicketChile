@@ -1,0 +1,11 @@
+{
+  "at": "2026-09-28T21:04:49.589Z",
+  "buildId": "PNXoKZ336Un6gh5Y8zn7T",
+  "liveness": 200,
+  "readinessWithUnreachableLoopbackDatabase": 503,
+  "body": {
+    "ready": false
+  },
+  "externalProviderCalls": 0,
+  "limitation": "Actual compiled local HTTP process; not hosted HTTPS or infrastructure failover certification"
+}

@@ -76,5 +76,5 @@ export async function POST(request: Request) {
     if(row.status==="VALID")throw new AccessError(409,"ACCESS_CLOSED","Acceso cerrado, fuera de horario o puerta no habilitada.");
     if (row.status === "USED") return privateJson(409, { ok: false, code: "ALREADY_USED", error: "Ticket ya fue usado.", usedAtISO: row.used_at ? new Date(row.used_at).toISOString() : null });
     throw new AccessError(409, "CANCELLED", "La entrada no está habilitada.");
-  } catch (error) { return accessResponse(error); }
+  } catch (error) { return accessResponse(error,'scanner'); }
 }

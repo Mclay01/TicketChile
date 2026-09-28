@@ -12,7 +12,7 @@ export function discountItems(items:Item[],p:{tier_ids:string[];kind:string;valu
 export async function applyPromotionTx(client:PoolClient,holdId:string,eventId:string,raw:unknown){
  const code=codeValue(raw);if(!code)return;const old=(await client.query(`SELECT p.code FROM promotion_reservations r JOIN promotions p ON p.id=r.promotion_id WHERE r.hold_id=$1`,[holdId])).rows[0];
  if(old){if(code&&old.code!==code)invalid('La reserva ya tiene otro descuento.');return;}
- if(!code)return;
+ if(process.env.PROMOTIONS_ENABLED==='false')invalid();
  const p=(await client.query(`SELECT p.* FROM promotions p WHERE event_id=$1 AND code=$2 AND active AND starts_at<=now() AND ends_at>now() FOR UPDATE`,[eventId,code])).rows[0];if(!p)invalid();
  const used=Number((await client.query(`SELECT count(*) FROM promotion_reservations r JOIN holds h ON h.id=r.hold_id WHERE r.promotion_id=$1 AND (h.status='CONSUMED' OR (h.status='ACTIVE' AND h.expires_at>now()))`,[p.id])).rows[0].count);if(used>=p.usage_limit)invalid('La promoción alcanzó su límite.');
  const items=(await client.query<Item>('SELECT ticket_type_id,unit_price_clp,qty FROM hold_items WHERE hold_id=$1',[holdId])).rows,discounted=discountItems(items,p),total=discounted.reduce((n,it)=>n+it.discount*it.qty,0);if(!total)invalid('La promoción no aplica a estas entradas.');

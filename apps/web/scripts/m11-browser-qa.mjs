@@ -8,7 +8,7 @@ assert.match(fixture.database,/^ticketchile_test_m3_\d+_\d+$/);
 const db=new pg.Pool({host:'127.0.0.1',port:55439,user:'ticket_local',database:fixture.database});
 process.env.SECURITY_DATA_KEY=Buffer.alloc(32,11).toString('base64');
 const crypto=loadSource('lib/security/crypto.server.ts'),page=await browserPage(),base='http://localhost:3005',rows=[];
-const folder='../../docs/03-implementation/qa/m11';await fs.mkdir(folder,{recursive:true});
+const folder=(process.env.QA_ARTIFACT_ROOT||'../../docs/03-implementation/qa/m11');await fs.mkdir(folder,{recursive:true});
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function wait(expression){for(let i=0;i<100;i++){if(await page.evaluate(expression))return;await pause(150);}console.error(await page.evaluate('document.querySelector("main")?.innerText'));throw Error(`Timed out: ${expression}`);}
 async function fill(name,value){await page.evaluate(`(()=>{const e=document.querySelector('input[name="${name}"]');if(!e)throw Error('Missing field ${name}');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event('input',{bubbles:true}));})()`);}
@@ -17,7 +17,7 @@ async function state(name,width){
  await pause(250);
  const result=await page.evaluate(`({h1:document.querySelector('h1')?.innerText,main:document.querySelectorAll('main').length,width:innerWidth,scroll:document.documentElement.scrollWidth,unlabeled:[...document.querySelectorAll('main input')].filter(e=>!e.labels?.length&&!e.getAttribute('aria-labelledby')).length,smallTargets:[...document.querySelectorAll('main button,main input,main .btn')].filter(e=>{const r=e.getBoundingClientRect();return r.height>0&&r.height<43}).map(e=>e.innerText||e.name),qr:[...document.images].filter(i=>i.src.includes('/api/qr')).length})`);
  assert.equal(result.main,1,`${name} landmarks`);assert.equal(result.unlabeled,0,`${name} labels`);assert.ok(result.scroll<=width+1,`${name} overflow ${result.scroll}/${width}`);assert.equal(result.smallTargets.length,0,`${name} targets`);
- rows.push({name,...result});if(width===390||width===1440)await page.capture(`${folder}/${name}-${width}.png`);
+ rows.push({name,...result});if((width===390||width===1440)&&(!process.env.QA_REHEARSAL||rows.length===1))await page.capture(`${folder}/${name}-${width}.png`);
 }
 async function logout(){await page.navigate(base+'/cuenta/seguridad',390);await click('Cerrar sesión');await wait(`location.pathname==='/'`);}
 async function login(email,width,callback='/mis-tickets'){
@@ -29,7 +29,7 @@ let completed=false;
 try{
  await page.call('Network.enable');await page.call('Page.bringToFront');await page.call('Emulation.setFocusEmulationEnabled',{enabled:true});
  for(const name of ['next-auth.session-token','__Secure-next-auth.session-token'])await page.call('Network.deleteCookies',{name,url:base});
- for(const width of [390,430,768,1024,1440]){
+ for(const width of (process.env.QA_REHEARSAL==='m13'?[390,1440]:[390,430,768,1024,1440])){
   const id=`m11-${width}`,email=`new-${width}@m11.test`;
   await login('sender@m11.test',width);
   await page.navigate(base+'/cuenta',width);await state('profile-edit',width);await fill('phone','invalid');await click('Guardar cambios');await wait(`document.body.innerText.includes('Revisa el nombre')`);await state('profile-validation',width);await fill('name',`Persona de prueba ${width}`);await fill('phone','+56 9 1234 5678');await click('Guardar cambios');await wait(`document.body.innerText.includes('Tus datos fueron guardados.')`);await state('profile-success',width);
@@ -57,7 +57,7 @@ try{
   for(const [name,expected]of [['expired','venció'],['cancelled','ya no está activa'],['invalid','no permite transferencias'],['wrong','correo que recibió']]){await page.navigate(`${base}/transferir#${fixture.tokens[name]}`,width);await wait(`document.body.innerText.includes(${JSON.stringify(expected)})`);await state(`${name}-invitation`,width);}
   await logout();
  }
- completed=true;console.log(`PASS ${rows.length} responsive states; real signup/verification/login, keyboard acceptance, resend/cancel, ownership/Wallet/QR boundaries at all five widths.`);
+ completed=true;console.log(`PASS ${rows.length} responsive states; real signup/verification/login, keyboard acceptance, resend/cancel, ownership/Wallet/QR boundaries at selected widths.`);
 }finally{
  await fs.writeFile(`${folder}/browser-report.json`,JSON.stringify({completed,states:rows,providers:'Disabled; Wallet JWT generated locally only',limitations:'Local Chrome only; no actual email, Wallet issuer, mobile hardware or formal accessibility certification'},null,2));await page.close();await db.end();
 }

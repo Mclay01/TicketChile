@@ -106,3 +106,32 @@ Initial issued/failed/cancelled confirmation responses no longer start a redunda
 ## M11 current-owner transfer interaction
 
 Transfers never modify payment/order owner, provider binding, paid evidence, amounts, inventory or refund destination. Any active refund request blocks new transfer acceptance; M9 execution/confirmation still uses the original verified payment and immutable refund-ticket mapping. Completion cancels the current owner's VALID mapped tickets and scanner admission remains blocked. PostgreSQL tests cover refund-request/acceptance races and refund completion after transfer. No reimbursement to a transferee, transfer fee or new refund policy is invented. See [TICKET-TRANSFER.md](TICKET-TRANSFER.md).
+
+## M13 environment and certification boundary
+
+[PROVIDER-CERTIFICATION.md](PROVIDER-CERTIFICATION.md) is the authoritative status and
+exact test procedure. No real Stripe/Webpay/Flow sandbox, webhook, refund or merchant
+account was exercised. Fintoc and manual bank transfer remain disabled.
+
+Database endpoint/name/TLS and deployment stage now bind hosted runtime configuration.
+Stripe test keys, Webpay integration and Flow sandbox are required outside production;
+production requires their live modes. These guards run at availability and network
+client/callback boundaries, including when new-checkout flags are off. Refund
+availability also rejects incompatible mode before claiming execution. Exact APP_BASE_URL,
+NEXTAUTH_URL and STAGING_ORIGIN prevent sandbox callbacks using a production origin.
+A DB must never be moved/reconfigured across payment environments; unknown historical
+evidence has no automatic environment/merchant adoption. Existing M4 amount/currency/
+order/reference/signature/idempotency and M2 ownership checks remain authoritative.
+
+Resend now requires an explicit resource-stage label and exact controlled recipients
+in nonproduction, checked immediately before every send. Unallowlisted recipients
+fail; no rewriting or falsely successful delivery. The unused direct-email helper was
+removed. TEST transports remain explicitly marked TEST. Local tests prove mail
+failure preserves issued purchases/transfers. No refund/settlement notification
+policy was invented. Private worker scheduling, sender DNS/delivery, bounce/complaint
+handling and real provider certification remain external gates.
+
+M13 also bounds poison-message retries with `MAIL_MAX_ATTEMPTS` (default 10, range 1-20).
+Exhausted attempts move to REVIEW even when malformed encrypted payloads fail before
+a first provider call. The 23-hour uncertain-send boundary remains independent.
+No transport failure or REVIEW state reverses a committed payment or transfer.

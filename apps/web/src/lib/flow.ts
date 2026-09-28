@@ -1,5 +1,6 @@
 // apps/web/src/lib/flow.ts
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { assertProviderEnvironment } from "../../environment-config.mjs";
 
 export type FlowStatus = {
   flowOrder: number;
@@ -21,6 +22,7 @@ function mustEnv(name: string) {
 }
 
 export function flowBaseUrl() {
+  assertProviderEnvironment("flow");
   // Tu env FLOW_BASE_URL puede ser:
   // - prod:    https://www.flow.cl/api  (clásico)
   // - sandbox: https://sandbox.flow.cl/api

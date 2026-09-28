@@ -7,7 +7,7 @@ import {browserPage} from './m5-browser.mjs';
 const fixture=JSON.parse(await fs.readFile('.local/m12-preview.json','utf8'));
 assert.match(fixture.database,/^ticketchile_test_m3_\d+_\d+$/);
 const db=new pg.Pool({host:'127.0.0.1',port:55439,user:'ticket_local',database:fixture.database});
-const page=await browserPage(),base='http://localhost:3005',folder='../../docs/03-implementation/qa/m12',rows=[],performance=[];
+const page=await browserPage(),base='http://localhost:3005',folder=(process.env.QA_ARTIFACT_ROOT||'../../docs/03-implementation/qa/m12'),rows=[],performance=[];
 await fs.mkdir(folder,{recursive:true});
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function wait(expression){for(let i=0;i<180;i++){if(await page.evaluate(expression))return;await pause(150);}throw Error(`Timed out: ${expression}\n${await page.evaluate('document.querySelector("main")?.innerText')}`);}
@@ -30,7 +30,7 @@ async function state(name,width){
  const result=await page.evaluate(`({name:${JSON.stringify(name)},width:innerWidth,scroll:document.documentElement.scrollWidth,main:document.querySelectorAll('main').length,images:[...document.querySelectorAll('main img')].map(i=>({src:i.currentSrc.replace(location.origin,''),loaded:i.complete&&i.naturalWidth>0,loading:i.loading,priority:i.fetchPriority,width:i.getBoundingClientRect().width,height:i.getBoundingClientRect().height})),unlabeled:[...document.querySelectorAll('main input')].filter(e=>!e.labels?.length&&!e.getAttribute('aria-label')).length})`);
  assert.ok(result.scroll<=width+1,`${name}: overflow`);assert.equal(result.main,1);assert.equal(result.unlabeled,0);assert.ok(result.images.every(i=>i.width>0&&i.height>0),`${name}: image geometry`);
  if(name==='catalog-card')assert.ok(result.images.every(i=>i.loading==='lazy'));
- rows.push(result);if(width===390||width===1440)await page.capture(`${folder}/${name}-${width}.png`);
+ rows.push(result);if((width===390||width===1440)&&(!process.env.QA_REHEARSAL||rows.length===1))await page.capture(`${folder}/${name}-${width}.png`);
 }
 async function saved(){await wait(`document.querySelector('p[aria-live="polite"]')?.textContent.startsWith('Guardado')`);}
 async function imageTab(){await wait(`[...document.querySelectorAll('main button')].some(e=>e.innerText==='03 / Imagen')`);await click('03 / Imagen');await wait(`document.querySelectorAll('input[type="file"]').length===3`);}
@@ -39,7 +39,7 @@ let completed=false;
 try{
  await page.call('Network.enable');await page.call('DOM.enable');await page.call('Page.bringToFront');
  await page.call('Page.addScriptToEvaluateOnNewDocument',{source:`window.mediaLcp=[];new PerformanceObserver(l=>{for(const e of l.getEntries())window.mediaLcp.push({time:e.startTime,url:e.url,tag:e.element?.tagName});}).observe({type:'largest-contentful-paint',buffered:true});`});
- for(const width of [390,430,768,1024,1440]){
+ for(const width of (process.env.QA_REHEARSAL==='m13'?[390,1440]:[390,430,768,1024,1440])){
   // Each viewport is a separate simulated editing session in this disposable DB.
   await db.query("UPDATE security_rate_limits SET expires_at=now() WHERE bucket='media-upload'");
   await session('organizer',fixture.organizer);await page.call('Network.deleteCookies',{name:'tc_admin_sess',url:base});
@@ -69,5 +69,5 @@ try{
   await page.navigate(`${base}/eventos/${id}`,width);await wait(`[...document.images].some(i=>i.currentSrc.includes('media-placeholder.svg')&&i.naturalWidth>0)`);await state('missing-fallback',width);
   await db.query("UPDATE events SET hero_desktop=$2,hero_mobile='' WHERE id=$1",[id,current.hero_desktop]);
  }
- completed=true;console.log(`PASS ${rows.length} media states at five widths.`);
+ completed=true;console.log(`PASS ${rows.length} media states at selected widths.`);
 }finally{await fs.writeFile(`${folder}/browser-report.json`,JSON.stringify({completed,states:rows,performance,environment:'Local development adapter and disposable PostgreSQL. No live S3/CDN.',limitations:'Chrome emulation, not physical device or production LCP certification.'},null,2));await page.close();await db.end();}

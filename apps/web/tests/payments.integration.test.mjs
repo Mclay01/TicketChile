@@ -271,3 +271,17 @@ test('a legacy PAID label cannot become verified from a pending provider observa
  assert.equal((await paymentRow(p.id)).verified_at,null);assert.equal((await counts(p)).tickets,0);
  await assert.rejects(finalize.finalizePayment(p.id),e=>e.code==='UNVERIFIED_PAYMENT');
 });
+
+test('poison encrypted mail reaches bounded REVIEW without provider calls or rolling back its paid order',async()=>{
+ await db.pool.query("UPDATE mail_jobs SET state='CANCELLED' WHERE state IN ('PENDING','SENDING')");
+ const {p}=await fixture();await reconcile.applyVerifiedPayment(evidence(p));
+ const job=(await db.pool.query("SELECT id FROM mail_jobs WHERE state='PENDING' ORDER BY id LIMIT 1")).rows[0].id;
+ await db.pool.query("UPDATE mail_jobs SET state='CANCELLED' WHERE state='PENDING' AND id<>$1",[job]);
+ await db.pool.query("UPDATE mail_jobs SET payload_cipher='synthetic-corruption' WHERE id=$1",[job]);
+ const old=process.env.MAIL_MAX_ATTEMPTS;process.env.MAIL_MAX_ATTEMPTS='2';let calls=0;
+ try{
+  for(let i=0;i<3;i++){await mail.processMailJobs({limit:1,transport:async()=>{calls++;}});await db.pool.query('UPDATE mail_jobs SET next_attempt_at=now() WHERE id=$1',[job]);}
+  assert.equal(calls,0);assert.deepEqual((await db.pool.query('SELECT state,attempts FROM mail_jobs WHERE id=$1',[job])).rows[0],{state:'REVIEW',attempts:2});
+  assert.equal((await paymentRow(p.id)).fulfillment_status,'ISSUED');
+ }finally{if(old===undefined)delete process.env.MAIL_MAX_ATTEMPTS;else process.env.MAIL_MAX_ATTEMPTS=old;}
+});

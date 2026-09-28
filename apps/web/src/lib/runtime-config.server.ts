@@ -1,8 +1,9 @@
 import 'server-only';
+import { isolationIssues } from '../../environment-config.mjs';
 
 // Pure presence/format validation. No connection, credential output or provider calls.
 export function coreConfigurationIssues(env: NodeJS.ProcessEnv = process.env): string[] {
-  const issues: string[] = [];
+  const issues: string[] = isolationIssues(env);
   const key = env.SECURITY_DATA_KEY || '';
   if (Buffer.from(key, 'base64').length !== 32 || Buffer.from(key, 'base64').toString('base64') !== key) issues.push('SECURITY_DATA_KEY');
   if ((env.NEXTAUTH_SECRET || '').length < 32) issues.push('NEXTAUTH_SECRET');

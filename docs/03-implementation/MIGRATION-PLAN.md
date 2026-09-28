@@ -150,3 +150,31 @@ adoption, lock the event and media and require its current field still equals th
 mapped asset before restoring `original_value` and increasing revision. Never
 overwrite later edits. Retain the metadata migration and audit/journal history.
 No production schema, base64 or object-store operation occurred in M12.
+
+## M13 fresh, legacy, backup and restore evidence
+
+No migration was added or edited: 0001-0011 remain immutable. Full regression reruns
+empty, reconstructed 0001 legacy, populated M11 media, repeat/checksum/drift/order
+and failed-DDL cases. `m13-restore-rehearsal.mjs` additionally creates two new synthetic
+loopback databases, applies all eleven migrations, exercises real payment issuance
+and transfer acceptance, commission snapshots and bounded legacy media adoption,
+then performs custom-format pg_dump and fresh-target pg_restore. All 58 table
+count/hash snapshots match; 73 validated foreign keys, current-owner application
+reads, payer ownership, credential/history, AI ciphertext and media hashes survive.
+See [qa/m13/restore-report.json](qa/m13/restore-report.json). Object bytes and encryption
+keys are backed up separately from SQL; local success is not managed production PITR.
+
+`staging-migrate.mjs --apply` is an explicit Preview-only remote executor with exact
+DB/origin/resource/TLS binding and no env-file/application URL fallback. It shares
+the immutable transactional runner and refuses unledgered application tables. It
+was prepared, not run against a remote account. Production remains unsupported by
+this CLI; actual catalog reconciliation, role grants, manual baseline adoption and
+provider-specific backup/restore require separate reviewed execution. Exact steps
+and remaining authority requirements: [STAGING-RUNBOOK.md](STAGING-RUNBOOK.md).
+
+A local M12 artifact was rebuilt in its original Turbopack mode and served the restored
+0011 schema without reversing migrations. The local dependency-root packaging override
+is documented in the rehearsal script. An attempted alternate webpack build exposed
+a legacy generated PageProps mismatch; the approved Turbopack pipeline passed. Do not
+substitute builders without verification. M12 lacks M13 operational isolation controls,
+so external providers/workers must remain disabled during that emergency fallback.

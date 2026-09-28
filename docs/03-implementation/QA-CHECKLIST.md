@@ -1,6 +1,6 @@
 # TicketChile QA gates
 
-Current release status (M10): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
+Current release status (M13): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
 
 Record executed results in ASTRA-PROGRESS.md. Unchecked items are not accepted as complete.
 
@@ -267,3 +267,30 @@ M10 completed the original plan. The subsequent user request explicitly extended
 - [ ] Production worker installation/alerts, real schema/restore/adoption approval, legacy local-file copying/orphan inventory, legal retention, device/security/load and all prior release gates.
 
 Recommended only: **M13 — Staging provider certification and operational release rehearsal**. Stop after M12; no automatic next milestone or deployment.
+
+## M13 staging preparation and operational rehearsal
+
+- [x] M1-M12 completion/clean baseline confirmed; no reimplementation or applied SQL changes.
+- [x] Current provider gap inventory, authoritative evidence matrix, staging runbook and future cutover plan.
+- [x] LOCAL/Preview/production DB endpoint/name/TLS/origin/mode guards and malformed configuration rejection.
+- [x] Exact nonproduction email recipients; no direct legacy send bypass; durable poison-job attempt cap/REVIEW.
+- [x] Preview secure host-only cookie configuration and no production-domain deletion header (local contract).
+- [x] Independent media-write, transfer and new-promotion incident controls; existing authority/history preserved.
+- [x] Private bounded workers, real PostgreSQL overlap/lease/retry/crash/poison visibility tests.
+- [x] Fresh/legacy/populated M11 migrations through0011; real local backup/fresh restore and application reads.
+- [x] Prior M12 application restored locally against retained 0011 schema; no down migration.
+- [x] Bounded measured local catalog/checkout/check-in/attendee/admin/promotion/queue load.
+- [x] 401 full tests pass, including provider contracts and PostgreSQL concurrency; no skips.
+- [x] Browser passes: 104 cross-role +46 transfer +38 media states at390/1440;16 selected screenshots.
+- [x] Compiled local DB outage: health200, ready503, generic no-store response.
+- [x] TypeScript; scoped44-file lint; whole373-file lint with zero errors/warnings; production build; diff check.
+- [ ] Real authorized Preview deployment and dedicated managed staging DB/resources.
+- [ ] Real payment/email/AI/S3/Wallet sandbox certification and external callback delivery.
+- [ ] Actual HTTPS sessions/origin/CSP, physical phones/cameras/Wallet and accessibility acceptance.
+- [ ] Worker packaging/scheduler/log sink/alerts/runtime grants and managed backup/PITR/hosted rollback.
+- [ ] Business commission/fee/refund/settlement/transfer/nominative/retention/verification/legal decisions.
+- [ ] Production schema/provider/security/dependency/capacity/cutover approval; no production deployment authorized.
+
+Evidence and qualifications: [qa/m13](qa/m13/README.md),
+[PROVIDER-CERTIFICATION.md](PROVIDER-CERTIFICATION.md),
+[STAGING-RUNBOOK.md](STAGING-RUNBOOK.md), [PRODUCTION-CUTOVER.md](PRODUCTION-CUTOVER.md).

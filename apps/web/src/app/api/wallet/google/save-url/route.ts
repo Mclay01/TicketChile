@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import { assertProviderEnvironment, assertOrigins } from "../../../../../../environment-config.mjs";
 import jwt from "jsonwebtoken";
-import { appBaseUrl } from "@/lib/stripe.server";
 import { signTicketToken } from "@/lib/qr-token.server";
 import { ownedTicketFromRequest } from "@/lib/ticket-access.server";
 import { accessResponse, privateJson } from "@/lib/access.server";
@@ -14,7 +14,8 @@ export async function GET(request: Request) {
     const email = process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL?.trim();
     const key = (process.env.GOOGLE_WALLET_PRIVATE_KEY || "").replace(/\\n/g, "\n").trim();
     if (!issuerId || !email || !key) return privateJson(503, { ok: false, error: "Google Wallet no está disponible." });
-    const base = appBaseUrl();
+    assertProviderEnvironment("wallet");
+    const base = assertOrigins();
     const suffix = (id: string) => id.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 64);
     const classId = `${issuerId}.${suffix(ticket.event_id)}`;
     const claims = {

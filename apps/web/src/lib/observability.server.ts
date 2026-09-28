@@ -1,6 +1,6 @@
 import 'server-only';
 
-type Event = { action: 'request.failed' | 'readiness.checked'; category: 'unexpected' | 'database' | 'configuration'; severity: 'error' | 'info'; durationMs?: number };
+type Event = { action: 'request.failed' | 'readiness.checked' | 'worker.completed' | 'worker.failed' | 'worker.busy'; category: 'unexpected' | 'database' | 'configuration' | 'mail' | 'payments' | 'media' | 'scanner' | 'ai'; severity: 'error' | 'info'; durationMs?: number };
 // Deliberately closed schema: never serialize Error, URLs, headers, bodies or identities.
 export function operationalLog(event: Event) {
   const requestId = globalThis.crypto.randomUUID();

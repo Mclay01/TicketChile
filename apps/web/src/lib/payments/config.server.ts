@@ -1,4 +1,5 @@
 import 'server-only';
+import { assertOrigins, assertProviderEnvironment } from '../../../environment-config.mjs';
 import { AccessError } from '@/lib/access.server';
 
 export const providers = ['stripe','webpay','flow','fintoc','transfer'] as const;
@@ -9,7 +10,7 @@ export function paymentOrigin() {
       (url.protocol !== 'https:' && !(process.env.NODE_ENV !== 'production' && url.protocol === 'http:' && ['localhost','127.0.0.1'].includes(url.hostname)))) {
     throw new Error('Invalid payment origin');
   }
-  return url.origin;
+  return assertOrigins();
 }
 export function feePolicy() {
   // Zero fees must be an explicit operator decision, never a prototype default.
@@ -18,7 +19,7 @@ export function feePolicy() {
 }
 export function availability(provider: Provider) {
   let configured = false;
-  try { paymentOrigin(); feePolicy(); configured = true; } catch { /* fail closed */ }
+  try { paymentOrigin(); feePolicy(); assertProviderEnvironment(provider); configured = true; } catch { /* fail closed */ }
   const has = (...keys: string[]) => keys.every(key => Boolean(process.env[key]?.trim()));
   if (provider === 'stripe') configured &&= process.env.STRIPE_ENABLED === 'true' && has('STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET') &&
     /^(sk_test_|sk_live_)/.test(process.env.STRIPE_SECRET_KEY || '');

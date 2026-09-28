@@ -1,5 +1,6 @@
 // apps/web/src/lib/stripe.server.ts
 import Stripe from "stripe";
+import { assertProviderEnvironment } from "../../environment-config.mjs";
 
 let stripeSingleton: Stripe | null = null;
 
@@ -24,6 +25,7 @@ function createStripe() {
  */
 export const stripe: Stripe = new Proxy({} as Stripe, {
   get(_target, prop) {
+    assertProviderEnvironment("stripe");
     if (!stripeSingleton) stripeSingleton = createStripe();
     // @ts-expect-error Proxy passthrough
     return stripeSingleton[prop];

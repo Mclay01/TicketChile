@@ -69,3 +69,20 @@ and [ENVIRONMENT.md](ENVIRONMENT.md) before enabling storage.
 - Retained event assets and APPLIED adoption assets remain protected. Business/legal
   retention and physical provider-version expiry are unresolved decisions. Existing
   untracked pre-M12 filesystem files need a separate reviewed inventory.
+
+## M13 staging and operational rehearsal
+
+The current executable/nonproduction procedure is [STAGING-RUNBOOK.md](STAGING-RUNBOOK.md);
+future production sequencing is [PRODUCTION-CUTOVER.md](PRODUCTION-CUTOVER.md). No hosted
+deployment or scheduler was installed. Migrations are now 0001-0011. The private
+`runWorkerBatch` entry adds bounded job selection, per-job PostgreSQL session locks
+and sanitized completion/failure/overlap logs around existing domain services.
+Mail still uses row leases/fencing and stable provider idempotency keys.
+
+Use `MEDIA_UPLOADS_ENABLED=false` to stop uploads/adoption while preserving reads;
+`MEDIA_PROVIDER=disabled` remains the full read/write disable. Stop cleanup separately.
+Preview resource binding, test-only provider modes, exact recipient allowlist and
+private scheduling requirements are mandatory. The local restore/rollback/load
+reports do not certify a hosted deployment, actual HTTPS, managed PITR or production
+capacity. [PROVIDER-CERTIFICATION.md](PROVIDER-CERTIFICATION.md) supersedes historical
+provider availability statements.

@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {loadSource} from './load-source.mjs';
 import {securityHeaders} from '../security-headers.mjs';
-const valid={NODE_ENV:'production',SECURITY_DATA_KEY:Buffer.alloc(32,7).toString('base64'),NEXTAUTH_SECRET:'s'.repeat(32),TICKETCHILE_QR_SECRET:'q'.repeat(32),APP_BASE_URL:'https://example.test',NEXTAUTH_URL:'https://example.test'};
+const valid={NODE_ENV:'production',APP_ENVIRONMENT:'development',SECURITY_DATA_KEY:Buffer.alloc(32,7).toString('base64'),NEXTAUTH_SECRET:'s'.repeat(32),TICKETCHILE_QR_SECRET:'q'.repeat(32),APP_BASE_URL:'https://example.test',NEXTAUTH_URL:'https://example.test'};
 test('readiness configuration rejects missing secrets, malformed keys and unsafe origins without exposing values',()=>{
  const {coreConfigurationIssues:check}=loadSource('lib/runtime-config.server.ts');
  assert.deepEqual(check(valid),[]);
- for(const key of Object.keys(valid).filter(k=>k!=='NODE_ENV')) assert.ok(check({...valid,[key]:''}).includes(key));
+ for(const key of Object.keys(valid).filter(k=>!['NODE_ENV','APP_ENVIRONMENT'].includes(k))) assert.ok(check({...valid,[key]:''}).includes(key));
  for(const origin of ['http://example.test','https://user:secret@example.test','https://example.test/path','https://example.test?secret=x']) assert.ok(check({...valid,APP_BASE_URL:origin}).includes('APP_BASE_URL'));
  assert.ok(check({...valid,SECURITY_DATA_KEY:'secret'}).includes('SECURITY_DATA_KEY'));
 });

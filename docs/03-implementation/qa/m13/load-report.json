@@ -1,0 +1,65 @@
+{
+  "at": "2026-09-28T20:31:59.510Z",
+  "database": "ticketchile_test_m3_1790627516817_38131",
+  "metrics": [
+    {
+      "operation": "catalog",
+      "count": 30,
+      "concurrency": 5,
+      "totalMs": 131,
+      "p50Ms": 2,
+      "p95Ms": 89
+    },
+    {
+      "operation": "hold + checkout preparation",
+      "count": 20,
+      "concurrency": 5,
+      "totalMs": 223,
+      "p50Ms": 26,
+      "p95Ms": 123
+    },
+    {
+      "operation": "verified fixture finalization",
+      "count": 20,
+      "concurrency": 5,
+      "totalMs": 183,
+      "p50Ms": 29,
+      "p95Ms": 87
+    },
+    {
+      "operation": "authorized check-in",
+      "count": 20,
+      "concurrency": 5,
+      "totalMs": 113,
+      "p50Ms": 13,
+      "p95Ms": 58
+    },
+    {
+      "operation": "authorized attendee list",
+      "count": 20,
+      "concurrency": 5,
+      "totalMs": 63,
+      "p50Ms": 13,
+      "p95Ms": 25
+    },
+    {
+      "operation": "MFA admin payment list",
+      "count": 20,
+      "concurrency": 5,
+      "totalMs": 15,
+      "p50Ms": 3,
+      "p95Ms": 6
+    },
+    {
+      "operation": "overlapping bounded mail batches",
+      "count": 4,
+      "concurrency": 2,
+      "totalMs": 34,
+      "p50Ms": 33,
+      "p95Ms": 33
+    }
+  ],
+  "externalProviderCalls": 0,
+  "integrity": "20 issued/used tickets; held=0; promotion limit=10; no stale ticket mail",
+  "limitations": "Bounded small local fixtures, not production capacity or external-provider load certification"
+}

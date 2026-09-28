@@ -1,14 +1,42 @@
-# TicketChile release readiness — M10
+# TicketChile release readiness - M13
 
-**Release decision: BLOCKED for production.** Local implementation completion is separate from external release approval. M1–M9 are preserved; M10 closes the implementation plan with release evidence and explicit operational gates. No deployment, merge, push, production migration, real provider transaction or credential inspection occurred.
+**Release decision: BLOCKED for production.** M1-M12 are complete; M13 prepares isolated staging and records local operational evidence. Real provider, hosted HTTPS, physical-device and business/release approvals remain pending. No production deployment or data access occurred.
 
-## Evidence and scope
+## M13 current release decision
+
+**BLOCKED for production.** M1-M12 are complete and preserved. M13 adds isolated
+staging preparation, environment/recipient/incident guards, private worker dispatch,
+local fresh/legacy migration/restore/rollback/load and cross-role browser evidence.
+No real Preview deployment, external provider call, production data/credential use,
+DNS/domain/branch change, merge or production scheduling occurred.
+
+The authoritative matrix is [PROVIDER-CERTIFICATION.md](PROVIDER-CERTIFICATION.md).
+Executable setup is [STAGING-RUNBOOK.md](STAGING-RUNBOOK.md); future release plan is
+[PRODUCTION-CUTOVER.md](PRODUCTION-CUTOVER.md). Local evidence: [qa/m13](qa/m13/README.md).
+Historical milestone notes below are superseded where they describe missing M11/M12
+implementation. Local passes do not imply hosted or production certification.
+
+| Classification | Current finding |
+|---|---|
+| RESOLVED | Cross-environment runtime guards, nonproduction mail allowlist, media upload/transfer/promotion incident switches, private worker overlap guard; local migrations/restore/rollback/load and authorization regressions |
+| STAGING VERIFIED | None against a hosted account; local rehearsals are explicitly recorded separately |
+| EXTERNAL CERTIFICATION REQUIRED | Authorized Preview project/DB, every enabled real payment/mail/AI/S3/Wallet provider, reachable HTTPS callbacks, restricted grants, worker packaging/scheduling, observability/alerts and sender/bounce/complaint readiness |
+| PHYSICAL DEVICE REQUIRED | Two-phone QR/camera/brightness/focus/network tests, transferred/refunded/duplicate/wrong-event QR and actual Wallet passes |
+| BUSINESS DECISION REQUIRED | Commission/fee payer/refund/settlement/transfer/nominative/retention/organizer verification/legal identity and approved customer policies; AI model/privacy/budget if enabled |
+| PRODUCTION REHEARSAL REQUIRED | Actual schema adoption, managed backup/PITR/object/key restore, compatible hosted rollback, production grants/ingress/security/dependency/accessibility/capacity and release/on-call sign-off |
+
+Exact recommended M14: **External staging certification, physical-device acceptance,
+and business-policy sign-off.** Obtain dedicated nonproduction account access, run the
+pending provider/HTTPS/worker/device cases and record approved policies. This is a
+recommendation only; M13 stops after its coherent commit. It does not authorize production.
+
+## Historical M10 evidence and scope
 
 See [QA-CHECKLIST](QA-CHECKLIST.md), [M10 audit](M10-AUDIT.md), [progress](ASTRA-PROGRESS.md) and `qa/m10/`. Baseline: branch `astra/ticketchile-v2`, clean `a3d38370b3b48598f1772148bc8d0f741f7221f1`, 328 tests, TypeScript/build/scoped lint pass; application lint 15 errors / 1 warning. Historical 287/35 is not the current lint result.
 
 Local verification uses disposable loopback PostgreSQL, synthetic identities, isolated Chrome and injected provider transports. It is not proof of merchant approval, email deliverability, real camera behavior, production scale, assistive-technology certification or legal compliance.
 
-## Provider matrix
+## Historical provider implementation summary (current matrix linked above)
 
 Production credential status is **not inspected** for every row. No provider is authorized for production enablement by this document.
 
@@ -21,7 +49,7 @@ Production credential status is **not inspected** for every row. No provider is 
 | Manual transfer | Unavailable boundary only | No solicitation or unauthorized approval | Business approval/evidence workflow absent | Disabled; future feature |
 | Resend | Durable encrypted mail queue, leases and idempotency | Injected TEST transport, retry/crash/expiry/ownership cases | Verified sender, deliverability, SPF/DKIM/DMARC and provider dedupe validation pending | Disabled without configuration; worker installation required |
 | OpenAI | Allowlisted structured-output adapter, bounded proposals and explicit apply | Fake/development adapters, schema/privacy/rate/revision tests | Selected model, account budget, latency and output evaluation pending | Disabled by default; optional independently gated feature |
-| Media storage | Local development upload/read and reference authorization | Image validation, transforms and owner checks | Production storage adapter/CDN lifecycle absent | Production uploads unavailable; release blocker for organizer publishing |
+| Media storage | M12 local/S3 adapter, variants and lifecycle | Authorization, commands, failure/adoption/cleanup tests | Dedicated S3 provider/IAM/delivery certification pending | Missing configuration fails closed; no production enablement |
 | Google Wallet | Current-owner ticket lookup and signed pass | Authorization and configuration tests | Issuer/service-account approval and Android/device testing pending | Optional; unavailable without complete configuration |
 
 ## Feature readiness

@@ -1,4 +1,5 @@
 import 'server-only';
+import { assertProviderEnvironment } from '../../../environment-config.mjs';
 import type Stripe from 'stripe';
 import { stripe } from '@/lib/stripe.server';
 import { flowCreatePayment, flowGetStatus } from '@/lib/flow';
@@ -9,6 +10,7 @@ import type { Payment, PaymentAdapter, VerifiedPayment } from './types';
 
 function mismatch(): never { throw new AccessError(409,'PAYMENT_MISMATCH','No se pudo verificar el pago.'); }
 export function normalizeStripe(p: Payment, session: Stripe.Checkout.Session, observationKey?: string): VerifiedPayment {
+  assertProviderEnvironment('stripe');
   if (session.id !== p.provider_ref || session.client_reference_id !== p.id || session.metadata?.paymentId !== p.id ||
       session.metadata?.holdId !== p.hold_id || session.mode !== 'payment' || session.amount_total !== Number(p.amount_clp) ||
       session.currency?.toUpperCase() !== p.currency || session.livemode !== process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_')) mismatch();
@@ -40,11 +42,13 @@ export function normalizeFlow(p: Payment, result: Awaited<ReturnType<typeof flow
     status,observationKey:`${intent}:${status}`,intent};
 }
 function webpay() {
+  assertProviderEnvironment('webpay');
   if (!process.env.WEBPAY_COMMERCE_CODE || !process.env.WEBPAY_API_KEY || !['production','integration'].includes(process.env.WEBPAY_ENV || '')) throw new Error('Provider unavailable');
   return new WebpayPlus.Transaction(new Options(process.env.WEBPAY_COMMERCE_CODE,process.env.WEBPAY_API_KEY,
     process.env.WEBPAY_ENV === 'production' ? Environment.Production : Environment.Integration));
 }
 export function adapter(provider: Provider): PaymentAdapter {
+  assertProviderEnvironment(provider);
   if (provider === 'stripe') return {
     provider,capabilities:{createRetry:'idempotent',refund:'provider-supported-unimplemented'},
     async create(p) {

@@ -7,11 +7,11 @@ import { loadSource } from "../tests/load-source.mjs";
 // Disposable fixture database and inert environment. Never uses application credentials.
 const env = { ...process.env, NODE_ENV: "development", NEXT_TELEMETRY_DISABLED: "1", TICKETCHILE_BUILD_DIR: ".next-m5-qa" };
 for (const name of [".env", ".env.local", ".env.development", ".env.development.local", ".env.production", ".env.production.local"]) if (fs.existsSync(name)) for (const key of Object.keys(dotenv.parse(fs.readFileSync(name)))) env[key] = "";
-for (const key of Object.keys(env)) if (/^(AI_|OPENAI_|STRIPE_|FLOW_|WEBPAY_|FINTOC_|RESEND_|MAIL_|CHECKOUT_|FROM_EMAIL$|GOOGLE_|AUTH_|SECURITY_|NEXTAUTH_|TRANSFER_|ORGANIZER_|ADMIN_BOOTSTRAP_|APP_|NEXT_PUBLIC_|SUPPORT_)/.test(key)) env[key] = "";
+for (const key of Object.keys(env)) if (/^(MEDIA_|AWS_|VERCEL_|WALLET_|TRANSFERS_|PROMOTIONS_|STAGING_|DATABASE_|AI_|OPENAI_|STRIPE_|FLOW_|WEBPAY_|FINTOC_|RESEND_|MAIL_|CHECKOUT_|FROM_EMAIL$|GOOGLE_|AUTH_|SECURITY_|NEXTAUTH_|TRANSFER_|ORGANIZER_|ADMIN_BOOTSTRAP_|APP_|NEXT_PUBLIC_|SUPPORT_)/.test(key)) env[key] = "";
 const db = await localDatabase();
 const url = `postgresql://ticket_local@127.0.0.1:55439/${db.database}`;
 for (const key of ["TICKETCHILE_DB_POSTGRES_URL", "TICKETCHILE_DB_POSTGRES_URL_NON_POOLING", "POSTGRES_URL", "POSTGRES_URL_NON_POOLING", "POSTGRES_PRISMA_URL", "DATABASE_URL"]) env[key] = url;
-Object.assign(env, { DATABASE_SSL: "false", SECURITY_DATA_KEY: Buffer.alloc(32, 53).toString("base64"), NEXTAUTH_SECRET: "m10-local-only-synthetic-session-secret", NEXTAUTH_URL: "http://localhost:3005", NEXTAUTH_URL_INTERNAL: "http://localhost:3005", APP_BASE_URL: "http://localhost:3005", TICKETCHILE_QR_SECRET: "m10-local-only-synthetic-qr-secret-long-enough", STRIPE_SECRET_KEY: "sk_test_disabled_placeholder", RESEND_API_KEY: "re_disabled_placeholder" });
+Object.assign(env, { DATABASE_SSL: "false", APP_ENVIRONMENT: "development", WALLET_RESOURCE_ENVIRONMENT: "development", SECURITY_DATA_KEY: Buffer.alloc(32, 53).toString("base64"), NEXTAUTH_SECRET: "m10-local-only-synthetic-session-secret", NEXTAUTH_URL: "http://localhost:3005", NEXTAUTH_URL_INTERNAL: "http://localhost:3005", APP_BASE_URL: "http://localhost:3005", TICKETCHILE_QR_SECRET: "m10-local-only-synthetic-qr-secret-long-enough", STRIPE_SECRET_KEY: "sk_test_disabled_placeholder", RESEND_API_KEY: "re_disabled_placeholder" });
 const crypto = loadSource("lib/security/crypto.server.ts");
 const user = randomUUID();
 await db.pool.query("INSERT INTO usuarios(id,nombre,email,password_hash,email_verified_at) VALUES($1,'Persona de prueba','buyer@m10.test',$2,now())", [user, await crypto.hashPassword("M10-local-fixture-password!")]);

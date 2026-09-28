@@ -1,5 +1,6 @@
 // apps/web/src/lib/db.ts
 import { Pool, type PoolClient } from "pg";
+import { assertDatabaseEnvironment, isolationIssues, deploymentStage } from "../../environment-config.mjs";
 
 export const runtime = "nodejs";
 
@@ -32,6 +33,10 @@ function mustConnString() {
     );
   }
 
+  assertDatabaseEnvironment(cs);
+  if (deploymentStage() !== "development") {
+    if (new Set(candidates).size !== 1 || isolationIssues().length) throw new Error("Environment isolation configuration invalid");
+  }
   return cs;
 }
 
@@ -80,9 +85,8 @@ function envInt(name: string, def: number) {
 }
 
 export const pool: Pool = (() => {
-  if (global.__pgPool) return global.__pgPool;
-
   const raw = mustConnString();
+  if (global.__pgPool) return global.__pgPool;
   const connectionString = stripSslMode(raw);
 
   const useSSL = envBool("DATABASE_SSL", process.env.NODE_ENV === "production");
