@@ -1,0 +1,684 @@
+{
+  "states": [
+    {
+      "page": "overview",
+      "scroll": 375,
+      "width": 390,
+      "title": "Lo que necesita atención.",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizers",
+      "scroll": 375,
+      "width": 390,
+      "title": "Organizadores",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizer-detail",
+      "scroll": 375,
+      "width": 390,
+      "title": "Producciones de prueba",
+      "missingLabels": 0
+    },
+    {
+      "page": "events",
+      "scroll": 375,
+      "width": 390,
+      "title": "Eventos",
+      "missingLabels": 0
+    },
+    {
+      "page": "event-detail",
+      "scroll": 375,
+      "width": 390,
+      "title": "Ritual Nocturno",
+      "missingLabels": 0
+    },
+    {
+      "page": "orders",
+      "scroll": 375,
+      "width": 390,
+      "title": "Compradores y órdenes",
+      "missingLabels": 0
+    },
+    {
+      "page": "order-detail",
+      "scroll": 375,
+      "width": 390,
+      "title": "Compradores y órdenes",
+      "missingLabels": 0
+    },
+    {
+      "page": "payments",
+      "scroll": 375,
+      "width": 390,
+      "title": "Pagos",
+      "missingLabels": 0
+    },
+    {
+      "page": "payment-detail",
+      "scroll": 375,
+      "width": 390,
+      "title": "Pagos",
+      "missingLabels": 0
+    },
+    {
+      "page": "refund-detail",
+      "scroll": 375,
+      "width": 390,
+      "title": "Reembolsos",
+      "missingLabels": 0
+    },
+    {
+      "page": "settlement-detail",
+      "scroll": 375,
+      "width": 390,
+      "title": "Liquidaciones",
+      "missingLabels": 0
+    },
+    {
+      "page": "support-detail",
+      "scroll": 375,
+      "width": 390,
+      "title": "Revision operativa local",
+      "missingLabels": 0
+    },
+    {
+      "page": "commissions",
+      "scroll": 375,
+      "width": 390,
+      "title": "Comisiones",
+      "missingLabels": 0
+    },
+    {
+      "page": "reports",
+      "scroll": 375,
+      "width": 390,
+      "title": "Reportes",
+      "missingLabels": 0
+    },
+    {
+      "page": "audit",
+      "scroll": 375,
+      "width": 390,
+      "title": "Auditoría",
+      "missingLabels": 0
+    },
+    {
+      "page": "settings",
+      "scroll": 390,
+      "width": 390,
+      "title": "Configuración operativa",
+      "missingLabels": 0
+    },
+    {
+      "page": "commission-confirmation",
+      "scroll": 375,
+      "width": 390,
+      "title": "Comisiones",
+      "missingLabels": 0
+    },
+    {
+      "page": "moderation-confirmation",
+      "scroll": 375,
+      "width": 390,
+      "title": "Ritual Nocturno",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizer-confirmation",
+      "scroll": 375,
+      "width": 390,
+      "title": "Producciones de prueba",
+      "missingLabels": 0
+    },
+    {
+      "page": "overview",
+      "scroll": 430,
+      "width": 430,
+      "title": "Lo que necesita atención.",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizers",
+      "scroll": 415,
+      "width": 430,
+      "title": "Organizadores",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizer-detail",
+      "scroll": 415,
+      "width": 430,
+      "title": "Producciones de prueba",
+      "missingLabels": 0
+    },
+    {
+      "page": "events",
+      "scroll": 415,
+      "width": 430,
+      "title": "Eventos",
+      "missingLabels": 0
+    },
+    {
+      "page": "event-detail",
+      "scroll": 415,
+      "width": 430,
+      "title": "Ritual Nocturno",
+      "missingLabels": 0
+    },
+    {
+      "page": "orders",
+      "scroll": 415,
+      "width": 430,
+      "title": "Compradores y órdenes",
+      "missingLabels": 0
+    },
+    {
+      "page": "order-detail",
+      "scroll": 415,
+      "width": 430,
+      "title": "Compradores y órdenes",
+      "missingLabels": 0
+    },
+    {
+      "page": "payments",
+      "scroll": 415,
+      "width": 430,
+      "title": "Pagos",
+      "missingLabels": 0
+    },
+    {
+      "page": "payment-detail",
+      "scroll": 415,
+      "width": 430,
+      "title": "Pagos",
+      "missingLabels": 0
+    },
+    {
+      "page": "refund-detail",
+      "scroll": 415,
+      "width": 430,
+      "title": "Reembolsos",
+      "missingLabels": 0
+    },
+    {
+      "page": "settlement-detail",
+      "scroll": 415,
+      "width": 430,
+      "title": "Liquidaciones",
+      "missingLabels": 0
+    },
+    {
+      "page": "support-detail",
+      "scroll": 415,
+      "width": 430,
+      "title": "Revision operativa local",
+      "missingLabels": 0
+    },
+    {
+      "page": "commissions",
+      "scroll": 415,
+      "width": 430,
+      "title": "Comisiones",
+      "missingLabels": 0
+    },
+    {
+      "page": "reports",
+      "scroll": 415,
+      "width": 430,
+      "title": "Reportes",
+      "missingLabels": 0
+    },
+    {
+      "page": "audit",
+      "scroll": 415,
+      "width": 430,
+      "title": "Auditoría",
+      "missingLabels": 0
+    },
+    {
+      "page": "settings",
+      "scroll": 430,
+      "width": 430,
+      "title": "Configuración operativa",
+      "missingLabels": 0
+    },
+    {
+      "page": "commission-confirmation",
+      "scroll": 415,
+      "width": 430,
+      "title": "Comisiones",
+      "missingLabels": 0
+    },
+    {
+      "page": "moderation-confirmation",
+      "scroll": 415,
+      "width": 430,
+      "title": "Ritual Nocturno",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizer-confirmation",
+      "scroll": 415,
+      "width": 430,
+      "title": "Producciones de prueba",
+      "missingLabels": 0
+    },
+    {
+      "page": "overview",
+      "scroll": 768,
+      "width": 768,
+      "title": "Lo que necesita atención.",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizers",
+      "scroll": 768,
+      "width": 768,
+      "title": "Organizadores",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizer-detail",
+      "scroll": 753,
+      "width": 768,
+      "title": "Producciones de prueba",
+      "missingLabels": 0
+    },
+    {
+      "page": "events",
+      "scroll": 753,
+      "width": 768,
+      "title": "Eventos",
+      "missingLabels": 0
+    },
+    {
+      "page": "event-detail",
+      "scroll": 753,
+      "width": 768,
+      "title": "Ritual Nocturno",
+      "missingLabels": 0
+    },
+    {
+      "page": "orders",
+      "scroll": 768,
+      "width": 768,
+      "title": "Compradores y órdenes",
+      "missingLabels": 0
+    },
+    {
+      "page": "order-detail",
+      "scroll": 753,
+      "width": 768,
+      "title": "Compradores y órdenes",
+      "missingLabels": 0
+    },
+    {
+      "page": "payments",
+      "scroll": 768,
+      "width": 768,
+      "title": "Pagos",
+      "missingLabels": 0
+    },
+    {
+      "page": "payment-detail",
+      "scroll": 753,
+      "width": 768,
+      "title": "Pagos",
+      "missingLabels": 0
+    },
+    {
+      "page": "refund-detail",
+      "scroll": 753,
+      "width": 768,
+      "title": "Reembolsos",
+      "missingLabels": 0
+    },
+    {
+      "page": "settlement-detail",
+      "scroll": 753,
+      "width": 768,
+      "title": "Liquidaciones",
+      "missingLabels": 0
+    },
+    {
+      "page": "support-detail",
+      "scroll": 753,
+      "width": 768,
+      "title": "Revision operativa local",
+      "missingLabels": 0
+    },
+    {
+      "page": "commissions",
+      "scroll": 768,
+      "width": 768,
+      "title": "Comisiones",
+      "missingLabels": 0
+    },
+    {
+      "page": "reports",
+      "scroll": 768,
+      "width": 768,
+      "title": "Reportes",
+      "missingLabels": 0
+    },
+    {
+      "page": "audit",
+      "scroll": 753,
+      "width": 768,
+      "title": "Auditoría",
+      "missingLabels": 0
+    },
+    {
+      "page": "settings",
+      "scroll": 768,
+      "width": 768,
+      "title": "Configuración operativa",
+      "missingLabels": 0
+    },
+    {
+      "page": "commission-confirmation",
+      "scroll": 753,
+      "width": 768,
+      "title": "Comisiones",
+      "missingLabels": 0
+    },
+    {
+      "page": "moderation-confirmation",
+      "scroll": 753,
+      "width": 768,
+      "title": "Ritual Nocturno",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizer-confirmation",
+      "scroll": 753,
+      "width": 768,
+      "title": "Producciones de prueba",
+      "missingLabels": 0
+    },
+    {
+      "page": "overview",
+      "scroll": 1024,
+      "width": 1024,
+      "title": "Lo que necesita atención.",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizers",
+      "scroll": 1024,
+      "width": 1024,
+      "title": "Organizadores",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizer-detail",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Producciones de prueba",
+      "missingLabels": 0
+    },
+    {
+      "page": "events",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Eventos",
+      "missingLabels": 0
+    },
+    {
+      "page": "event-detail",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Ritual Nocturno",
+      "missingLabels": 0
+    },
+    {
+      "page": "orders",
+      "scroll": 1024,
+      "width": 1024,
+      "title": "Compradores y órdenes",
+      "missingLabels": 0
+    },
+    {
+      "page": "order-detail",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Compradores y órdenes",
+      "missingLabels": 0
+    },
+    {
+      "page": "payments",
+      "scroll": 1024,
+      "width": 1024,
+      "title": "Pagos",
+      "missingLabels": 0
+    },
+    {
+      "page": "payment-detail",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Pagos",
+      "missingLabels": 0
+    },
+    {
+      "page": "refund-detail",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Reembolsos",
+      "missingLabels": 0
+    },
+    {
+      "page": "settlement-detail",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Liquidaciones",
+      "missingLabels": 0
+    },
+    {
+      "page": "support-detail",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Revision operativa local",
+      "missingLabels": 0
+    },
+    {
+      "page": "commissions",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Comisiones",
+      "missingLabels": 0
+    },
+    {
+      "page": "reports",
+      "scroll": 1024,
+      "width": 1024,
+      "title": "Reportes",
+      "missingLabels": 0
+    },
+    {
+      "page": "audit",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Auditoría",
+      "missingLabels": 0
+    },
+    {
+      "page": "settings",
+      "scroll": 1024,
+      "width": 1024,
+      "title": "Configuración operativa",
+      "missingLabels": 0
+    },
+    {
+      "page": "commission-confirmation",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Comisiones",
+      "missingLabels": 0
+    },
+    {
+      "page": "moderation-confirmation",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Ritual Nocturno",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizer-confirmation",
+      "scroll": 1009,
+      "width": 1024,
+      "title": "Producciones de prueba",
+      "missingLabels": 0
+    },
+    {
+      "page": "overview",
+      "scroll": 1440,
+      "width": 1440,
+      "title": "Lo que necesita atención.",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizers",
+      "scroll": 1440,
+      "width": 1440,
+      "title": "Organizadores",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizer-detail",
+      "scroll": 1425,
+      "width": 1440,
+      "title": "Producciones de prueba",
+      "missingLabels": 0
+    },
+    {
+      "page": "events",
+      "scroll": 1425,
+      "width": 1440,
+      "title": "Eventos",
+      "missingLabels": 0
+    },
+    {
+      "page": "event-detail",
+      "scroll": 1425,
+      "width": 1440,
+      "title": "Ritual Nocturno",
+      "missingLabels": 0
+    },
+    {
+      "page": "orders",
+      "scroll": 1440,
+      "width": 1440,
+      "title": "Compradores y órdenes",
+      "missingLabels": 0
+    },
+    {
+      "page": "order-detail",
+      "scroll": 1425,
+      "width": 1440,
+      "title": "Compradores y órdenes",
+      "missingLabels": 0
+    },
+    {
+      "page": "payments",
+      "scroll": 1440,
+      "width": 1440,
+      "title": "Pagos",
+      "missingLabels": 0
+    },
+    {
+      "page": "payment-detail",
+      "scroll": 1425,
+      "width": 1440,
+      "title": "Pagos",
+      "missingLabels": 0
+    },
+    {
+      "page": "refund-detail",
+      "scroll": 1425,
+      "width": 1440,
+      "title": "Reembolsos",
+      "missingLabels": 0
+    },
+    {
+      "page": "settlement-detail",
+      "scroll": 1425,
+      "width": 1440,
+      "title": "Liquidaciones",
+      "missingLabels": 0
+    },
+    {
+      "page": "support-detail",
+      "scroll": 1425,
+      "width": 1440,
+      "title": "Revision operativa local",
+      "missingLabels": 0
+    },
+    {
+      "page": "commissions",
+      "scroll": 1440,
+      "width": 1440,
+      "title": "Comisiones",
+      "missingLabels": 0
+    },
+    {
+      "page": "reports",
+      "scroll": 1440,
+      "width": 1440,
+      "title": "Reportes",
+      "missingLabels": 0
+    },
+    {
+      "page": "audit",
+      "scroll": 1425,
+      "width": 1440,
+      "title": "Auditoría",
+      "missingLabels": 0
+    },
+    {
+      "page": "settings",
+      "scroll": 1440,
+      "width": 1440,
+      "title": "Configuración operativa",
+      "missingLabels": 0
+    },
+    {
+      "page": "commission-confirmation",
+      "scroll": 1425,
+      "width": 1440,
+      "title": "Comisiones",
+      "missingLabels": 0
+    },
+    {
+      "page": "moderation-confirmation",
+      "scroll": 1425,
+      "width": 1440,
+      "title": "Ritual Nocturno",
+      "missingLabels": 0
+    },
+    {
+      "page": "organizer-confirmation",
+      "scroll": 1425,
+      "width": 1440,
+      "title": "Producciones de prueba",
+      "missingLabels": 0
+    },
+    {
+      "page": "forbidden",
+      "scroll": 390,
+      "width": 390,
+      "title": "Acceso restringido",
+      "missingLabels": 0
+    },
+    {
+      "page": "empty",
+      "scroll": 375,
+      "width": 390,
+      "title": "Compradores y órdenes",
+      "missingLabels": 0
+    }
+  ],
+  "notes": "Final layout correction, native form validation and explicit permission/empty states. Read-only synthetic local data."
+}

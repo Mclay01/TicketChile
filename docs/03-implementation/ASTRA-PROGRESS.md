@@ -315,3 +315,35 @@ No deployment, production credentials/data, live merchant/model/mail/Wallet call
 ## Exact next milestone after M8
 
 **M9: Admin operations, finance/refunds/settlements and support.** Completion evidence: **authorized audited operations; no invented business policies**. Stop after the coherent M8 commit. M9 has not begun.
+
+
+## M9 complete - admin operations, finance, refunds, settlements and support (2026-09-28)
+
+Started from clean `astra/ticketchile-v2` at M8 commit `50af6da6bf97eab5870beb02f5d547228785f59f`. M1-M8 were confirmed complete and retained. This section supersedes the historical M8 next-step note above.
+
+Implemented the TicketChile 1D admin shell, real backlog dashboard, organizer business verification, shared-domain event moderation, exact buyer/order lookup, persisted payment evidence/exception review, local finalization retry, full-order Stripe refund lifecycle, immutable commission versions/purchase snapshots, settlement calculation/allocation/adjustments/approval and truthful external payout recording. Added private support cases/notes, durable authorized ticket resend, bounded scoped CSV, audit UI and operational configuration/status. Organizer finance exposes scoped settlement totals/history. Financial actions require current server capabilities/MFA, explicit reason/confirmation and durable idempotency; event moderation cannot be bypassed through owner publication or retired admin mutations.
+
+Refund execution remains explicitly disabled unless configured. Signature-verified Stripe refund events and authenticated API results bind the stored payment, intent, amount, currency and refund metadata. Uncertain execution blocks admission and does not claim success. Only confirmed completion cancels the mapped tickets. Settlement calculations preserve original commission and actual refunds, use explicit accounting adjustments, and require policy review before approval. No provider call occurs merely by opening an admin page; manual payout records do not initiate transfers. No admin AI monetary or permission mutation was added.
+
+New migration: `0009_admin_finance.sql`; 0001-0008 unchanged. Adds live admin capabilities, review/moderation state, immutable decision/financial evidence, refund mappings, settlement claims/lines/adjustments/payout evidence and private support records. No historical commission backfill or production migration occurred. The detailed adoption, finance/authorization limitations and policy decisions are documented in [FINANCE-OPERATIONS.md](FINANCE-OPERATIONS.md), PAYMENTS, AUTHORIZATION, EVENT-LIFECYCLE, EVENT-OPERATIONS, MIGRATION-PLAN and DESIGN-SYSTEM.
+
+| Gate | Final result |
+| --- | --- |
+| Full Node regression command | PASS: **328 tests**, zero failures/skips; **15 new M9 integration cases**, retained M1-M8 boundaries |
+| Disposable PostgreSQL 18.1 | PASS: refund/settlement replay and concurrency, immutable snapshots/history, live authorization, scanner effects, migration/checksum/rollback through 0009 |
+| `node node_modules/typescript/bin/tsc --noEmit --incremental false` | PASS; final production build also ran TypeScript |
+| `node scripts/lint-changed.mjs` | PASS: **35** changed/new source/test/QA files, zero errors/warnings |
+| `node scripts/verify-build.mjs` | PASS: optimized production build, TypeScript and page/route generation with scrubbed credentials and unreachable loopback DB |
+| `node scripts/m9-browser-qa.mjs` | PASS: **80** screen/viewport states and actual local support/refund-review/settlement/manual-payout/denial workflows |
+| `node scripts/m9-review-qa.mjs` | PASS: **97** final states, confirmation forms, required validation, denied/empty screens and corrected desktop layout at 390/430/768/1024/1440 |
+| Root Git whitespace check | PASS |
+
+[QA evidence](qa/m9/README.md) includes final mobile/desktop captures and machine-readable reports. Intermediate corrections: old admin tests needed new response/shell contracts; immutable-table assertions now match the actual append-only database error; the admin desktop layout initially duplicated an inherited gutter; final review added strict date validation and a refund-admission index. Final review also restricted organizer settlement history to the original tenant after an event reassignment; all 15 focused finance cases passed again, including that assertion. Final gates passed after these corrections. Whole-repository lint is not claimed clean; the historical baseline is 287 errors/35 warnings.
+
+Remaining production/policy limits: approved organizer verification evidence; commission base/payer/rounding, refund eligibility and refunded-commission treatment; processor/tax accounting; payout cadence/SLA and adjustment governance. Stripe full-order technical flow is tested with doubles, not live-certified; Webpay/Flow execution, partial/used-ticket/unissued-order refunds, out-of-band refunds/chargebacks, automatic payout, approved/paid reversal and post-allocation refunds require separate review. Historical missing-policy payments deliberately block settlement. Bounded 50-row lists/1000-payment settlement and CSV batches, the global inventory lock, grant provisioning, migrations/workers/delivery/provider/key/storage/retention rehearsal and formal accessibility/load/device certification remain explicit release constraints. Legacy submissions require current-format drafts before publication. No whole-platform production-readiness claim.
+
+No deployment, production credentials/data, real email, live merchant/model/Wallet call, main switch, merge or push. The local preview, QA Chrome and PostgreSQL are stopped at handoff; synthetic databases remain for inspection. One coherent M9 commit follows this completed record.
+
+## Exact next milestone after M9
+
+**M10: Complete states, accessibility, performance, cleanup and release documentation.** Completion evidence: **full gates and responsive end-to-end acceptance matrix**. M10 has not begun. Stop after the coherent M9 commit.

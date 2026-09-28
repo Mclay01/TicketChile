@@ -1,0 +1,9 @@
+import Link from 'next/link';
+import type {AdminRow,Section} from '@/lib/admin/queries.server';
+const labels:Record<string,string>={id:'Identificador',name:'Nombre',state:'Estado',created_at:'Creado',event_id:'Evento',organizer_id:'Organizador',order_id:'Orden',payment_id:'Pago',amount_clp:'Monto CLP',gross_clp:'Bruto CLP',refunds_clp:'Reembolsos CLP',commission_clp:'Comisión CLP',net_clp:'Saldo CLP',adjustments_clp:'Ajustes CLP',basis_points:'Tasa (puntos base)',fixed_clp:'Fijo por orden CLP',email_verified:'Correo verificado',active:'Activo',fulfillment_status:'Emisión',verified_at:'Verificado',policy_reference:'Política',moderation_block:'Bloqueo de moderación',previous_state:'Antes',new_state:'Después',reason:'Motivo',body:'Nota interna',actor_id:'Actor',reference:'Referencia externa',status:'Estado',buyer_email:'Correo del comprador',buyer_name:'Nombre del comprador',provider:'Proveedor',scope:'Alcance'};
+export const fieldLabel=(key:string)=>labels[key]||key.replaceAll('_',' ');
+export function RecordFields({row}:{row:AdminRow}){return <dl className="admin-details">{Object.entries(row).map(([key,value])=><div key={key}><dt>{fieldLabel(key)}</dt><dd>{value===null?'Pendiente / sin dato':typeof value==='boolean'?(value?'Sí':'No'):String(value)}</dd></div>)}</dl>;}
+export default function Records({rows,section}:{rows:AdminRow[];section?:Section}){
+ if(!rows.length)return <div className="notice"><strong>Sin registros para estos filtros.</strong><p>Prueba otro intervalo o identificador.</p></div>;
+ return <div className="admin-records">{rows.map((row,i)=><article className="admin-record" key={String(row.id||i)}><div className="row between"><strong>{String(row.name||row.id||row.action||row.payment_id||'Registro')}</strong>{section&&row.id&& !['audit','reports','commissions'].includes(section)&&<Link className="btn secondary" href={`/admin/${section}/${row.id}`}>Abrir</Link>}</div><RecordFields row={row}/></article>)}</div>;
+}

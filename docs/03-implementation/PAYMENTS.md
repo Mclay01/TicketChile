@@ -86,3 +86,12 @@ Before production rollout: catalog reconciliation and migration rehearsal; activ
 New holds additionally require a future event start and active, visible tiers inside their sales windows. Organizer saves/transitions share advisory lock 7319322, enforce summed event capacity and sold+held lower bounds, and never edit existing hold-item price snapshots. Current tier price changes after sales require explicit confirmation; financial summaries use historical paid evidence and prices.
 
 Pause blocks new holds/new payment attempts and public discovery; a previously persisted payment attempt may still finish against its unexpired reservation. Cancellation/end release active holds once. Cancellation invalidates unused tickets and records REVIEW_REQUIRED follow-up; used tickets, payment evidence and orders remain historical. Paid evidence arriving after release goes through the unchanged M4 PAID+REVIEW path and issues nothing. No remote charge cancellation, refund, settlement or automatic buyer communication is implied. [EVENT-LIFECYCLE.md](EVENT-LIFECYCLE.md) defines the owner confirmations and operational effects.
+
+
+## M9 refunds, commission and settlements (2026-09-28)
+
+The original M4 paid-evidence/finalization/worker model remains authoritative. Admin support can retry the same local finalizer or mark an unissued payment for review; page rendering does not call a provider. M9 adds full-issued-order Stripe refunds behind `STRIPE_REFUNDS_ENABLED`, explicit approval policy reference, durable request/provider keys, authoritative result binding and monotonic callback processing. PROCESSING/UNKNOWN blocks check-in; only confirmed success cancels mapped valid tickets. Webpay/Flow execution, partial/used-ticket refunds and automatic event-cancellation refunds are unavailable. No live certification occurred.
+
+New payment creation snapshots effective commission policy immutably; missing policy remains NULL and legacy values are not reconstructed from current rates. Settlement drafts allocate actual verified issued payments, subtract confirmed refunds and historical commission, and retain explicit adjustments. Accounting approval and external payout recording are separate states. Recording an external payout never sends money. Processor/tax/commission-refund policies and payout cadence remain unresolved, documented approval inputs.
+
+[FINANCE-OPERATIONS.md](FINANCE-OPERATIONS.md) is the detailed lifecycle, adapter, accounting and production runbook. M9 tests use disposable PostgreSQL and injected provider responses only.

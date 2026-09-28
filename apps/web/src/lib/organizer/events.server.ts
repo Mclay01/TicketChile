@@ -143,6 +143,15 @@ export async function transitionEvent(id:string,revision:unknown,target:unknown,
     const e=await readEvent(id,'event.edit',client,actor);
     // Publication and destructive lifecycle authority is intentionally owner-only.
     if(actor.kind!=='ORGANIZER'||actor.id!==e.organizer_id)fail('Solo el propietario puede cambiar el estado.','NOT_AUTHORIZED',403);
+    return transitionEventTx(client,actor,e,revision,target,confirmation);
+  });
+}
+export async function transitionEventTx(client:PoolClient,actor:Principal,e:EventRecord,revision:unknown,target:unknown,confirmation:unknown){
+    const id=e.id;
+    if(actor.kind!=='ADMIN'&&target==='PUBLISHED'){
+      const blocked=await client.query('SELECT moderation_block FROM events WHERE id=$1',[id]);
+      if(blocked.rows[0]?.moderation_block)fail('La moderaci\u00f3n requiere revisi\u00f3n administrativa.','MODERATION_REQUIRED',409);
+    }
     if(e.revision!==revision)fail('Recarga la versión actual.','REVISION_CONFLICT',409);
     if(typeof target!=='string'||!transitions[e.lifecycle].includes(target as Lifecycle))fail('Transición no permitida.');
     if(confirmation!==(target==='CANCELLED'?`CANCELAR ${id}`:target))fail('Confirma explícitamente la operación.');
@@ -157,5 +166,4 @@ export async function transitionEvent(id:string,revision:unknown,target:unknown,
       cancellation_followup=CASE WHEN $2='CANCELLED' THEN 'REVIEW_REQUIRED' ELSE cancellation_followup END WHERE id=$1`,[id,target]);
     await audit(client,{actor,organizerId:e.organizer_id,eventId:id,action:`event.${target.toLowerCase()}`,targetType:'event',targetId:id,metadata:{outcome:target}});
     return {revision:e.revision+1,lifecycle:target};
-  });
 }

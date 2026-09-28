@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       const changed = await client.query<CheckinRow>(
       `UPDATE tickets t SET status='USED', used_at=NOW()
        WHERE t.id=$1 AND t.event_id=$2 AND t.status='VALID'
+         AND NOT EXISTS(SELECT 1 FROM refunds r WHERE r.order_id=t.order_id AND r.status IN ('PROCESSING','UNKNOWN','COMPLETED'))
          AND security_can_event($3,$4,$5,t.event_id,'scanner.checkin')
          AND EXISTS(SELECT 1 FROM events e WHERE e.id=t.event_id AND e.lifecycle NOT IN ('CANCELLED','ENDED'))
          AND NOT EXISTS(SELECT 1 FROM event_access_config ac WHERE ac.event_id=t.event_id AND (NOT ac.enabled OR ac.starts_at>now() OR (cardinality(ac.gates)>0 AND NOT $6=ANY(ac.gates))))

@@ -136,3 +136,14 @@ The organizer operations endpoint dispatches bounded, same-origin requests to se
 Scanner selection/config/lookup/stats/history are event-scoped. Exact manual lookup returns no buyer PII. Canonical and demo check-in aliases use the same signed-QR/explicit-manual guards and atomic scoped mutation, additionally enforcing configured start, enabled state and gate. Gate/device strings are metadata, not identity. Successful check-in history is unique and append-only. Terminal/cancelled/used tickets cannot be accepted again. No check-in reversal or offline authority exists.
 
 All HTTP CSV aliases stream bounded pages with repeated export scope and formula escaping. Finance values/filtering need finance.read independently of attendee.read. Re-send cannot redirect to arbitrary recipients. IDs, role labels, gate codes, QR signatures and client discount amounts do not replace authorization. Remaining transfer/re-keying, runtime grants, worker/provider/storage and release limitations are unchanged; M9 financial/admin policies remain pending.
+
+
+## M9 admin operations (2026-09-28)
+
+`security_can_admin` and `requireAdminCapability` enforce current persisted ADMIN/SUPERADMIN identity, version, active/disabled state, enabled MFA and explicit capabilities. Default ADMIN permissions cover operations read, moderation, support, audit and reports; financial detail/refund/settlement/configuration permissions require SUPERADMIN or an explicit persisted grant. Every M9 mutation rechecks after the shared inventory lock, requires an exact action/target confirmation, reason and actor-bound durable request key, and writes immutable decision/audit history. Session/cookie data and entity IDs alone never authorize operations.
+
+Legacy admin list/detail aliases use bounded canonical readers. The old organizer approval mutation joins retired event mutations as guarded 410. Platform moderation blocks owner republication until cleared. Refund PROCESSING/UNKNOWN/COMPLETED orders are excluded in the canonical scanner write predicate; completed refunds invalidate only the bound order tickets. Organizer settlement reads repeat `finance.read` and event/tenant scope in SQL. Support notes remain admin-only. Admin AI has no financial or authorization mutation capability.
+
+The existing M3 identity administration endpoint and last-superadmin safeguards remain separate. Fine-grained grant provisioning is a controlled server/database operation, not a self-service browser setting. See [Finance operations](FINANCE-OPERATIONS.md) for capability model, audit boundaries and provider limitations.
+
+An event reassignment does not expose its previous organizer's settlement: organizer reads require both current event authority and a matching snapshot organizer ID. A PostgreSQL regression explicitly exercises this case.

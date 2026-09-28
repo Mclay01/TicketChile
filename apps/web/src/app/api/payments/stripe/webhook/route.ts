@@ -1,4 +1,5 @@
 import type Stripe from 'stripe';
+import {applyStripeRefund} from '@/lib/payments/refunds.server';
 import { stripe } from '@/lib/stripe.server';
 import { pool } from '@/lib/db';
 import { AccessError, accessResponse, privateJson } from '@/lib/access.server';
@@ -13,6 +14,11 @@ export async function POST(req: Request) {
   let event: Stripe.Event;
   try {event=stripe.webhooks.constructEvent(await req.text(),req.headers.get('stripe-signature')||'',process.env.STRIPE_WEBHOOK_SECRET);}
   catch {throw new AccessError(400,'INVALID_SIGNATURE','Firma invalida.');}
+  if(['refund.created','refund.updated','refund.failed'].includes(event.type)){
+   if(event.livemode!==!!process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_'))throw new AccessError(400,'INVALID_MODE','Modo incompatible.');
+   await applyStripeRefund(event.data.object as Stripe.Refund,'WEBHOOK');
+   return privateJson(200,{received:true});
+  }
   if(!['checkout.session.completed','checkout.session.async_payment_succeeded','checkout.session.async_payment_failed','checkout.session.expired'].includes(event.type)) return privateJson(200,{received:true});
   const session=event.data.object as Stripe.Checkout.Session;
   const payment=(await pool.query<Payment>("SELECT * FROM payments WHERE provider='stripe' AND provider_ref=$1",[session.id])).rows[0];

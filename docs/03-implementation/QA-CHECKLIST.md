@@ -191,3 +191,23 @@ Whole-repository lint remains unclaimed; historical legacy debt persists. No dep
 - [ ] M9: Admin operations, finance/refunds/settlements and support; authorized audited operations, no invented business policies.
 
 Whole-repository lint remains unclaimed (historical 287 errors/35 warnings). No deployment, production access, real emails or live provider calls occurred.
+
+
+## M9 acceptance - completed locally, 2026-09-28
+
+- [x] Current persisted admin role/version/active/MFA/capability policy on admin pages, services and mutations; reason, confirmation, audit and durable request keys.
+- [x] Real operational dashboard, organizer verification and shared-domain event moderation; administrative pause blocks owner republication; legacy approval paths cannot bypass review.
+- [x] Exact progressive buyer/order support, payment evidence/exception views, local idempotent finalization retry, private support case/note lifecycle and durable ticket resend.
+- [x] Full-issued-order Stripe refund technical flow with authoritative result binding, signature/mode webhook validation, replay/window limits and UNKNOWN admission blocking; no browser-result trust or unrelated ticket cancellation.
+- [x] No hardcoded default commission; future effective global/organizer/event versions and immutable purchase snapshots; missing historical policy blocks accounting.
+- [x] Deterministic settlement snapshots, single payment allocation, immutable signed adjustments, explicit approval and amount/reference-verified external payout recording; scoped organizer finance view.
+- [x] Bounded scoped reporting and formula-safe CSV; private audit UI; no admin AI monetary or permission action path.
+- [x] Additive migration 0009, unchanged 0001-0008, local idempotency/checksum/rollback and financial concurrency coverage.
+- [x] **328 tests**, including **15 M9 integration cases**; final TypeScript, **35-file scoped lint**, optimized production build and root whitespace gate.
+- [x] **80** browser workflow/layout states plus **97** final layout/confirmation/denied/empty states at **390/430/768/1024/1440**; selected captures visually inspected. [Evidence](qa/m9/README.md).
+- [x] Progress, finance, payment, authorization, lifecycle, operations, design and migration documentation updated.
+- [ ] Live test-merchant/provider/webhook certification, production schema/grants/worker/key/delivery rehearsal and formal accessibility/device/load testing remain release gates.
+- [ ] Business policies for verification evidence, commission/refund treatment, taxes/processor fees, settlement timing and adjustment governance require approval; unsupported partial/used-ticket/post-allocation refunds and automatic bank transfer are not presented as complete capabilities.
+- [ ] **Next: M10 - Complete states, accessibility, performance, cleanup and release documentation.** Not started.
+
+No production access or deployment occurred. Whole-repository lint remains unclaimed (historical 287 errors/35 warnings).

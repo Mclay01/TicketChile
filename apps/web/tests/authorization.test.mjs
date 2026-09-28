@@ -38,7 +38,7 @@ for (const [route, method] of protectedRoutes) {
       });
       const response = await handler[method](new Request("https://ticketchile.test/api/" + route, { method }), { params: Promise.resolve({ id: "event-b" }) });
       assert.equal(response.status, 401);
-      assert.equal(response.headers.get("cache-control"), "no-store");
+      assert.match(response.headers.get("cache-control"), /no-store/);
     });
   }
 }
@@ -47,7 +47,7 @@ test("valid persisted admin can read; legacy publication is retired; browser cro
   const writes = [];
   const overrides = {
     "next/headers": cookieJar(validSession),
-    "@/lib/db": { pool: { query: async () => ({ rows: [activeAdmin] }) } },
+    "@/lib/db": { pool: { query: async sql => ({ rows: (sql.includes('FROM identity_sessions')||sql.includes('FROM identity_principals'))?[activeAdmin]:sql.includes(' AS allowed')?[{allowed:true}]:[{id:'event-a'}] }) } },
     "@/lib/events.admin.server": {
       adminListEventsDb: async () => [{ id: "event-a" }],
       adminSetPublishedDb: async (...args) => writes.push(args),
@@ -56,7 +56,7 @@ test("valid persisted admin can read; legacy publication is retired; browser cro
   const list = loadSource("app/api/admin/events/route.ts", overrides);
   const response = await list.GET(new Request("https://ticketchile.test/api/admin/events"));
   assert.equal(response.status, 200);
-  assert.equal((await response.json()).events[0].id, "event-a");
+  assert.equal((await response.json()).rows[0].id, "event-a");
   const publish = loadSource("app/api/admin/events/[id]/publish/route.ts", overrides);
   const ctx = { params: Promise.resolve({ id: "event-a" }) };
   const request = origin => new Request("https://ticketchile.test/api/admin/events/event-a/publish", { method: "POST", headers: { origin } });
@@ -86,11 +86,15 @@ test("legacy submission approval is retired and never issues an event", async ()
 test("admin panel layout rejects a forged cookie and keeps valid session access", async () => {
   for (const authorized of [false, true]) {
     const layout = loadSource("app/(admin)/admin/(panel)/layout.tsx", {
+      "@/app/organizer.css":{},"@/app/admin.css":{},
       "next/headers": cookieJar(validSession),
       "next/navigation": { redirect: path => { throw new Error(`redirect:${path}`); } },
-      "@/lib/db": { pool: { query: async () => ({ rows: authorized ? [activeAdmin] : [] }) } },
+      "@/lib/db": { pool: { query: async sql => ({ rows: !authorized?[]:(sql.includes('FROM identity_sessions')||sql.includes('FROM identity_principals'))?[activeAdmin]:sql.includes(' AS allowed')?[{allowed:true}]:[{c:'operations.read'}] }) } },
     });
-    if (authorized) assert.equal(await layout.default({ children: "protected content" }), "protected content");
+    if (authorized) {
+      const contains=node=>node==='protected content'||(Array.isArray(node)?node.some(contains):node&&typeof node==='object'&&contains(node.props?.children));
+      assert.ok(contains(await layout.default({ children: "protected content" })));
+    }
     else await assert.rejects(layout.default({ children: "protected content" }), /redirect:\/admin\/login/);
   }
 });

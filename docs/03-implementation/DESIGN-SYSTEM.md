@@ -92,3 +92,10 @@ Staff assignments, attendee filters/details, courtesy confirmation/history, prom
 The scanner keeps event context and connectivity visible, uses large result/next-entry controls with success/error surfaces, and separates exact manual fallback from camera capture. Permission, no-camera, ready/paused and connectivity states are explicit. Result headings receive focus, camera tracks stop on exit, stopped-session callbacks are ignored, and duplicate detections are throttled. Door history contains tier/time/gate/device without buyer PII.
 
 Responsive evidence is recorded in [qa/m8](qa/m8/README.md). Browser QA uses real ZXing QR decoding of synthetic camera frames and real local check-in requests; denied/missing-camera states are injected in the harness. This is not physical-camera, Safari/Firefox or formal accessibility/load certification.
+
+
+## M9 admin operational application
+
+The admin surface reuses TicketChile 1D dark surfaces, typography, red accent, borders, focus treatment and organizer shell primitives. It adds a persistent 248px desktop navigation, visible identity/role/MFA, responsive section navigation below 1024px, dense labeled record grids and progressive detail. It does not introduce an unrelated template or redesign public/organizer pages. Financial values, state and evidence are shown before confirmed actions; unknown policy is explicit and external payout recording is labeled as such.
+
+Lists have filters, bounded pagination and empty states. Native labeled forms require reason and exact action/target confirmation, show pending/result/error messages and preserve request keys for idempotent retries. Dedicated loading/error/access-denied states avoid displaying secrets or mistaking a failed read for a successful operation. Local QA covers 390/430/768/1024/1440; evidence is in [qa/m9](qa/m9/README.md). Formal assistive-technology and cross-browser certification remains a release gate.

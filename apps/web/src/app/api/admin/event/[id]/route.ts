@@ -1,16 +1,4 @@
-// apps/web/src/app/api/admin/event/[id]/route.ts
-import { NextResponse, type NextRequest } from "next/server";
-import { adminGetEventDb } from "@/lib/events.admin.server";
-import { requireAdmin } from "@/lib/admin-guard.server";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const gate = await requireAdmin(req);
-  if (!gate.ok) return gate.response;
-  const { id } = await ctx.params;
-  const event = await adminGetEventDb(String(id));
-  if (!event) return NextResponse.json({ ok: false, error: "No existe." }, { status: 404 });
-  return NextResponse.json({ ok: true, event });
-}
+import {adminDetail} from '@/lib/admin/queries.server';
+import {accessResponse,privateJson} from '@/lib/access.server';
+export const dynamic='force-dynamic';
+export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){try{const {id}=await params;return privateJson(200,{ok:true,...await adminDetail('events',id)});}catch(e){return accessResponse(e);}}

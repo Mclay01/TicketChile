@@ -1,30 +1,4 @@
-// apps/web/src/app/api/admin/organizers/route.ts
-import { NextResponse, type NextRequest } from "next/server";
-import { pool } from "@/lib/db";
-import { requireAdmin } from "@/lib/admin-guard.server";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-export async function GET(req: NextRequest) {
-  const gate = await requireAdmin(req);
-  if (!gate.ok) return gate.response;
-  const url = new URL(req.url);
-  const status = url.searchParams.get("status"); // pending | approved
-
-  const where =
-    status === "approved"
-      ? "WHERE approved = true"
-      : "WHERE verified = true AND approved = false";
-
-  const r = await pool.query(
-    `
-    SELECT id, username, display_name, email, phone, verified, approved, created_at
-    FROM organizer_users
-    ${where}
-    ORDER BY created_at DESC
-    `
-  );
-
-  return NextResponse.json({ ok: true, organizers: r.rows ?? [] });
-}
+import {adminList} from '@/lib/admin/queries.server';
+import {accessResponse,privateJson} from '@/lib/access.server';
+export const dynamic='force-dynamic';
+export async function GET(req:Request){try{return privateJson(200,{ok:true,...await adminList('organizers',Object.fromEntries(new URL(req.url).searchParams))});}catch(e){return accessResponse(e);}}

@@ -1,4 +1,5 @@
 import 'server-only';
+import type {PoolClient} from 'pg';
 import { randomUUID } from 'node:crypto';
 import { withTx } from '@/lib/db';
 import { AccessError } from '@/lib/access.server';
@@ -35,7 +36,9 @@ export async function recordVerifiedPayment(evidence: VerifiedPayment) {
 }
 /** Sole paid-ticket issuer. Retry after an interrupted transaction is safe. */
 export async function finalizePayment(paymentId: string) {
-  return withTx(async client => {
+  return withTx(client=>finalizePaymentTx(client,paymentId));
+}
+export async function finalizePaymentTx(client:PoolClient,paymentId:string){
     await lockInventory(client);
     const p = (await client.query<Payment>('SELECT * FROM payments WHERE id=$1 FOR UPDATE',[paymentId])).rows[0];
     if (!p || p.status !== 'PAID' || !p.verified_at) throw new AccessError(409,'UNVERIFIED_PAYMENT','Pago sin verificar.');
@@ -73,5 +76,4 @@ export async function finalizePayment(paymentId: string) {
     await client.query("UPDATE payments SET order_id=$2,fulfillment_status='ISSUED',updated_at=NOW() WHERE id=$1",[p.id,orderId]);
     await audit(client,{actor,action:'payment.finalized',targetType:'payment',targetId:p.id,eventId:p.event_id,metadata:{provider:p.provider,outcome:'ISSUED'}});
     return {orderId,status:'ISSUED' as const};
-  });
 }

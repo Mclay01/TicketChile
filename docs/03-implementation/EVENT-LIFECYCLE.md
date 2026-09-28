@@ -80,3 +80,8 @@ See [EVENT-OPERATIONS.md](EVENT-OPERATIONS.md). Published/paused future events c
 Promotions reserve one usage with an ACTIVE unexpired checkout hold and consume it with successful M4 issuance. Original/final unit prices are immutable snapshots; existing reservations survive promotion deactivation or window expiry. Expiry/release restores available usage without deleting history; cancellation/refund does not automatically restore consumed usage. Terms are immutable and replaced with a new code when necessary.
 
 Check-in remains atomic VALID to USED. Access can be disabled, start-time restricted or limited to configured gate labels by an authorized editor; ENDED/CANCELLED lifecycle still blocks new entry. Recent records capture actor/method/gate/device. No reversal, refunded/transfer ticket state or offline check-in is simulated. Actual ticket statuses remain VALID/USED/CANCELLED, and prior transfer/QR revocation limitations remain explicit.
+
+
+## M9 platform moderation
+
+Admin moderation calls the shared `transitionEventTx` lifecycle boundary with a live capability, revision, explicit confirmation and reason. Existing checklist, terminal hold release, cancellation ticket invalidation and follow-up rules remain unchanged. Administrative pause or changes request sets `moderation_block`; owner publication checks it server-side. Admin approval clears it transactionally only when the organizer is eligible and publication validation succeeds. Organizer business verification remains independent from email verification. Legacy submissions are reviewed as retained records; no direct legacy payload publication or automatic conversion occurs. See [Finance operations](FINANCE-OPERATIONS.md).
