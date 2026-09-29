@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
+import {useRouter} from 'next/navigation';
 import {Button,Field,Notice} from '@/components/tc/ui';
 import {emptyDraft,type Draft} from '@/lib/organizer/model';
 import type {Event} from '@/lib/events';
@@ -9,6 +10,7 @@ import Preview from '@/components/organizer/Preview';
 import DraftFields from './DraftFields';
 
 export default function Simulator({status}:{status:ProviderStatus}){
+ const router=useRouter();
  const [prompt,setPrompt]=useState(''),[draft,setDraft]=useState<Draft|null>(null),[proposal,setProposal]=useState<Proposal|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState(false),[saved,setSaved]=useState(false),[confirmed,setConfirmed]=useState(false),[organizations,setOrganizations]=useState<{id:string;name:string}[]>([]),[organization,setOrganization]=useState(''),[tab,setTab]=useState('edit');
  const heading=useRef<HTMLHeadingElement>(null);
  useEffect(()=>{let live=true;fetch('/api/ai/simulator').then(r=>r.json()).then(d=>{if(!live)return;if(d.draft){setDraft(d.draft.draft);setProposal(d.draft.proposal);setSaved(true);setMessage('Borrador recuperado en este navegador. Revisa tus cambios antes de continuar.');}setOrganizations(d.organizations||[]);setOrganization(d.organizations?.[0]?.id||'');}).catch(()=>{if(live)setMessage('No pudimos recuperar el borrador. Intenta recargar.');});return()=>{live=false;};},[]);
@@ -18,7 +20,7 @@ export default function Simulator({status}:{status:ProviderStatus}){
   try{
    if(action==='generate'){const d=await request({action,prompt,requestId:crypto.randomUUID()});setDraft(d.draft);setProposal(d.proposal);setSaved(true);setConfirmed(false);setMessage('Propuesta validada y conservada. Todos los campos son sugerencias por revisar.');setTimeout(()=>heading.current?.focus(),0);}
    if(action==='save'){await request({action,draft});setSaved(true);setMessage('Borrador conservado durante 7 días desde su creación, en este navegador. Puedes crear tu cuenta o iniciar sesión.');}
-   if(action==='claim'){await request({action:'save',draft});const d=await request({action,organizerId:organization,confirmed});window.location.assign(`/organizador/eventos/${d.id}?section=editor`);}
+   if(action==='claim'){await request({action:'save',draft});const d=await request({action,organizerId:organization,confirmed});router.push(`/organizador/eventos/${encodeURIComponent(d.id)}?section=editor`);}
   }catch(e){setError(true);setMessage(e instanceof Error?e.message:'No hay conexión. Tu texto y cambios se conservan en esta pantalla.');}finally{setBusy(false);}
  }
  const preview:Event|null=draft?{id:'simulator',slug:'simulator',title:draft.title||'Nombre por confirmar',description:draft.description||'Descripción por confirmar',city:draft.city||'Ciudad por confirmar',venue:draft.venue||'Recinto por confirmar',dateISO:draft.date_iso||'',endISO:draft.end_at||undefined,timezone:draft.timezone,address:draft.address,agePolicy:draft.age_policy,accessInfo:draft.access_info,faq:draft.faq,image:'',organizerName:'Tu organización',categoryName:draft.category_slug,ticketTypes:draft.tiers.map(t=>({id:t.id,name:t.name||'Entrada por confirmar',priceCLP:t.price_clp,capacity:t.capacity,maxPerOrder:t.max_per_order}))}:null;

@@ -1,0 +1,34 @@
+{
+  "baselineCommit": "ab2ac4e3605b7422927173c7126f3a530a8799f4",
+  "branch": "astra/ticketchile-v2",
+  "compiledBuildId": "iA6L-YitZgj97sxIuXbCZ",
+  "browser": "Chrome/153.0.8010.54",
+  "viewportWidths": [
+    390,
+    1440
+  ],
+  "physicalDevicesTested": 0,
+  "externalProviderCalls": 0,
+  "sources": {
+    "package": {
+      "path": "apps/web/package.json",
+      "sha256": "34c9ae42365c7e23399a499f4592c4a8e3a42af5a6b41fc90605a5b282e6e1b5"
+    },
+    "lockfile": {
+      "path": "apps/web/pnpm-lock.yaml",
+      "sha256": "63e57db7d0e3ec6de6be37f955198fd2bf309ecf08c0af072bb8b07fab19dedd"
+    },
+    "checkout": {
+      "path": "apps/web/src/components/CheckoutBuyerForm.tsx",
+      "sha256": "ff12166b16ab652589bf53275f80cbc72d6e79ddcf2f4dc95da48d8c4dd67821"
+    },
+    "simulator": {
+      "path": "apps/web/src/components/ai/Simulator.tsx",
+      "sha256": "834d894831449b36af7cc29cc0b137fdb328f6a022e0ae20738a6c94e2c216a9"
+    },
+    "browserHarness": {
+      "path": "apps/web/scripts/m10-browser-qa.mjs",
+      "sha256": "f3bcb868aeccb6fbbd44329d3d6d1e89cc1d9c50f3f974540a7458cb61e24de7"
+    }
+  }
+}

@@ -1,5 +1,13 @@
 # M13 isolated staging and operational rehearsal
 
+M14 continuation: [M14-CERTIFICATION](M14-CERTIFICATION.md) records exact missing
+resource access and secure configuration actions; [STAGING-ACCEPTANCE](STAGING-ACCEPTANCE.md)
+records blocked hosted workflows. No hosted execution is newly claimed. Install from
+the patched `apps/web/pnpm-lock.yaml`, not the orphan root legacy lock; see
+[DEPENDENCY-SECURITY](DEPENDENCY-SECURITY.md). Worker packaging/scheduler selection is
+still required. Apply [BUSINESS-SIGNOFF](BUSINESS-SIGNOFF.md) values only after actual
+human approval and record real devices in [PHYSICAL-DEVICE-QA](PHYSICAL-DEVICE-QA.md).
+
 This authorizes neither production deployment nor a switch of the Vercel Production
 Branch. Work from `astra/ticketchile-v2`. Real hosted staging was **not created** in M13:
 the repository has no Vercel link and no explicitly identified staging account/resources.

@@ -1,6 +1,6 @@
 # TicketChile QA gates
 
-Current release status (M13): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
+Current release status (M14): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M14-CERTIFICATION.md](M14-CERTIFICATION.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
 
 Record executed results in ASTRA-PROGRESS.md. Unchecked items are not accepted as complete.
 
@@ -294,3 +294,29 @@ Recommended only: **M13 — Staging provider certification and operational relea
 Evidence and qualifications: [qa/m13](qa/m13/README.md),
 [PROVIDER-CERTIFICATION.md](PROVIDER-CERTIFICATION.md),
 [STAGING-RUNBOOK.md](STAGING-RUNBOOK.md), [PRODUCTION-CUTOVER.md](PRODUCTION-CUTOVER.md).
+# M14 external acceptance and dependency review
+
+Current M14 evidence: [qa/m14](qa/m14/README.md). Required hosted and physical workflow
+results are separated in [STAGING-ACCEPTANCE](STAGING-ACCEPTANCE.md) and
+[PHYSICAL-DEVICE-QA](PHYSICAL-DEVICE-QA.md). No actual hosted/provider/device result
+has been certified. [M14-CERTIFICATION](M14-CERTIFICATION.md) lists exact external
+actions and secure variable locations; [BUSINESS-SIGNOFF](BUSINESS-SIGNOFF.md) records
+all unsupplied policy/legal/retention/launch decisions as PENDING.
+
+- [x] Confirm clean M13 baseline and preserve M1-M13; no schema reimplementation.
+- [x] Run registry audit and inspect reachable dependency paths; patch Next/Auth.js/
+  Sharp/compatible transport/build dependencies. One moderate UUID advisory remains;
+  no high/critical findings in final application-lock audit. Not a clean audit claim.
+- [x] Full401 local tests after final dependency pins, including PostgreSQL integration/
+  concurrency, migrations and provider/authorization/media contracts; no skipped cases.
+- [x] Repeat type/lint/build/browser gates as justified by runtime changes; see final
+  result record for actual browser scope and failures corrected during verification.
+- [x] Prepare [manual security scope](SECURITY-REVIEW-SCOPE.md); no penetration-test claim.
+- [ ] Identify authorized existing Vercel project, dedicated managed DB and restore target.
+- [ ] Certify real sandboxes/mail/OpenAI/S3/Wallet and actual HTTPS/cookies/CSP/callbacks.
+- [ ] Package/install private staging workers, scheduler, sanitized logs/alerts and recovery.
+- [ ] Test actual phones/cameras/Wallet and available screen reader; measure rapid scans.
+- [ ] Obtain business/legal/retention and optional launch-feature decisions.
+- [ ] Separate production certification/cutover approval; M14 makes no production change.
+
+M13 restore/load/browser evidence above remains historical. No M15 was created.

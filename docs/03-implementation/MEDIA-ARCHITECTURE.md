@@ -209,3 +209,14 @@ scheduling separately during an incident; a call already executing may finish.
 is the trusted bounded/session-locked wrapper, not an HTTP scheduler. Provider/IAM/
 versioned deletion/cache/CSP/backup validation and installation remain pending; follow
 [PROVIDER-CERTIFICATION.md](PROVIDER-CERTIFICATION.md) and [STAGING-RUNBOOK.md](STAGING-RUNBOOK.md).
+
+## M14 decoder security update
+
+Sharp is pinned to0.35.4 to incorporate upstream libvips/libheif security fixes;
+see [DEPENDENCY-SECURITY](DEPENDENCY-SECURITY.md). Existing READY objects/references
+are not rewritten. Regenerate with a new upload idempotency key if normalized bytes
+change across decoder versions; never overwrite immutable variant bytes to force an
+old pending intent to match. Real provider acceptance must include pending-intent and
+legacy-adoption recovery across the deployed decoder version. No managed object or
+production data was touched; local normalization/lifecycle tests and browser uploads
+are separate from staging IAM/cache/restore certification.

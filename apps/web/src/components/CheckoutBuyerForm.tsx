@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import type { Event } from "@/lib/events";
 import { formatCLP } from "@/lib/events";
@@ -205,6 +205,7 @@ function parseCartParam(s: string) {
 ----------------------------- */
 
 export default function CheckoutBuyerForm({ event, methods }: { event: Event; methods: PayMethod[] }) {
+  const router = useRouter();
   const [promotionCode,setPromotionCode]=useState(''),[quote,setQuote]=useState<{signature:string;discount:number;fee:number;total:number}|null>(null),[quoting,setQuoting]=useState(false),[quoteError,setQuoteError]=useState('');
   const attempt = useRef<{payload:string;key:string} | null>(null);
   const sp = useSearchParams();
@@ -368,7 +369,7 @@ export default function CheckoutBuyerForm({ event, methods }: { event: Event; me
       });
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data?.error === 'string' ? data.error : data?.error?.message || 'No se pudo iniciar el pago.');
-      if (data.status === 'PAID') {window.location.href=`/checkout/confirm?payment_id=${encodeURIComponent(data.paymentId)}`;return;}
+      if (data.status === 'PAID') {router.push(`/checkout/confirm?payment_id=${encodeURIComponent(data.paymentId)}`);return;}
       if (payMethod === 'webpay') submitWebpayForm(data.webpay.url,data.webpay.token);
       else if (data.checkoutUrl) window.location.href=data.checkoutUrl;
       else throw new Error('Pago pendiente de revision.');

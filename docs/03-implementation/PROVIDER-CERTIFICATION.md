@@ -1,4 +1,18 @@
-# M13 provider certification record
+# Provider certification record - M14
+
+## M14 current state
+
+No dedicated external account/resources or physical devices were supplied. Every real
+provider remains **NOT CONFIGURED / BLOCKED BY USER ACTION / PRODUCTION CERTIFICATION
+STILL REQUIRED**; no row below is upgraded from local contracts to sandbox-certified.
+No hosted deployment, real payment/mail/AI/storage/Wallet call or DNS change occurred.
+Exact secure variable names, account actions and resume steps are in
+[M14-CERTIFICATION](M14-CERTIFICATION.md). Actual workflow status is in
+[STAGING-ACCEPTANCE](STAGING-ACCEPTANCE.md); devices and launch decisions are tracked in
+[PHYSICAL-DEVICE-QA](PHYSICAL-DEVICE-QA.md) and [BUSINESS-SIGNOFF](BUSINESS-SIGNOFF.md).
+M14 patched vulnerable application dependencies; [DEPENDENCY-SECURITY](DEPENDENCY-SECURITY.md)
+records one remaining moderate transitive advisory and its inspected reachability.
+The detailed M13 procedures and local matrix below remain applicable and historical.
 
 Date: 2026-09-28. Branch: `astra/ticketchile-v2`. Starting release: M12
 `7f34bf0aa3c2e1af6ec9447ee15315a42b24e46d`. This is the authoritative current matrix;

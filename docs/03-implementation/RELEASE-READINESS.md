@@ -1,6 +1,35 @@
-# TicketChile release readiness - M13
+# TicketChile release readiness - M14
 
-**Release decision: BLOCKED for production.** M1-M12 are complete; M13 prepares isolated staging and records local operational evidence. Real provider, hosted HTTPS, physical-device and business/release approvals remain pending. No production deployment or data access occurred.
+**Release decision: BLOCKED for production.** M1-M13 are complete and preserved.
+M14 performs the achievable dependency review/hardening and acceptance preparation;
+external certification and human sign-off remain blocked by identified missing inputs.
+No production deployment, credential/customer data access, money movement, DNS/domain/
+Production Branch change, merge or push occurred.
+
+## M14 current release decision
+
+| Classification | Evidence / remaining gate |
+|---|---|
+| TECHNICALLY VERIFIED | Local regression/build evidence in [qa/m14](qa/m14/README.md), security dependency fixes and M13 retained restore/load evidence. One moderate transitive advisory remains; not a clean audit or penetration certification |
+| STAGING VERIFIED | None; existing Vercel team/project, dedicated DB and external resource access not established |
+| PHYSICAL DEVICE VERIFIED | None; no identified real phone/camera/Wallet/screen-reader test |
+| EXTERNAL CERTIFICATION PENDING | Hosted HTTPS/cookies/CSP, actual DB migration/grants/managed restore, enabled payment/mail/AI/media/Wallet providers, worker packaging/schedules/logs/alerts and provider failures/recovery |
+| BUSINESS SIGN-OFF PENDING | All commission/fee/refund/settlement/transfer/nominative/courtesy/organizer/launch-feature decisions; no supplied approval |
+| LEGAL REVIEW PENDING | Actual company identity/contact, approved terms/privacy/refund content and per-record retention/holds |
+| PRODUCTION CUTOVER PENDING | Independently authorized release, schema reconciliation, live-provider certification, least privilege, rollback/object/key recovery, operational ownership and final security/accessibility/capacity acceptance |
+
+Actions and secure configuration: [M14-CERTIFICATION](M14-CERTIFICATION.md). Workflow
+results: [STAGING-ACCEPTANCE](STAGING-ACCEPTANCE.md). Human decisions:
+[BUSINESS-SIGNOFF](BUSINESS-SIGNOFF.md). Physical evidence:
+[PHYSICAL-DEVICE-QA](PHYSICAL-DEVICE-QA.md). Manual review scope:
+[SECURITY-REVIEW-SCOPE](SECURITY-REVIEW-SCOPE.md). Audit:
+[DEPENDENCY-SECURITY](DEPENDENCY-SECURITY.md).
+
+Resume M14 certification when these dependencies exist. No M15 is automatically needed
+or created. A bounded implementation follow-up will be necessary for worker packaging
+once the runtime is selected, approved retention jobs, or optional Fintoc/refund features
+if product actually requires them. Access provisioning and human sign-off are not code
+milestones. Historical M13/M10 evidence below does not override this current decision.
 
 ## M13 current release decision
 

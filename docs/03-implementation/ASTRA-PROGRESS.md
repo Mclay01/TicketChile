@@ -1,6 +1,6 @@
 # Astra execution state
 
-Current outcome: M1–M12 are complete and preserved. M13 staging preparation and local operational rehearsal are complete under the user's missing-credentials fallback. Real hosted/provider/HTTPS/physical-device certification remains explicitly pending. Production remains blocked. Exact recommended M14: external staging certification, physical-device acceptance, and business-policy sign-off; do not start without a new request.
+Current outcome: M1–M13 are complete and preserved. M14 achievable dependency hardening and acceptance/sign-off preparation are complete under the unavailable-dependency acceptance rule: external resources/devices/business/legal inputs remain explicitly blocked. Real hosted/provider/HTTPS/physical-device certification is not claimed. Production remains blocked; no automatic M15.
 
 Updated: 2026-09-28. Branch: `astra/ticketchile-v2`. M10 starting commit: `a3d38370b3b48598f1772148bc8d0f741f7221f1`; initial working tree clean. Earlier sections below retain milestone-specific historical evidence.
 
@@ -19,7 +19,7 @@ Updated: 2026-09-28. Branch: `astra/ticketchile-v2`. M10 starting commit: `a3d38
   - Buyer ticket APIs use session-derived ownership, including the legacy demo alias. Resend checks owner before signing/email, rejects cancelled tickets and sends only to the current owner. QR for resend is rendered locally, eliminating request-host cookie forwarding.
   - Added 36 isolated handler/service/layout regression tests and a safe build-verification command.
 
-## Current work
+## Historical M11 authorization
 
 M11 is the current user-authorized extension, starting from clean `b72128f3d0cd44722e4b0dae8125e4f477029e4d` on `astra/ticketchile-v2`. M1-M10 are complete and preserved. Final M11 evidence appears at the end of this document.
 
@@ -581,3 +581,59 @@ legal identity decisions. Fintoc remains incomplete/disabled. Production remains
 and business-policy sign-off.** Obtain dedicated nonproduction account access, execute
 the pending provider/HTTPS/worker/device matrix and record approved policies. This is
 recommendation only. Stop after the coherent M13 commit; do not deploy or merge.
+
+## M14 completed within available access - external certification dependencies recorded
+
+Started from clean M13 `ab2ac4e3605b7422927173c7126f3a530a8799f4` on
+`astra/ticketchile-v2`; read the latest M14 attachment and required operational,
+provider, release, security and architecture records. Confirmed M1-M13 complete;
+no prior milestone or SQL migration was reimplemented. No dedicated Vercel project,
+managed staging DB/provider resources, physical devices or approved business/legal
+values were supplied. Requested names/configuration status/devices/decision owners,
+never secret values. No external certification or human approval was invented.
+
+- Created M14 certification/action matrix, staging acceptance, physical-device QA,
+  business/legal/retention sign-off, manual security scope and dependency review.
+  Each hosted/provider/device workflow remains explicitly blocked; configuration
+  labels do not prove account ownership. Exact variables, secure locations, owner
+  actions and resume procedures are documented. Fintoc remains disabled/incomplete;
+  optional launch inclusion is a human decision, not an automatic blocker or approval.
+- Ran actual registry audit:115 initial findings (3 critical/56 high/50 moderate/6 low).
+  Patched Next/eslint-config-next16.3.6, Auth.js4.24.15, Sharp0.35.4, PostCSS8.5.28
+  and compatible major-scoped transitive security pins. Final audit:1 moderate UUID
+  advisory, no high/critical/low. Svix uses v4 without buffers, outside the affected
+  v3/v5/v6 path in inspected usage; retained finding is not a clean-audit claim.
+- Updated two internal navigations to the Next router for new lint compatibility.
+  Strengthened browser hydration/session assertions and made synthetic QR frames
+  visibly change for stable decoding. No scanner authority or app policy was relaxed,
+  no unrelated UI redesign, and no new server credential/provider/model was enabled.
+  Next dev-generated AGENTS/CLAUDE guidance accompanies the dependency upgrade.
+- Reused M13 local restore/load evidence without regenerating it. Runtime dependency
+  changes justified fresh full tests, PostgreSQL/provider contracts, TypeScript,
+  whole/scoped lint, production build and cross-role/transfer/media browser checks;
+  exact final results, warnings and corrected failures are in [qa/m14](qa/m14/README.md).
+- Updated provider/release/progress/QA/authorization/deployment/staging/media records.
+  Release classifications explicitly distinguish technically verified local work,
+  no hosted/physical verification, external/business/legal gates and pending cutover.
+
+Final gates:401 tests PASS (zero failures/skips), PostgreSQL/provider contracts PASS,
+TypeScript PASS, scoped3/whole373 maintained-file lint PASS (zero errors/warnings),
+Next16.3.6 production build PASS,188 local browser states PASS (104 cross-role,
+46 transfer,38 media;390/1440 widths;16 screenshots), root diff check PASS.
+Dependency audit retains exit1 for the one moderate UUID advisory. Evidence and source/
+lockfile/build hashes: [qa/m14](qa/m14/README.md). Local preview and isolated Chrome
+were stopped; synthetic PostgreSQL fixtures remain. No hosted smoke test was possible.
+
+Remaining: identified authorized Preview team/project, dedicated DB/roles/restore
+target, actual enabled provider sandboxes and callbacks, email DNS/delivery, approved
+AI model/budget/data, S3 IAM/cache/recovery, demo Wallet/device, private worker package/
+scheduler/logs/alerts, actual HTTPS/MFA/CSP, physical scanner/accessibility, managed
+capacity/recovery and independent security review. Business/feature/legal/retention
+values remain PENDING. Locale hydration and development image notices are documented;
+one moderate dependency advisory remains. Production stays BLOCKED.
+
+No deploy, merge, push, main/Production Branch/domain/DNS change, production credential/
+customer-data access, financial movement or production scheduling occurred. Stop here
+after the coherent M14 commit. Resume the pending certification when dependencies are
+provided; **no M15 is created automatically**. Further implementation is conditional on
+selected worker architecture, approved retention and actually required optional features.

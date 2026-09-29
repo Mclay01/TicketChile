@@ -214,3 +214,15 @@ Private workers have bounded dispatch and advisory session locks, never public c
 authority. Full secret-manager/least-privilege grants, HTTPS ingress, provider callbacks,
 physical QR/Wallet and independent security review remain release gates. See the
 authoritative [provider matrix](PROVIDER-CERTIFICATION.md) and [staging runbook](STAGING-RUNBOOK.md).
+
+## M14 review boundary
+
+M1-M13 authorization remains unchanged. Patched framework/Auth.js/Sharp/transport
+dependencies and reran local boundary regressions; this does not certify hosted ingress,
+least-privilege grants or an independent penetration review. See
+[SECURITY-REVIEW-SCOPE](SECURITY-REVIEW-SCOPE.md) for manual auth/RBAC/tenant/payment/QR/
+scanner/AI/media/admin-finance cases, and [DEPENDENCY-SECURITY](DEPENDENCY-SECURITY.md)
+for the remaining moderate UUID finding and inspected non-reachability.
+External certification, physical devices and human policy approvals remain pending
+under [M14-CERTIFICATION](M14-CERTIFICATION.md). No credential, event code or resource
+identifier was accepted as authority to select an external account or bypass a guard.

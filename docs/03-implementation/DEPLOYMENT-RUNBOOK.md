@@ -1,5 +1,11 @@
 # Deployment runbook — authorization required
 
+M14 current gate: [M14-CERTIFICATION](M14-CERTIFICATION.md). No Preview project has
+been identified/provisioned in this work. Use the patched `apps/web` lockfile and
+recheck its remaining advisory before any release; the root orphan transbank lock is
+not the deployment input. Next16.3.6/Auth.js4.24.15/Sharp0.35.4 require fresh provider/
+hosted/browser acceptance. No production execution is authorized by local passes.
+
 This is a future operator procedure. M10 performs no deployment. Use a reviewed release artifact and explicit environment authorization; never point the local rehearsal scripts at production.
 
 ## Before a release
