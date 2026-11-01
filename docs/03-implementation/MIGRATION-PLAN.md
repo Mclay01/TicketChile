@@ -1,5 +1,28 @@
 # Versioned migration strategy ? M3
 
+## Managed staging execution — 2026-11-01
+
+Migrations 0001–0011 were applied with the current guarded
+`apps/web/scripts/staging-migrate.mjs --apply` to the already existing, initially empty
+`ticketchile_preview_app` database on dedicated Neon project `tiny-term-61980927`
+(`ticketchile-preview`). No legacy apply-schema script, database recreation, baseline
+adoption, production migration or edit to an applied SQL file occurred.
+
+All eleven normalized SHA-256 checksums match the checkout. Catalog verification:
+58 public tables, 131 valid/ready indexes, 628 validated constraints, 73 FKs and expected
+critical domain tables. A separate restricted pooled runtime role has no schema CREATE,
+ledger writes, audit UPDATE/DELETE or table TRUNCATE. SQL ran through the explicit
+direct operator endpoint with certificate-verified TLS; operator credentials were
+never configured in the web runtime. Neon terminates client TLS at its proxy:
+`pg_stat_ssl.ssl=false` on the backend is not client transport evidence; the Node TLS
+socket reported `encrypted=true` and `authorized=true` with certificate verification.
+
+See [sanitized migration/catalog/HTTPS evidence](qa/m14/preview-2026-11-01/README.md).
+Historical local-only/prepared-not-executed statements below describe earlier milestones.
+Actual production adoption, managed backup/restore and populated end-to-end domain
+validation remain separate, unexecuted gates. Production remains unsupported by the
+staging executor and was not accessed.
+
 Current release status (M10): see [RELEASE-READINESS.md](RELEASE-READINESS.md) and [M10-AUDIT.md](M10-AUDIT.md). Milestone-specific test counts and handoffs below are historical. No production release is certified.
 
 Only disposable local PostgreSQL databases have been created/migrated. No existing or production database was dropped, recreated, inspected or changed. `apps/web/sql/schema.sql` remains a legacy bootstrap, not an authoritative production snapshot.

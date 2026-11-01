@@ -1,13 +1,28 @@
 # M14 staging acceptance
 
+## Executed hosted baseline — 2026-11-01
+
+Basic protected Preview deployment and managed schema/runtime isolation are **PASS**:
+[22-request HTTPS and database evidence](qa/m14/preview-2026-11-01/README.md).
+The September matrix below is historical except where updated explicitly. Full buyer,
+organizer/admin/MFA, enabled-provider, recovery, worker and device workflows remain
+blocked/not tested; initial HTTP/cookie checks are not full browser certification.
+
+Current Preview uses only `ticketchile-preview` / `ticketchile_preview_app`, with a
+restricted pooled runtime role, verified TLS, all eleven migration checksums, 58 tables,
+73 validated FKs, 131 valid indexes and 628 validated constraints. Synthetic registration
+queued one encrypted verification; mail stayed disabled and no delivery was claimed.
+The catalog contains no events, orders, payments or tickets. Temporary access to the
+Preview alias was revoked; Vercel SSO protection remains enabled.
+
 Date: 2026-09-28. No hosted target or dedicated external resources were identified.
 **No workflow is certified against real staging.** Allowed results: PASS, FAIL,
 BLOCKED EXTERNAL, BLOCKED BUSINESS, NOT TESTED. Absence of evidence is never PASS.
 
 | Workflow | Result | Required evidence / dependency |
 |---|---|---|
-| Vercel project/settings/Preview deploy | BLOCKED EXTERNAL | Named authorized project, apps/web root, unchanged production settings, deployment/build/URL and ingress logs |
-| Managed DB migration/catalog | BLOCKED EXTERNAL | Dedicated provider identity, TLS/roles, ledger0001-0011, tables/indexes/constraints/FKs and all domain reads |
+| Vercel project/settings/Preview deploy | PASS | 2026-11-01: mcflay/ticket-chile-api, apps/web, main unchanged, READY dpl_3UzqaMAWJw5QFcRWyqyucjSoRkpy; protected stable alias and basic HTTPS smoke in linked evidence |
+| Managed DB migration/catalog | PASS | 2026-11-01: dedicated tiny-term-61980927/ticketchile_preview_app, verified TLS, restricted runtime grants, ledger/checksums0001-0011, 58 tables/131 indexes/628 constraints/73 FKs; empty-domain reads and synthetic registration verified; populated full-domain workflows remain pending |
 | Managed backup/restore/app rollback | BLOCKED EXTERNAL | Actual provider snapshot and separate restore target, key/object recovery, application reads/invariants and measured times |
 | Buyer full workflow | BLOCKED EXTERNAL | Register/verify/discover/search/event/select/hold/real sandbox checkout/completion/inbox/account/QR; Wallet if selected; transfer claim/old denial/new QR; supported refund |
 | Organizer full workflow | BLOCKED EXTERNAL | Register/verify/MFA, draft/media/AI if selected, tiers/preview/publish, promo/courtesy/staff assignment, attendees/sales/finance |

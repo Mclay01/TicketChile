@@ -1,5 +1,48 @@
 # M13 isolated staging and operational rehearsal
 
+## Current provisioned Preview — 2026-11-01
+
+The historical setup gaps below are superseded for this existing deployment by the
+[executed Preview report](qa/m14/preview-2026-11-01/README.md). Do not recreate its DB.
+
+- Vercel: `mcflay/ticket-chile-api`, root `apps/web`, branch `astra/ticketchile-v2`;
+  Production Branch remains `main`. Stable protected origin:
+  `https://ticket-chile-api-git-astra-ticketchile-v2-mcflay.vercel.app`.
+- Neon resource: `ticketchile-preview`, project `tiny-term-61980927`, retained store
+  `store_cSHfHsKq9xCijUtJ`. Database: `ticketchile_preview_app`; runtime role:
+  `ticketchile_preview_runtime`. Runtime host (no explicit port):
+  `ep-frosty-poetry-b8gmprqf-pooler.c-14.us-east-1.aws.neon.tech`.
+- Guards: `DATABASE_RESOURCE_ENVIRONMENT=preview`, exact expected name/host above,
+  `DATABASE_SSL=true`, `DATABASE_SSL_REJECT_UNAUTHORIZED=true`, `DATABASE_POOL_MAX=5`.
+  All settings and connection overrides are Preview/branch scoped.
+- `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `POSTGRES_URL`, `POSTGRES_URL_NON_POOLING`,
+  `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NO_SSL` are deliberately identical **pooled,
+  restricted-role** compatibility aliases. Their names do not supply operator or
+  insecure connections. Matching PG/POSTGRES host/user/password/database variables
+  also identify that role/database. TICKETCHILE_DB URL aliases are absent.
+- The automatic resource connection was detached only from Preview because its
+  build action injected default `neondb` owner connections over manual branch values.
+  Do not reconnect that default integration without proving its effective build and
+  runtime role/database bindings. Resource and manual `NEON_PROJECT_ID` remain.
+- Runtime connection URIs have no query parameters. Disallowed `channel_binding` and
+  Prisma `connect_timeout` never reach the validator; TLS and certificate verification
+  remain explicit Pool settings. The validator was not changed or relaxed.
+- Migrations 0001–0011 are applied/verified. For future authorized migration work use
+  only `scripts/staging-migrate.mjs --apply`, with a privately injected operator URI
+  and **direct** expected host `ep-frosty-poetry-b8gmprqf.c-14.us-east-1.aws.neon.tech`
+  in that local operator process. Never add that URI or owner password to web config.
+  Review new table/sequence grants separately; runtime has no DDL/ledger-write power.
+- Preserve existing NEXTAUTH/QR/data keys. All payment/refund/mail/AI/media/transfer/
+  promotion switches remain disabled. Do not claim provider or verified-account
+  certification from this initial smoke. One unverified `.invalid` buyer and a queued
+  encrypted verification remain as identified synthetic fixtures.
+- Keep Preview protection enabled. Tests used a temporary shareable token on this
+  Preview alias only, then revoked it. Do not let `vercel curl` silently create a
+  project-wide automation bypass on a project that also hosts Production.
+
+No production migration/deployment/configuration, main merge, DNS/domain change, real
+customer data, external delivery or financial operation is authorized by this record.
+
 M14 continuation: [M14-CERTIFICATION](M14-CERTIFICATION.md) records exact missing
 resource access and secure configuration actions; [STAGING-ACCEPTANCE](STAGING-ACCEPTANCE.md)
 records blocked hosted workflows. No hosted execution is newly claimed. Install from

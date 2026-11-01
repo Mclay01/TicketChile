@@ -1,5 +1,23 @@
 # M14 external certification
 
+## Current hosted baseline — 2026-11-01
+
+The existing authorized Vercel project and dedicated Neon resource are now CONNECTED.
+The protected branch Preview is READY, migrations 0001–0011 and catalog/runtime grants
+are verified, and 22 bounded HTTPS checks passed. See the
+[execution evidence](qa/m14/preview-2026-11-01/README.md) for deployment IDs, resource
+bindings, local gates and exact limitations. These results supersede the Vercel/DB
+access blockers in the historical September matrix below; they do not certify full
+provider, verified-account/MFA, physical-device or business workflows.
+
+Vercel CLI authentication was renewed interactively by the user, then all remaining
+work used CLI/API. Neon build-time injection of `neondb` owner aliases was the remaining
+isolation failure. Only the `ticketchile-preview` → Preview injection connection was
+detached; the resource remains. Runtime aliases now contain a restricted pooled role
+for `ticketchile_preview_app`. Existing identity/QR/encryption secrets were preserved.
+All external providers remain disabled/unconfigured. Preview SSO stays enabled and
+temporary alias-scoped test access was revoked. Production remains BLOCKED.
+
 Date: 2026-09-28. Branch: `astra/ticketchile-v2`. Baseline: M13
 `ab2ac4e3605b7422927173c7126f3a530a8799f4`, clean tree; M1-M13 complete and preserved.
 This record covers the authorized nonproduction milestone. Production remains blocked.

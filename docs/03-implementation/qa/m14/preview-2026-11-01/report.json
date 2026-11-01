@@ -1,0 +1,484 @@
+{
+  "date": "2026-11-01",
+  "scope": "LOCAL and protected PREVIEW only",
+  "applicationCodeChanged": false,
+  "database": {
+    "resource": "ticketchile-preview",
+    "project": "tiny-term-61980927",
+    "host": "ep-frosty-poetry-b8gmprqf-pooler.c-14.us-east-1.aws.neon.tech",
+    "database": "ticketchile_preview_app",
+    "schema": "public",
+    "migrations": [
+      {
+        "version": "0001_runtime_baseline.sql",
+        "checksum": "0c3580d18a24df51fe81922ddeed0283e7faf55da39f46164d3a1068c2032651"
+      },
+      {
+        "version": "0002_identity_security.sql",
+        "checksum": "bd37352519495036dd6b3b57512882d5b33e8fa988f949cb0296d4c2743c3e97"
+      },
+      {
+        "version": "0003_capability_policy.sql",
+        "checksum": "ee3d7f122e55a332edb77245521851303906fef469db17ed5c3258143b43e96e"
+      },
+      {
+        "version": "0004_payment_lifecycle.sql",
+        "checksum": "9d758cced666be7461a6c9f1fef7fcd12f2670e875f0715ad82fe41cfa1cd010"
+      },
+      {
+        "version": "0005_discovery_media.sql",
+        "checksum": "ef95051c0927589868d805101316b6817a1ba9aed702964129ba69c99cd38a6d"
+      },
+      {
+        "version": "0006_event_lifecycle.sql",
+        "checksum": "f03946a9aafcdbb2ef4ff398243c111de7d2e46905867c7c5434af4c05338775"
+      },
+      {
+        "version": "0007_ai_proposals.sql",
+        "checksum": "75e394e6b9fd151affa4f376a4b4a1c3b206b6cd7d7ea9aac25b771b9e49c9ff"
+      },
+      {
+        "version": "0008_event_operations.sql",
+        "checksum": "4d299138af52731e34aedac08e0d1394751a54a4d42f51d7ca9e234167177647"
+      },
+      {
+        "version": "0009_admin_finance.sql",
+        "checksum": "5f1820a0c38fadcaf25c99bbd7c87a4ffbf301bb63b437781dbd388eabb0ddd8"
+      },
+      {
+        "version": "0010_ticket_transfers.sql",
+        "checksum": "570561647637ca0f5c1dfc725f11569351fac4a0a74260f6898f69c48204b4d0"
+      },
+      {
+        "version": "0011_media_lifecycle.sql",
+        "checksum": "7e5b9e30998b7691f21dde53f95d6d578b057a2a99261a3653601a4d808d7856"
+      }
+    ],
+    "checksumVerification": true,
+    "catalog": {
+      "tables": 58,
+      "indexes": 131,
+      "constraints": 628,
+      "foreign_keys": 73,
+      "unvalidated_constraints": 0,
+      "invalid_indexes": 0
+    },
+    "requiredTables": [
+      "usuarios",
+      "events",
+      "ticket_types",
+      "holds",
+      "hold_items",
+      "orders",
+      "tickets",
+      "payments",
+      "identity_accounts",
+      "identity_sessions",
+      "organizer_staff",
+      "security_audit",
+      "mail_jobs",
+      "ai_requests",
+      "refunds",
+      "settlements",
+      "ticket_transfers",
+      "ticket_ownership_history",
+      "media_objects",
+      "media_variants"
+    ],
+    "runtime": {
+      "database": "ticketchile_preview_app",
+      "role": "ticketchile_preview_runtime",
+      "can_create": false,
+      "can_change_ledger": false,
+      "can_update_audit": false,
+      "can_delete_audit": false,
+      "can_truncate": false,
+      "migration_count": 11,
+      "events": 0,
+      "buyers": 0,
+      "orders": 0
+    },
+    "tls": {
+      "encrypted": true,
+      "certificateVerified": true
+    }
+  },
+  "environment": {
+    "branch": "astra/ticketchile-v2",
+    "origin": "https://ticket-chile-api-git-astra-ticketchile-v2-mcflay.vercel.app",
+    "settings": {
+      "APP_ENVIRONMENT": "preview",
+      "APP_BASE_URL": "https://ticket-chile-api-git-astra-ticketchile-v2-mcflay.vercel.app",
+      "NEXTAUTH_URL": "https://ticket-chile-api-git-astra-ticketchile-v2-mcflay.vercel.app",
+      "STAGING_ORIGIN": "https://ticket-chile-api-git-astra-ticketchile-v2-mcflay.vercel.app",
+      "DATABASE_RESOURCE_ENVIRONMENT": "preview",
+      "DATABASE_EXPECTED_NAME": "ticketchile_preview_app",
+      "DATABASE_EXPECTED_HOST": "ep-frosty-poetry-b8gmprqf-pooler.c-14.us-east-1.aws.neon.tech",
+      "DATABASE_SSL": "true",
+      "DATABASE_SSL_REJECT_UNAUTHORIZED": "true",
+      "DATABASE_POOL_MAX": "5",
+      "STRIPE_ENABLED": "false",
+      "STRIPE_REFUNDS_ENABLED": "false",
+      "WEBPAY_ENABLED": "false",
+      "FLOW_ENABLED": "false",
+      "MAIL_TRANSPORT": "disabled",
+      "AI_PROVIDER": "disabled",
+      "MEDIA_PROVIDER": "disabled",
+      "MEDIA_UPLOADS_ENABLED": "false",
+      "TRANSFERS_ENABLED": "false",
+      "PROMOTIONS_ENABLED": "false",
+      "PGUSER": "ticketchile_preview_runtime",
+      "POSTGRES_USER": "ticketchile_preview_runtime",
+      "PGDATABASE": "ticketchile_preview_app",
+      "POSTGRES_DATABASE": "ticketchile_preview_app",
+      "PGHOST": "ep-frosty-poetry-b8gmprqf-pooler.c-14.us-east-1.aws.neon.tech",
+      "PGHOST_UNPOOLED": "ep-frosty-poetry-b8gmprqf-pooler.c-14.us-east-1.aws.neon.tech",
+      "POSTGRES_HOST": "ep-frosty-poetry-b8gmprqf-pooler.c-14.us-east-1.aws.neon.tech"
+    },
+    "urlAliases": [
+      "DATABASE_URL",
+      "DATABASE_URL_UNPOOLED",
+      "POSTGRES_URL",
+      "POSTGRES_URL_NON_POOLING",
+      "POSTGRES_PRISMA_URL",
+      "POSTGRES_URL_NO_SSL"
+    ],
+    "allRuntimeUrlsIdentical": true,
+    "securitySecretMetadataPreserved": true,
+    "productionEnvironmentMetadataPreserved": true,
+    "operatorCredentialsInRuntime": false
+  },
+  "integration": {
+    "resource": "ticketchile-preview",
+    "project": "tiny-term-61980927",
+    "storeId": "store_cSHfHsKq9xCijUtJ",
+    "connectionDetached": "spc_UJfHhn1Q10QSXjKA",
+    "environments": [
+      "preview"
+    ],
+    "reason": "Integration build injection superseded restricted branch DB aliases with neondb owner connections",
+    "resourceRetained": true
+  },
+  "httpsSmoke": {
+    "origin": "https://ticket-chile-api-git-astra-ticketchile-v2-mcflay.vercel.app",
+    "executedAt": "2026-11-01T04:38:15.446Z",
+    "transport": "Node HTTPS fetch; Preview-alias-scoped temporary shareable access",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/",
+        "status": 200,
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/eventos",
+        "status": 200,
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/signin",
+        "status": 200,
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/signup",
+        "status": 200,
+        "cacheControl": "public, max-age=0, must-revalidate",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/organizador/login",
+        "status": 200,
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/organizador/registro",
+        "status": 200,
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/api/events",
+        "status": 200,
+        "cacheControl": "private, no-store",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/api/health",
+        "status": 200,
+        "cacheControl": "private, no-store",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/api/ready",
+        "status": 200,
+        "cacheControl": "private, no-store",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/api/auth/session",
+        "status": 200,
+        "cacheControl": "private, no-cache, no-store",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/api/payments/availability",
+        "status": 200,
+        "cacheControl": "private, no-store",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/api/tickets",
+        "status": 401,
+        "cacheControl": "no-store",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/api/qr?ticket_id=preview-synthetic-unknown",
+        "status": 401,
+        "cacheControl": "private, no-store",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/cuenta",
+        "status": 200,
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cspPresent": true,
+        "redirect": null,
+        "streamingAuthRedirect": {
+          "origin": "https://ticket-chile-api-git-astra-ticketchile-v2-mcflay.vercel.app",
+          "path": "/signin"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/organizador",
+        "status": 307,
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cspPresent": true,
+        "redirect": {
+          "origin": "https://ticket-chile-api-git-astra-ticketchile-v2-mcflay.vercel.app",
+          "path": "/organizador/login"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/admin",
+        "status": 307,
+        "cacheControl": "public, max-age=0, must-revalidate",
+        "cspPresent": true,
+        "redirect": {
+          "origin": "https://ticket-chile-api-git-astra-ticketchile-v2-mcflay.vercel.app",
+          "path": "/admin/login"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/auth/csrf",
+        "status": 200,
+        "cacheControl": "private, no-cache, no-store",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/signup",
+        "status": 200,
+        "cacheControl": "private, no-store",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/signup",
+        "status": 403,
+        "cacheControl": "private, no-store",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/callback/credentials",
+        "status": 401,
+        "cacheControl": "public, max-age=0, must-revalidate",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "POST",
+        "path": "/api/organizador/login",
+        "status": 401,
+        "cacheControl": "private, no-store",
+        "cspPresent": true,
+        "redirect": null
+      },
+      {
+        "method": "GET",
+        "path": "/api/auth/session",
+        "status": 200,
+        "cacheControl": "private, no-cache, no-store",
+        "cspPresent": true,
+        "redirect": null
+      }
+    ],
+    "cookies": [
+      {
+        "name": "__Host-next-auth.csrf-token",
+        "secure": true,
+        "httpOnly": true,
+        "sameSite": "Lax",
+        "hostOnly": true,
+        "path": "/"
+      },
+      {
+        "name": "__Secure-next-auth.callback-url",
+        "secure": true,
+        "httpOnly": true,
+        "sameSite": "Lax",
+        "hostOnly": true,
+        "path": "/"
+      },
+      {
+        "name": "__Secure-next-auth.callback-url",
+        "secure": true,
+        "httpOnly": true,
+        "sameSite": "Lax",
+        "hostOnly": true,
+        "path": "/"
+      }
+    ],
+    "checks": {
+      "catalogShape": "array",
+      "catalogEmpty": true,
+      "paymentsDisabled": [
+        {
+          "provider": "stripe",
+          "available": false
+        },
+        {
+          "provider": "webpay",
+          "available": false
+        },
+        {
+          "provider": "flow",
+          "available": false
+        },
+        {
+          "provider": "fintoc",
+          "available": false
+        },
+        {
+          "provider": "transfer",
+          "available": false
+        }
+      ],
+      "syntheticRegistration": "persisted; verification queued, no external delivery",
+      "foreignOriginDenied": true,
+      "unverifiedBuyerLoginDenied": true,
+      "unknownOrganizerLoginDenied": true,
+      "unauthenticatedSessionPreserved": true,
+      "authCookiesSecureHttpOnlyLaxHostOnly": true,
+      "noCredentialLeakDetected": true
+    },
+    "result": "PASS"
+  },
+  "finalAudit": {
+    "executedAt": "2026-11-01T04:39:22.707Z",
+    "data": {
+      "database": "ticketchile_preview_app",
+      "role": "ticketchile_preview_runtime",
+      "buyers": 1,
+      "matching_unverified_synthetic_buyers": 1,
+      "organizers": 0,
+      "admins": 0,
+      "events": 0,
+      "orders": 0,
+      "payments": 0,
+      "tickets": 0,
+      "identity_sessions": 0,
+      "security_outbox": 1,
+      "mail_jobs": 0
+    },
+    "securitySecretsUnchanged": true,
+    "productionEnvironmentMetadataUnchanged": true,
+    "productionBranch": "main",
+    "projectProtectionEnabled": true,
+    "temporaryAliasAccessRevoked": true,
+    "anonymousResponse": {
+      "status": 302,
+      "redirectOrigin": "https://vercel.com"
+    },
+    "projectWideBypassCreated": false,
+    "providerCredentialsAbsent": true,
+    "migrationCredentialsAbsentFromRuntime": true,
+    "integrationInjectionDetached": true,
+    "deployment": {
+      "id": "dpl_3UzqaMAWJw5QFcRWyqyucjSoRkpy",
+      "url": "https://ticket-chile-lbtnohhe8-mcflay.vercel.app",
+      "stableUrl": "https://ticket-chile-api-git-astra-ticketchile-v2-mcflay.vercel.app",
+      "state": "READY",
+      "target": "preview",
+      "branch": "astra/ticketchile-v2",
+      "commit": "dca08b38abe89b690918464f5d88061aa7b14482",
+      "createdAt": "2026-11-01T04:34:49.706Z",
+      "readyAt": "2026-11-01T04:35:46.979Z",
+      "framework": "nextjs",
+      "nodeVersion": "24.x"
+    }
+  },
+  "quality": {
+    "tests": {
+      "passed": 401,
+      "failed": 0,
+      "skipped": 0,
+      "includesPostgreSQLAndConcurrency": true
+    },
+    "typeScript": "PASS",
+    "wholeRepositoryLint": {
+      "result": "PASS",
+      "maintainedFiles": 373,
+      "errors": 0,
+      "warnings": 0
+    },
+    "isolatedProductionBuild": "PASS",
+    "hostedProductionBuild": "PASS",
+    "gitDiffCheck": "PASS"
+  },
+  "limitations": [
+    "No seeded event-detail or verified-account/MFA workflow certification",
+    "No provider enabled or externally certified",
+    "No managed restore/rollback, private worker/scheduler or alert certification",
+    "No browser, physical-device, capacity or independent security certification",
+    "Business, legal, retention and production cutover remain blocked"
+  ]
+}

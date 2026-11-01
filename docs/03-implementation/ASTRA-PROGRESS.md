@@ -1,6 +1,51 @@
 # Astra execution state
 
-Current outcome: M1–M13 are complete and preserved. M14 achievable dependency hardening and acceptance/sign-off preparation are complete under the unavailable-dependency acceptance rule: external resources/devices/business/legal inputs remain explicitly blocked. Real hosted/provider/HTTPS/physical-device certification is not claimed. Production remains blocked; no automatic M15.
+## Current Preview execution — 2026-11-01
+
+TicketChile V2 is running on the protected Vercel Preview for `astra/ticketchile-v2`.
+Deployment `dpl_3UzqaMAWJw5QFcRWyqyucjSoRkpy` is READY at the
+[stable Preview URL](https://ticket-chile-api-git-astra-ticketchile-v2-mcflay.vercel.app),
+using application commit `dca08b38abe89b690918464f5d88061aa7b14482`.
+This update supersedes historical statements below that no hosted target exists.
+
+- Verified `mcflay/ticket-chile-api`, `apps/web`, the existing GitHub repository,
+  unchanged `main` Production Branch, and unchanged Production environment metadata.
+- Connected only to Neon `ticketchile-preview` / `tiny-term-61980927`, database
+  `ticketchile_preview_app`; applied immutable migrations 0001–0011 through the guarded
+  staging executor. All checksums match: 58 tables, 73 FKs, 131 indexes, 628 constraints;
+  no invalid indexes or unvalidated constraints.
+- Created `ticketchile_preview_runtime` without schema creation, migration-ledger writes,
+  audit UPDATE/DELETE, TRUNCATE, role administration or database administration. Web
+  aliases all resolve to the same pooled app-database connection with verified TLS.
+- Diagnosed the actual hosted failure: the Neon integration injected owner connections
+  to `neondb` during builds, superseding branch overrides. Detached only that dedicated
+  Preview connection; retained the Neon resource and a manual project-ID binding.
+  No isolation validator or application code was weakened or changed.
+- Preserved the three existing branch security secrets. Payment/refund, email, AI,
+  media upload, transfer and promotion providers/features remain disabled; provider
+  credentials and the operator migration connection are absent from the web runtime.
+- Passed 22 HTTPS checks, including health/readiness, empty public catalog, auth pages,
+  synthetic registration, denied unverified/unknown logins, foreign-origin denial,
+  owner-only API denial and secure host-only auth cookies. One reserved `.invalid`
+  buyer and one queued encrypted verification message remain; no message was delivered.
+- Fresh local gates: 401 tests PASS, including PostgreSQL/concurrency; TypeScript PASS;
+  whole-repository lint PASS (373 files); isolated production build PASS. The hosted
+  build also passed. The first local test attempt preceded PostgreSQL crash recovery;
+  the complete rerun after readiness passed with zero failures/skips.
+- Used terminal/CLI/API only. Temporary access was scoped to the Preview alias and
+  revoked after testing; normal Vercel SSO protection remains enabled. No project-wide
+  automation bypass, production deployment, main merge, DNS/domain change or real
+  payment/email/provider operation occurred.
+
+Sanitized evidence, exact configuration and limitations:
+[Preview execution report](qa/m14/preview-2026-11-01/README.md).
+Full provider workflows, verified-account/MFA acceptance, managed restore/rollback,
+workers, physical devices and business/legal approval remain M14 gates. Production
+remains BLOCKED; no M15 or production operation is authorized.
+
+## Historical M14 preparation outcome — 2026-09-28
+
+M1–M13 are complete and preserved. M14 achievable dependency hardening and acceptance/sign-off preparation are complete under the unavailable-dependency acceptance rule: external resources/devices/business/legal inputs remain explicitly blocked. Real hosted/provider/HTTPS/physical-device certification was not claimed in that milestone. Production remains blocked; no automatic M15.
 
 Updated: 2026-09-28. Branch: `astra/ticketchile-v2`. M10 starting commit: `a3d38370b3b48598f1772148bc8d0f741f7221f1`; initial working tree clean. Earlier sections below retain milestone-specific historical evidence.
 

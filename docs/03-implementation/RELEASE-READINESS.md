@@ -1,5 +1,20 @@
 # TicketChile release readiness - M14
 
+## Current staging addendum — 2026-11-01
+
+**Production remains BLOCKED.** The isolated protected Vercel Preview is now READY.
+Managed staging migrations 0001–0011, checksums/catalog, restricted runtime grants and
+22 basic HTTPS checks have passed. Fresh local results: 401 tests, TypeScript,
+373-file whole lint and isolated production build PASS; hosted production build PASS.
+See [Preview evidence](qa/m14/preview-2026-11-01/README.md).
+
+This supersedes historical claims of no hosted verification below. It establishes a
+safe, empty-catalog Preview with one synthetic unverified buyer and disabled providers.
+It does not complete sandbox checkout/delivery/AI/media/Wallet, verified-user/MFA flows,
+private workers/alerts, managed restore/rollback, physical devices, independent security
+review, capacity or business/legal/retention sign-off. Production settings, environment
+metadata, database, branch, domains and DNS were not changed by this execution.
+
 **Release decision: BLOCKED for production.** M1-M13 are complete and preserved.
 M14 performs the achievable dependency review/hardening and acceptance preparation;
 external certification and human sign-off remain blocked by identified missing inputs.
